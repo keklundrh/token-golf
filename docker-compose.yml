@@ -17,6 +17,9 @@ services:
       - ./tests:/app/tests
       # Mount data directory for SQLite database
       - ./data:/app/data
+      # Mount Alembic migration files
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
     environment:
       # Load from .env file
       - ENV=${ENV:-development}
