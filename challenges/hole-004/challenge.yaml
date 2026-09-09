@@ -1,0 +1,49 @@
+# PLACEHOLDER - Hard Question Answering Challenge
+# TODO: Complete this challenge definition
+
+id: hole-004
+name: "[PLACEHOLDER] Complex Question Answering"
+difficulty: hard
+description: |
+  TODO: Write a challenging question-answering task.
+
+  Example template:
+  - Requires analyzing multiple context files
+  - Non-obvious answer requiring reasoning
+  - Specific format for answer
+
+task_type: question_answering
+
+validation:
+  type: semantic_similarity
+  criteria:
+    reference_answer: "TODO: Write the reference correct answer here"
+    similarity_threshold: 0.85
+    model: "text-embedding-3-small"
+
+context_files:
+  # TODO: Add context files that contain information needed
+  # - name: "document1.txt"
+  #   path: "./challenges/hole-004/assets/document1.txt"
+  #   description: "Primary source document"
+  #   removable: false
+  #   editable: false
+  #   default_included: true
+
+system_prompt:
+  default: "You are a helpful assistant that analyzes documents and answers questions."
+  removable: false
+  editable: true
+
+parameters:
+  max_iterations: 15
+  time_limit_seconds: null
+  hints_available: 1
+
+metadata:
+  author: "Token Golf Team"
+  created_date: "2026-09-09"
+  tags: ["placeholder", "question_answering", "hard"]
+  estimated_tokens_expert: 800  # TODO: Update after testing
+  estimated_tokens_beginner: 2500  # TODO: Update after testing
+  estimated_difficulty: 7.0

@@ -67,41 +67,30 @@
 
 ## What's Next
 
-### Immediate Next Steps
+### Development Approach
 
-1. **Create Project Structure**
-   ```bash
-   mkdir -p app/{api,services,models,templates}
-   mkdir -p static/{css,js,images}
-   mkdir -p tests/{unit,integration,challenges}
-   mkdir -p challenges
-   mkdir -p scripts
-   ```
+**Strategy**: Component-by-component incremental development (containerized from the start)
 
-2. **Initialize Python Project**
-   - Create `requirements.txt` with core dependencies
-   - Create `requirements-dev.txt` with development dependencies
-   - Create `.env.example` template
-   - Set up `app/main.py` (FastAPI entry point)
-   - Set up `app/config.py` (configuration management)
+See [docs/DEVELOPMENT_PHASES.md](docs/DEVELOPMENT_PHASES.md) for complete phase breakdown.
 
-3. **Setup Development Tools**
-   - Create `pyproject.toml` for Black/isort config
-   - Create `.flake8` configuration
-   - Create `pytest.ini` for pytest configuration
-   - Create `.pre-commit-config.yaml`
+### Current Phase: Phase 0 - Container Foundation
 
-4. **Create First Vertical Slice**
-   - Simple "Hello World" FastAPI endpoint
-   - Basic Jinja2 template rendering
-   - htmx test page
-   - Alpine.js pill component example
-   - Verify local development works
+**Next Steps**:
+1. Create `Dockerfile` for development
+2. Create `docker-compose.yml` for local development
+3. Create `requirements.txt` with initial dependencies
+4. Create `.env.example` template
+5. Verify container builds and runs
 
-5. **Database Setup**
-   - Create SQLAlchemy models (User, Challenge, Attempt, Score)
-   - Set up database initialization
-   - Create basic migrations structure
+After Phase 0 is complete, we will proceed through phases sequentially:
+- **Phase 1**: Foundation (FastAPI, config, models, Alembic)
+- **Phase 2**: Core Services (challenge loader, LLM client, validator, scoring)
+- **Phase 3**: API Endpoints (challenges, game, leaderboard)
+- **Phase 4**: Frontend Templates (Tailwind, layouts)
+- **Phase 5**: Frontend Interactivity (htmx, Alpine.js)
+- **Phase 6**: Supporting Features (name generator, sessions, leaderboard page)
+- **Phase 7**: Polish & Testing
+- **Phase 8**: Production Preparation (PostgreSQL, OpenShift)
 
 ### Phase 1: MVP Development
 
@@ -178,28 +167,32 @@
 ## Technical Decisions Log
 
 ### Confirmed Decisions
-1. **Tech Stack**: FastAPI + htmx + Alpine.js + SQLite→PostgreSQL
+1. **Tech Stack**: FastAPI + htmx + Alpine.js + SQLite→PostgreSQL + Alembic
 2. **Development Process**: Gitflow on dev branch
 3. **Documentation**: All decisions in markdown/ADRs
-4. **Challenge Format**: YAML files in git repository
+4. **Challenge Format**: YAML files in git repository (with placeholders to fill later)
 5. **Scoring**: All tokens count (input + output + system)
 6. **User Identity**: Auto-generated names (Color-Course-Club)
+7. **CSS Framework**: Tailwind CSS
+8. **Tie-Breaking**: If tied for first, run another challenge until there's a winner (repeat as needed)
+9. **Database Migrations**: Alembic from the start (ADR 004)
 
 ### Pending Decisions
-1. **CSS Framework**: Tailwind vs Pico.css vs custom
-2. **Validation**: Which validation types to implement first
-3. **Challenge Set**: How many challenges for MVP
-4. **Monitoring**: Which tools for production observability
-5. **Rate Limiting**: Strategy for API rate limiting
+1. **Validation**: Which validation types to implement first
+2. **Challenge Set**: How many challenges for MVP
+3. **Monitoring**: Which tools for production observability
+4. **Rate Limiting**: Strategy for API rate limiting
+5. **Timeline**: When is the first conference demo?
 
 ## Current Challenges & Questions
 
 ### Open Questions
-1. How to handle tie-breaking in leaderboard?
+1. ~~How to handle tie-breaking in leaderboard?~~ **RESOLVED**: Tied players compete in another challenge until winner emerges
 2. Should we support challenge "difficulty multipliers"?
 3. Do we need a "practice mode" vs "competition mode"?
 4. How to prevent cheating (users sharing solutions)?
 5. Should we track and display token costs ($)?
+6. What is the target date for first conference demo?
 
 ### Known Risks
 1. **LLM API latency** - Mitigate with async, loading indicators

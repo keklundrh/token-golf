@@ -1,0 +1,51 @@
+# PLACEHOLDER - Medium Extraction Challenge
+# TODO: Complete this challenge definition
+
+id: hole-002
+name: "[PLACEHOLDER] Data Extraction Task"
+difficulty: medium
+description: |
+  TODO: Write a clear extraction task.
+
+  Example template:
+  - What data should be extracted?
+  - From what source (context file)?
+  - What format should the output be?
+  - How should edge cases be handled?
+
+task_type: extraction
+
+validation:
+  type: pattern_match
+  criteria:
+    # TODO: Define the pattern that validates correct extraction
+    pattern: "TODO: Add regex pattern"
+    description: "TODO: Describe what pattern matches"
+    flags: []
+
+context_files:
+  # TODO: Add context file with data to extract from
+  # - name: "data_source.csv"
+  #   path: "./challenges/hole-002/assets/data_source.csv"
+  #   description: "Data source for extraction"
+  #   removable: false
+  #   editable: false
+  #   default_included: true
+
+system_prompt:
+  default: "You are a helpful assistant that extracts structured data."
+  removable: false
+  editable: true
+
+parameters:
+  max_iterations: 10
+  time_limit_seconds: null
+  hints_available: 0
+
+metadata:
+  author: "Token Golf Team"
+  created_date: "2026-09-09"
+  tags: ["placeholder", "extraction", "medium"]
+  estimated_tokens_expert: 300  # TODO: Update after testing
+  estimated_tokens_beginner: 1000  # TODO: Update after testing
+  estimated_difficulty: 3.0

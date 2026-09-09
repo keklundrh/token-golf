@@ -1,0 +1,53 @@
+# PLACEHOLDER - Easy Coding Challenge
+# TODO: Complete this challenge definition
+
+id: hole-001
+name: "[PLACEHOLDER] Easy Coding Task"
+difficulty: easy
+description: |
+  TODO: Write a clear, unambiguous task description.
+
+  Example template:
+  - What should the LLM create/do?
+  - What are the exact requirements?
+  - What format should the output be in?
+  - Any edge cases to handle?
+
+task_type: coding
+
+validation:
+  type: test_cases
+  language: python
+  criteria:
+    # TODO: Add test cases
+    - name: "Test case 1"
+      input:
+        param1: value1
+      expected_output: expected_result
+      timeout_ms: 1000
+
+# context_files:
+#   - name: "example_file.txt"
+#     path: "./challenges/hole-001/assets/example_file.txt"
+#     description: "Description of what this file contains"
+#     removable: true
+#     editable: false
+#     default_included: true
+
+system_prompt:
+  default: "You are a helpful coding assistant."
+  removable: false
+  editable: true
+
+parameters:
+  max_iterations: 10
+  time_limit_seconds: null
+  hints_available: 0
+
+metadata:
+  author: "Token Golf Team"
+  created_date: "2026-09-09"
+  tags: ["placeholder", "coding", "easy"]
+  estimated_tokens_expert: 150  # TODO: Update after testing
+  estimated_tokens_beginner: 500  # TODO: Update after testing
+  estimated_difficulty: 1.0

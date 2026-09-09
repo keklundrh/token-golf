@@ -1,0 +1,396 @@
+# Token Golf - Development Phases
+
+**Approach**: Component-by-component incremental development  
+**Strategy**: Build one piece at a time, containerize from the start, test as we go
+
+## Phase 0: Container Foundation
+
+**Goal**: Establish containerized development environment
+
+- [ ] Create `Dockerfile` for development
+- [ ] Create `docker-compose.yml` for local development
+- [ ] Create `.dockerignore`
+- [ ] Create `requirements.txt` with initial dependencies
+- [ ] Create `.env.example` template
+- [ ] Verify container builds and runs
+- [ ] Document how to run containerized development
+
+**Deliverable**: Can run `docker-compose up` and access the app
+
+---
+
+## Phase 1: Foundation Components
+
+### 1.1 Basic FastAPI App
+**Goal**: Get minimal web server running in container
+
+- [ ] Create `app/` directory structure
+- [ ] Create `app/main.py` with basic FastAPI app
+- [ ] Create one health check endpoint (`/health`)
+- [ ] Verify endpoint works via curl/browser
+- [ ] Hot reload working in development
+
+**Deliverable**: `curl http://localhost:8000/health` returns JSON
+
+### 1.2 Configuration Management
+**Goal**: Manage environment variables and settings
+
+- [ ] Create `app/config.py` with settings class
+- [ ] Use Pydantic BaseSettings for config
+- [ ] Load from environment variables
+- [ ] Configure database URL
+- [ ] Configure LLM API settings
+- [ ] Document all required env vars in `.env.example`
+
+**Deliverable**: Settings loaded from environment, accessible throughout app
+
+### 1.3 Database Models
+**Goal**: Define SQLAlchemy models for all entities
+
+- [ ] Create `app/models/__init__.py`
+- [ ] Create `app/models/base.py` with Base class
+- [ ] Create `app/models/user.py` - User model
+- [ ] Create `app/models/challenge.py` - Challenge model
+- [ ] Create `app/models/attempt.py` - Attempt model
+- [ ] Create `app/models/score.py` - Score model
+- [ ] Add relationships between models
+- [ ] Include type hints and docstrings
+
+**Deliverable**: All models defined, importable, type-checked
+
+### 1.4 Alembic Setup
+**Goal**: Initialize database migrations
+
+- [ ] Install Alembic in requirements.txt
+- [ ] Run `alembic init alembic`
+- [ ] Configure `alembic.ini` for containerized environment
+- [ ] Configure `alembic/env.py` to use our models
+- [ ] Create initial migration
+- [ ] Test migration: upgrade and downgrade
+- [ ] Document migration workflow
+
+**Deliverable**: Database created with all tables, migration works
+
+---
+
+## Phase 2: Core Services
+
+### 2.1 Challenge Loader Service
+**Goal**: Read and parse YAML challenge files
+
+- [ ] Create `app/services/__init__.py`
+- [ ] Create `app/services/challenge_loader.py`
+- [ ] Implement YAML file reading
+- [ ] Implement challenge parsing and validation
+- [ ] Cache parsed challenges
+- [ ] Handle missing/invalid files gracefully
+- [ ] Write unit tests
+- [ ] Test with placeholder challenges
+
+**Deliverable**: Can load challenges from YAML files, return Challenge objects
+
+### 2.2 LLM Client Service
+**Goal**: Abstract LLM provider interaction
+
+- [ ] Create `app/services/llm_client.py`
+- [ ] Define `LLMResponse` model
+- [ ] Implement Claude API client
+- [ ] Implement token counting
+- [ ] Add error handling and retries
+- [ ] Create mock client for testing
+- [ ] Add timeout configuration
+- [ ] Write unit tests with mocked API
+
+**Deliverable**: Can call LLM, get response with token counts
+
+### 2.3 Validator Service
+**Goal**: Validate LLM responses against challenge criteria
+
+- [ ] Create `app/services/validator.py`
+- [ ] Define `ValidationResult` model
+- [ ] Implement `test_cases` validation type
+- [ ] Implement `exact_match` validation type
+- [ ] Implement `pattern_match` validation type
+- [ ] Add validation error handling
+- [ ] Write comprehensive unit tests
+- [ ] Test with real challenge examples
+
+**Deliverable**: Can validate responses, return pass/fail with feedback
+
+### 2.4 Scoring Service
+**Goal**: Track token usage and calculate scores
+
+- [ ] Create `app/services/scoring.py`
+- [ ] Implement attempt recording
+- [ ] Implement score calculation
+- [ ] Implement score retrieval by user/challenge
+- [ ] Track cumulative tokens across attempts
+- [ ] Write unit tests
+- [ ] Test with database
+
+**Deliverable**: Can record attempts, calculate and retrieve scores
+
+---
+
+## Phase 3: API Endpoints
+
+### 3.1 Challenge API
+**Goal**: Endpoints for challenge operations
+
+- [ ] Create `app/api/__init__.py`
+- [ ] Create `app/api/challenges.py`
+- [ ] `GET /api/challenges` - List all challenges
+- [ ] `GET /api/challenges/{id}` - Get specific challenge
+- [ ] Add filtering by difficulty/type
+- [ ] Add request/response models (Pydantic)
+- [ ] Write integration tests
+- [ ] Test in container
+
+**Deliverable**: Can list and retrieve challenges via API
+
+### 3.2 Game API
+**Goal**: Endpoints for game session management
+
+- [ ] Create `app/api/game.py`
+- [ ] `POST /api/game/start` - Start new game session
+- [ ] `POST /api/game/submit` - Submit prompt attempt
+- [ ] `GET /api/game/status/{session}` - Get game state
+- [ ] Integrate LLM client, validator, scoring services
+- [ ] Handle errors gracefully
+- [ ] Write integration tests
+
+**Deliverable**: Can start game, submit prompts, get validation results
+
+### 3.3 Leaderboard API
+**Goal**: Endpoints for leaderboard views
+
+- [ ] Create `app/api/leaderboard.py`
+- [ ] `GET /api/leaderboard/global` - Global leaderboard
+- [ ] `GET /api/leaderboard/hole/{id}` - Per-hole leaderboard
+- [ ] `GET /api/leaderboard/session` - Session leaderboard
+- [ ] Implement ranking logic
+- [ ] Add pagination
+- [ ] Write integration tests
+
+**Deliverable**: Can retrieve leaderboards in all three views
+
+---
+
+## Phase 4: Frontend - Templates
+
+### 4.1 Base Template & Static Setup
+**Goal**: Set up Tailwind CSS and base template
+
+- [ ] Add Tailwind CSS to container build
+- [ ] Create `static/css/input.css` with Tailwind directives
+- [ ] Configure Tailwind build in docker-compose
+- [ ] Create `app/templates/base.html` - base template
+- [ ] Add static file serving in FastAPI
+- [ ] Test Tailwind classes render correctly
+- [ ] Add Alpine.js CDN link
+
+**Deliverable**: Base template with Tailwind and Alpine.js working
+
+### 4.2 Home/Lobby Page
+**Goal**: Landing page to start game
+
+- [ ] Create `app/templates/index.html`
+- [ ] Add welcome message
+- [ ] Add "Start Game" button
+- [ ] Style with Tailwind
+- [ ] Add route in main.py
+- [ ] Test in browser
+
+**Deliverable**: Can visit home page, see styled interface
+
+### 4.3 Game Interface Layout
+**Goal**: Main game page with split layout
+
+- [ ] Create `app/templates/game.html`
+- [ ] Implement two-column layout (problem + metrics)
+- [ ] Add problem statement section
+- [ ] Add chat/interaction section placeholder
+- [ ] Add metrics panel placeholder
+- [ ] Style with Tailwind
+- [ ] Make responsive
+
+**Deliverable**: Game page with proper layout structure
+
+---
+
+## Phase 5: Frontend - Interactivity
+
+### 5.1 Htmx Prompt Submission
+**Goal**: Submit prompts without page reload
+
+- [ ] Add htmx to base template
+- [ ] Create prompt input form
+- [ ] Add htmx attributes for AJAX submission
+- [ ] Create htmx response partial templates
+- [ ] Handle loading states
+- [ ] Display LLM responses
+- [ ] Show validation results
+
+**Deliverable**: Can submit prompts, see results without page reload
+
+### 5.2 Alpine.js Pills UI
+**Goal**: Context file pills for add/remove
+
+- [ ] Create Alpine.js component for pills
+- [ ] Display context files as pills
+- [ ] Add remove (X) functionality
+- [ ] Add pill styling with Tailwind
+- [ ] Include pill data in form submission
+- [ ] Test add/remove interaction
+
+**Deliverable**: Can add/remove context files via pill UI
+
+### 5.3 Metrics Panel
+**Goal**: Display real-time stats and leaderboard
+
+- [ ] Create metrics panel template component
+- [ ] Display current token count
+- [ ] Display attempt count
+- [ ] Display user rank
+- [ ] Add leaderboard view (top 10)
+- [ ] Use htmx for auto-refresh
+- [ ] Style with Tailwind
+
+**Deliverable**: Metrics update in real-time as game progresses
+
+---
+
+## Phase 6: Supporting Features
+
+### 6.1 Name Generator Service
+**Goal**: Auto-generate user names
+
+- [ ] Create `app/services/name_generator.py`
+- [ ] Create lists: colors, courses, club numbers
+- [ ] Implement name generation algorithm
+- [ ] Ensure uniqueness (check database)
+- [ ] Add inappropriate name filtering
+- [ ] Write unit tests
+- [ ] Integrate into game start
+
+**Deliverable**: New users get auto-generated names
+
+### 6.2 Session Management
+**Goal**: Track user sessions
+
+- [ ] Add session middleware to FastAPI
+- [ ] Store session data (in-memory for MVP)
+- [ ] Associate users with sessions
+- [ ] Handle session expiration
+- [ ] Add session cleanup
+- [ ] Test session lifecycle
+
+**Deliverable**: Sessions persist across requests
+
+### 6.3 Leaderboard Page
+**Goal**: Standalone leaderboard view
+
+- [ ] Create `app/templates/leaderboard.html`
+- [ ] Add toggle for three leaderboard types
+- [ ] Display rankings with styling
+- [ ] Highlight current user
+- [ ] Add route in main.py
+- [ ] Style with Tailwind
+
+**Deliverable**: Can view leaderboards in standalone page
+
+---
+
+## Phase 7: Polish & Testing
+
+### 7.1 Error Handling
+**Goal**: Graceful error handling throughout
+
+- [ ] Add global exception handlers
+- [ ] Create error templates (404, 500, etc.)
+- [ ] Add validation error messages
+- [ ] Handle LLM API failures gracefully
+- [ ] Add user-friendly error messages
+- [ ] Log errors appropriately
+
+**Deliverable**: Errors don't crash app, users see helpful messages
+
+### 7.2 Testing Suite
+**Goal**: Comprehensive test coverage
+
+- [ ] Organize tests: unit, integration, e2e
+- [ ] Achieve >80% coverage on services
+- [ ] Test all API endpoints
+- [ ] Test validation logic thoroughly
+- [ ] Create test fixtures and factories
+- [ ] Document how to run tests in container
+
+**Deliverable**: Full test suite passing, good coverage
+
+### 7.3 Documentation
+**Goal**: Complete developer and user documentation
+
+- [ ] Update README with setup instructions
+- [ ] Document API endpoints (auto-generated + examples)
+- [ ] Create local development guide
+- [ ] Document environment variables
+- [ ] Create troubleshooting guide
+- [ ] Add architecture diagrams
+
+**Deliverable**: New developers can get started easily
+
+---
+
+## Phase 8: Production Preparation
+
+### 8.1 Production Dockerfile
+**Goal**: Optimized container for production
+
+- [ ] Create multi-stage Dockerfile
+- [ ] Minimize image size
+- [ ] Run as non-root user
+- [ ] Health check endpoint
+- [ ] Production-ready uvicorn config
+- [ ] Document deployment
+
+**Deliverable**: Production-ready container image
+
+### 8.2 PostgreSQL Migration
+**Goal**: Switch from SQLite to PostgreSQL
+
+- [ ] Add PostgreSQL to docker-compose
+- [ ] Test Alembic migrations on PostgreSQL
+- [ ] Update connection pooling
+- [ ] Verify all queries work
+- [ ] Document PostgreSQL setup
+
+**Deliverable**: App works with PostgreSQL
+
+### 8.3 OpenShift Preparation
+**Goal**: Ready for OpenShift deployment
+
+- [ ] Create OpenShift manifests
+- [ ] Configure routes/ingress
+- [ ] Set up environment variables
+- [ ] Configure persistent volumes
+- [ ] Test deployment process
+- [ ] Document OpenShift deployment
+
+**Deliverable**: Can deploy to OpenShift
+
+---
+
+## Notes
+
+- **Flexibility**: Phases can be reordered based on priorities
+- **Testing**: Test each component before moving to next
+- **Documentation**: Update docs as we go
+- **Git**: Commit after each completed sub-task
+- **Containerization**: Always test in Docker, not just local Python
+- **ADRs**: Create ADR for any significant decisions made during development
+
+## Current Status
+
+**Last Updated**: 2026-09-09  
+**Current Phase**: Phase 0 - Container Foundation  
+**Next Step**: Create Dockerfile and docker-compose.yml

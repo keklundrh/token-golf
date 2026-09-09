@@ -48,14 +48,14 @@ We will use the following technology stack:
 - **Framework**: FastAPI (Python 3.11+)
 - **Database**: SQLite (dev) → PostgreSQL (prod)
 - **ORM**: SQLAlchemy 2.0
-- **Migrations**: Alembic
+- **Migrations**: Alembic (see ADR 004)
 - **Async Runtime**: uvicorn with asyncio
 
 ### Frontend
 - **Rendering**: Server-side with Jinja2 templates
 - **Interactivity**: htmx for AJAX
 - **Minimal JS**: Alpine.js (15kb) for component state
-- **Styling**: Modern CSS (framework TBD - likely Tailwind or Pico.css)
+- **Styling**: Tailwind CSS
 
 ### LLM Integration
 - **Development**: Anthropic Claude API (direct HTTP client)

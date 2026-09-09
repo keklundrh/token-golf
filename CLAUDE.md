@@ -21,6 +21,7 @@ Conference attendees at major tech conferences who need to learn how different d
 - Each iteration adds to their total token count
 - Players can retry after success (counts as additional strokes)
 - Winner has the lowest total token count across completed holes
+- **Tie-breaking**: If multiple players tie for first place, they compete in an additional challenge until a single winner emerges (repeat as needed)
 
 ### Challenge Structure
 - **Holes**: Individual challenges with specific tasks
@@ -66,7 +67,10 @@ Each challenge must have clear, verifiable correct answers:
   - Pill UI (add/remove elements)
   - Local form state
   - Toggle visibility
-- **Styling**: [TBD - modern CSS framework]
+- **Styling**: Tailwind CSS
+  - Utility-first approach
+  - Customizable design system
+  - Production-optimized builds
 
 #### Deployment
 - Docker containers for OpenShift compatibility

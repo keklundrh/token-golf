@@ -1,0 +1,48 @@
+# PLACEHOLDER - Medium Coding Challenge
+# TODO: Complete this challenge definition
+
+id: hole-003
+name: "[PLACEHOLDER] Medium Coding Task"
+difficulty: medium
+description: |
+  TODO: Write a medium-complexity coding task.
+
+  Example template:
+  - Multiple steps or edge cases
+  - Requires some reasoning
+  - Clear success criteria
+
+task_type: coding
+
+validation:
+  type: test_cases
+  language: python
+  criteria:
+    # TODO: Add comprehensive test cases
+    - name: "Basic case"
+      input:
+        param1: value1
+      expected_output: result1
+
+    - name: "Edge case 1"
+      input:
+        param1: edge_value
+      expected_output: edge_result
+
+system_prompt:
+  default: "You are a helpful Python programming assistant."
+  removable: false
+  editable: true
+
+parameters:
+  max_iterations: 15
+  time_limit_seconds: null
+  hints_available: 0
+
+metadata:
+  author: "Token Golf Team"
+  created_date: "2026-09-09"
+  tags: ["placeholder", "coding", "medium"]
+  estimated_tokens_expert: 400  # TODO: Update after testing
+  estimated_tokens_beginner: 1200  # TODO: Update after testing
+  estimated_difficulty: 4.0

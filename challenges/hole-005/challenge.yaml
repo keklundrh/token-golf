@@ -1,0 +1,59 @@
+# PLACEHOLDER - Easy Classification Challenge
+# TODO: Complete this challenge definition
+
+id: hole-005
+name: "[PLACEHOLDER] Classification Task"
+difficulty: easy
+description: |
+  TODO: Write a simple classification task.
+
+  Example template:
+  - Classify input into predefined categories
+  - Clear classification rules
+  - Simple, unambiguous cases
+
+task_type: classification
+
+validation:
+  type: exact_match
+  criteria:
+    expected_answer: "TODO: The correct classification"
+    case_sensitive: false
+    trim_whitespace: true
+
+# Alternative: multiple_choice validation
+# validation:
+#   type: multiple_choice
+#   criteria:
+#     correct_answer: "A"
+#     options:
+#       A: "Option A description"
+#       B: "Option B description"
+#       C: "Option C description"
+
+context_files:
+  # TODO: Add context file with item to classify
+  # - name: "item_to_classify.txt"
+  #   path: "./challenges/hole-005/assets/item_to_classify.txt"
+  #   description: "Item requiring classification"
+  #   removable: false
+  #   editable: false
+  #   default_included: true
+
+system_prompt:
+  default: "You are a helpful classification assistant."
+  removable: false
+  editable: true
+
+parameters:
+  max_iterations: 8
+  time_limit_seconds: null
+  hints_available: 0
+
+metadata:
+  author: "Token Golf Team"
+  created_date: "2026-09-09"
+  tags: ["placeholder", "classification", "easy"]
+  estimated_tokens_expert: 100  # TODO: Update after testing
+  estimated_tokens_beginner: 400  # TODO: Update after testing
+  estimated_difficulty: 1.5

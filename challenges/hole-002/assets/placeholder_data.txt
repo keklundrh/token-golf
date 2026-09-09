@@ -1,0 +1,11 @@
+# PLACEHOLDER DATA FILE
+# This is an example context file for hole-002 (extraction challenge)
+# Replace with actual data when completing the challenge
+
+Example data that might need to be extracted:
+- Email addresses
+- Phone numbers
+- Dates
+- Specific values from structured/unstructured text
+
+TODO: Add real data here that matches the challenge task.
