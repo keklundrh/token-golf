@@ -171,28 +171,62 @@ After Phase 0 is complete, we will proceed through phases sequentially:
 2. **Development Process**: Gitflow on dev branch
 3. **Documentation**: All decisions in markdown/ADRs
 4. **Challenge Format**: YAML files in git repository (with placeholders to fill later)
-5. **Scoring**: All tokens count (input + output + system)
-6. **User Identity**: Auto-generated names (Color-Course-Club)
+5. **Scoring**: All tokens count (input + output + system tokens treated as input)
+6. **User Identity**: Auto-generated names (Color-Course-Club), new username each session
 7. **CSS Framework**: Tailwind CSS
 8. **Tie-Breaking**: If tied for first, run another challenge until there's a winner (repeat as needed)
 9. **Database Migrations**: Alembic from the start (ADR 004)
+10. **Session Structure**: Session = Competition = Game on a course (collection of holes)
+11. **Session Timeout**: 3 hours from creation (configurable), then marked DNF
+12. **Edit Persistence**: User modifications persist across attempts within same hole
+13. **Storage Granularity**: Per user per session per attempt
+14. **LLM Model**: Haiku only for MVP (hardcoded)
+15. **Validation Types (MVP)**: Test cases and exact match only
+16. **Leaderboards**: Three views - Global (all sessions), Per-Hole, Session (current)
+17. **LLM Error Handling**: "Weather delay" - clear tokens for affected user/hole only
+18. **Multiple Sessions**: Users can participate in multiple concurrent sessions
+19. **No Offline Mode**: Requires internet connection for MVP
+
+### MVP Exclusions
+- Skills/agents (predefined skill files)
+- Schema validation file (challenges/schema.yaml)
+- Model selection by users
+- Time limits per hole
+- Hints system
+- Persistent authentication with passwords
+- Semantic similarity validation
+- Custom validation scripts
+- Model parameters modification UI
+- Offline mode
+- Pill drag-to-reorder functionality
+- Real-time WebSocket updates
 
 ### Pending Decisions
-1. **Validation**: Which validation types to implement first
-2. **Challenge Set**: How many challenges for MVP
-3. **Monitoring**: Which tools for production observability
-4. **Rate Limiting**: Strategy for API rate limiting
-5. **Timeline**: When is the first conference demo?
+1. **Challenge Set**: How many challenges for MVP (3-5 planned)
+2. **Monitoring**: Which tools for production observability
+3. **Rate Limiting**: Strategy for API rate limiting
+4. **Timeline**: When is the first conference demo?
 
 ## Current Challenges & Questions
 
-### Open Questions
+### Open Questions (Most Resolved)
 1. ~~How to handle tie-breaking in leaderboard?~~ **RESOLVED**: Tied players compete in another challenge until winner emerges
-2. Should we support challenge "difficulty multipliers"?
-3. Do we need a "practice mode" vs "competition mode"?
-4. How to prevent cheating (users sharing solutions)?
-5. Should we track and display token costs ($)?
-6. What is the target date for first conference demo?
+2. ~~Edit persistence within a hole?~~ **RESOLVED**: Yes, edits persist across attempts within same hole
+3. ~~Session timeout?~~ **RESOLVED**: 3 hours from creation (configurable), then marked DNF
+4. ~~Multiple concurrent sessions?~~ **RESOLVED**: Yes, users can join multiple sessions
+5. ~~Authentication?~~ **RESOLVED**: New username each session for MVP, no passwords
+6. ~~Model selection?~~ **RESOLVED**: Haiku only for MVP, hardcoded
+7. ~~Leaderboard views?~~ **RESOLVED**: Three views - Global, Per-Hole, Session
+8. ~~LLM error handling?~~ **RESOLVED**: "Weather delay" - clear tokens for affected user/hole only
+9. ~~Validation types for MVP?~~ **RESOLVED**: Test cases and exact match only
+10. ~~Storage granularity?~~ **RESOLVED**: Per user per session per attempt
+
+### Still Open
+1. Should we support challenge "difficulty multipliers"? (Future consideration)
+2. Do we need a "practice mode" vs "competition mode"? (Not for MVP)
+3. How to prevent cheating (users sharing solutions)? (Future consideration)
+4. Should we track and display token costs ($)? (Not for MVP)
+5. What is the target date for first conference demo? (TBD)
 
 ### Known Risks
 1. **LLM API latency** - Mitigate with async, loading indicators

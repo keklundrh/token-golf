@@ -16,32 +16,43 @@ Conference attendees at major tech conferences who need to learn how different d
 ## Core Game Mechanics
 
 ### Scoring System
-- **All tokens count**: input + output + system prompts + failed attempts
+- **All tokens count**: input + output + system prompts (treated as input tokens) + failed attempts
 - Players iterate on their prompts until they achieve the correct answer
 - Each iteration adds to their total token count
-- Players can retry after success (counts as additional strokes)
+- Players can retry after success with no limit (counts as additional strokes)
 - Winner has the lowest total token count across completed holes
-- **Tie-breaking**: If multiple players tie for first place, they compete in an additional challenge until a single winner emerges (repeat as needed)
+- **Tie-breaking**: If multiple players tie for first place, they compete in an additional challenge until a single winner emerges (repeat as needed) - placeholder for tie-breaking challenge to be created later
 
 ### Challenge Structure
 - **Holes**: Individual challenges with specific tasks
-- **Rounds**: Competitions with N holes
-- **Difficulty Levels**: Configurable per hole and per competition
+- **Sessions**: A "game" on a specific course (collection of holes). Think of it as one round of golf.
+- **Courses**: Predefined collections of holes (like golf courses) that define which challenges are included in a session
+- **Difficulty Levels**: Configurable per hole and per course
 - **Task Types**: coding, data extraction, question answering, text transformation
+- Holes are ordered easy to hard within a session
+- Players play independently and scores are aggregated into a common session for the course
+
+### Session Management
+- **Session Timeout**: 3 hours from session creation (configurable in config file)
+- **Timeout Behavior**: Sessions that timeout are marked "DNF" (Did Not Finish)
+- **Multiple Sessions**: Users can participate in multiple concurrent sessions
+- **Session Resumption**: Players can pause mid-hole, close browser, and return within 3 hours to resume
+- **Username**: Each time a player starts a new session, they get a new auto-generated username (no persistent authentication for MVP)
 
 ### User Interaction Elements
 Players can modify these during gameplay (pill UI with X buttons):
 - Pre-loaded context files (can be included/excluded/edited)
-- System prompts (modifiable)
-- Skills/agents (generic LLM concepts/files)
-- Model parameters (if OpenShift AI supports it)
+- System prompts (can be modified or removed)
+- **Note**: Skills/agents and model parameters are NOT in MVP (future features)
+
+**Edit Persistence**: Changes to context files and system prompts persist across attempts within the same hole. If a user removes a context file on attempt 1, it remains removed on attempt 2 of the same hole. User modifications are stored per user per session per attempt.
 
 ### Validation
-Each challenge must have clear, verifiable correct answers:
-- Test cases (for coding)
-- Exact string matching
-- Semantic similarity checks
-- Custom validation scripts
+Each challenge must have clear, verifiable correct answers (MVP only includes first two):
+- Test cases (for coding) - **MVP**
+- Exact string matching - **MVP**
+- Semantic similarity checks - **NOT in MVP**
+- Custom validation scripts - **NOT in MVP**
 
 ## Technical Architecture
 
@@ -118,7 +129,9 @@ token-golf/
 │   ├── hole-001/
 │   │   ├── challenge.yaml   # Challenge definition
 │   │   └── assets/          # Context files, test data
-│   └── schema.yaml          # YAML schema definition
+│   ├── hole-002/
+│   │   └── ...
+│   └── courses.yaml         # Course definitions (which holes belong to which course)
 ├── docs/
 │   ├── ADRs/                # Architecture Decision Records
 │   │   ├── 000-use-adrs.md
@@ -156,7 +169,8 @@ Auto-generated usernames ensure professional, family-friendly identifiers:
   - Courses: Famous golf course names (Augusta, Pebblebeach, StAndrews, etc.)
   - Clubs: 1-14 (standard golf club numbers)
 - Validation: Filter inappropriate combinations
-- Persistence: Names tied to sessions, stored in database
+- **MVP Behavior**: New username generated each time a player starts a session (no persistent authentication)
+- **Future**: Password-based authentication to reclaim usernames across sessions (not in MVP)
 
 ## UI Layout Specification
 
@@ -182,7 +196,7 @@ Auto-generated usernames ensure professional, family-friendly identifiers:
 │  │ Context Pills:        │  │                            │
 │  │ [context.csv X]       │  │                            │
 │  │ [system.txt X]        │  │                            │
-│  │ [skill-1 X]          │  │                            │
+│  │                       │  │                            │
 │  └───────────────────────┘  │                            │
 │                             │                            │
 └─────────────────────────────┴────────────────────────────┘
@@ -199,28 +213,35 @@ Auto-generated usernames ensure professional, family-friendly identifiers:
 
 2. **Leaderboard Display**
    - Toggle: Global / Per-Hole / Session
+     - **Global**: Scores across all sessions in current deployment (historically)
+     - **Per-Hole**: Best scores for individual challenges across all sessions
+     - **Session**: Scores for current session only
    - Top 10 players
    - Highlight current user
-   - Real-time updates (in competition mode)
+   - Shows current leader's name and score for each challenge/hole
+   - Real-time updates (future enhancement, not MVP)
 
 3. **Comparison Data**
    - User's last attempt vs current
    - User's score vs average
    - Improvement indicators
+   - User's current place in leaderboard
 
 4. **Statistical Distribution**
-   - Average tokens for this hole
+   - Displayed in top right corner alongside user's place
+   - Shows current leader's name and score for each challenge/hole
+   - Average tokens for this hole (across all sessions)
    - Median tokens
    - Best score
    - Number of completions
-   - Histogram/distribution graph
+   - Histogram/distribution graph (calculated real-time or cached as needed)
 
 ### Pills UI
 - Alpine.js driven
 - Click X to remove element
 - Click pill to edit/configure (modal or inline)
 - Visual indication of active/inactive state
-- Drag to reorder (future enhancement)
+- **Note**: Drag-to-reorder is NOT in MVP (future enhancement)
 
 ## Challenge Format
 
@@ -238,7 +259,7 @@ description: |
 task_type: coding  # coding, extraction, question_answering, generation
 
 validation:
-  type: test_cases  # test_cases, exact_match, semantic_similarity, custom_script
+  type: test_cases  # MVP: test_cases, exact_match only
   criteria:
     - input: [1, 2, 3]
       expected_output: 6
@@ -302,14 +323,36 @@ See `docs/CHALLENGE_FORMAT.md` for complete specification.
 
 ## Database Schema (Initial)
 
+### Sessions Table
+```sql
+CREATE TABLE sessions (
+    id TEXT PRIMARY KEY,              -- UUID or similar
+    course_id TEXT NOT NULL,          -- Which set of holes (e.g., "beginner-course")
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    timeout_hours INTEGER DEFAULT 3,  -- Configurable, default 3 hours
+    status TEXT DEFAULT 'active',     -- 'active', 'completed', 'dnf'
+    expires_at TIMESTAMP              -- created_at + timeout_hours
+);
+```
+
 ### Users Table
 ```sql
 CREATE TABLE users (
     id INTEGER PRIMARY KEY,
     username TEXT UNIQUE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    session_id TEXT,
     is_active BOOLEAN DEFAULT TRUE
+);
+```
+
+### Session Participants Table
+```sql
+CREATE TABLE session_participants (
+    id INTEGER PRIMARY KEY,
+    session_id TEXT REFERENCES sessions(id),
+    user_id INTEGER REFERENCES users(id),
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(session_id, user_id)
 );
 ```
 
@@ -330,9 +373,12 @@ CREATE TABLE challenges (
 CREATE TABLE attempts (
     id INTEGER PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
+    session_id TEXT REFERENCES sessions(id),
     challenge_id TEXT REFERENCES challenges(id),
     attempt_number INTEGER,
     prompt TEXT,
+    system_prompt TEXT,               -- User's system prompt for this attempt
+    context_files JSON,                -- Which context files were active
     response TEXT,
     input_tokens INTEGER,
     output_tokens INTEGER,
@@ -342,25 +388,43 @@ CREATE TABLE attempts (
 );
 ```
 
+**Note on storage granularity**: System prompts, context files, and other user modifications are stored per user per session per attempt in the attempts table.
+
 ### Scores Table
 ```sql
 CREATE TABLE scores (
     id INTEGER PRIMARY KEY,
     user_id INTEGER REFERENCES users(id),
+    session_id TEXT REFERENCES sessions(id),
     challenge_id TEXT REFERENCES challenges(id),
     total_attempts INTEGER,
-    total_tokens INTEGER,
+    total_tokens INTEGER,              -- Running total for this hole
     completed_at TIMESTAMP,
-    session_id TEXT
+    UNIQUE(user_id, session_id, challenge_id)
 );
 ```
 
 ## LLM Integration
 
 ### Token Counting
-- Use LLM provider's token counting API
-- Track separately: input tokens, output tokens, system tokens
+- Use LLM provider's token counting API (for MVP, may use MLFlow for production)
+- Track separately: input tokens, output tokens
+- System tokens are treated as input tokens
 - Store all token counts in database for analysis
+- Tokens accumulate: running counter per hole and per session
+
+### Model Selection
+- **MVP**: Haiku only (hardcoded, no user choice)
+- **Future**: Challenge files will have a flag to indicate which models are allowed
+- **After MVP**: Players can choose models based on challenge configuration
+
+### Error Handling
+- **LLM API Errors**: Treated as "weather delay"
+  - Only the user who encountered the error is affected
+  - Clear the token count for that specific hole for that user
+  - User starts the hole over
+  - Completed holes remain untouched
+  - Other users' progress is not affected
 
 ### API Abstraction
 Create service layer to abstract LLM provider:
@@ -429,15 +493,57 @@ python scripts/new_challenge.py --id hole-042 --name "Challenge Name"
 python scripts/validate_challenges.py
 ```
 
+## MVP Scope
+
+### Features INCLUDED in MVP
+- Test cases validation (for coding challenges)
+- Exact match validation (for text responses)
+- Auto-generated usernames (new username each session)
+- Haiku model only (hardcoded)
+- Three leaderboard views (Global, Per-Hole, Session)
+- Session timeout (3 hours, configurable)
+- Context file management (add/remove/edit via pills UI)
+- System prompt editing
+- Token counting and scoring
+- SQLite database
+- Claude API backend
+
+### Features EXCLUDED from MVP
+- Skills/agents (predefined skill files)
+- Schema validation file (challenges/schema.yaml - not needed)
+- Model selection by users (Haiku only)
+- Time limits per hole
+- Hints system
+- Persistent authentication with passwords
+- Semantic similarity validation
+- Custom validation scripts
+- Model parameters modification UI
+- Offline mode
+- Pill drag-to-reorder functionality
+- Real-time WebSocket updates
+
+### Config File Requirements
+- Session timeout duration (default 3 hours)
+- Backend LLM provider configuration
+- Database connection settings
+
 ## Key Design Decisions
 
 1. **Server-Side Rendering**: Chosen for simplicity, reduced JS complexity, better SEO
 2. **SQLite First**: Start simple, migrate to PostgreSQL via ADR when scaling needs are clear
 3. **YAML Challenges**: Version-controlled, human-readable, easy to edit
 4. **All Tokens Count**: Most realistic measure of efficiency, teaches true optimization
-5. **Auto-Generated Names**: Removes authentication friction for demos, ensures appropriate names
+5. **Auto-Generated Names**: Removes authentication friction for demos, ensures appropriate names (new username each session for MVP)
 6. **Pill UI**: Clear visual for which context elements are active
-7. **Three Leaderboards**: Different competitive contexts (global achievement vs current competition)
+7. **Three Leaderboards**: Different competitive contexts:
+   - **Global**: All sessions in current deployment
+   - **Per-Hole**: Individual challenge scores across all sessions
+   - **Session**: Current session only
+8. **Edit Persistence**: User modifications persist across attempts within same hole
+9. **Storage Granularity**: Per user per session per attempt
+10. **Session = Competition = Game**: A session is a game on a specific course (collection of holes)
+11. **LLM Error Handling**: Treat as "weather delay" - affected user clears tokens for that hole only
+12. **No Offline Mode**: Requires internet connection for MVP
 
 ## Important Notes for AI Assistants
 
@@ -450,14 +556,19 @@ python scripts/validate_challenges.py
 - **Validation Reliability**: Answer validation must be deterministic and fair
 - **Conference Ready**: UI/UX must work well for live demos with large audiences
 
-## Questions to Address
+## Clarified Design Questions (Resolved)
 
-When implementing features, consider:
-1. How does this scale to 100 concurrent users?
-2. Is the token counting accurate and auditable?
-3. Can this be easily modified via YAML/config?
-4. Does this work offline (for conference WiFi issues)?
-5. Is the validation fair and deterministic?
-6. How do we handle ties in scoring?
-7. What happens if the LLM API is down?
-8. Can challenge authors test their challenges easily?
+1. **How does this scale to 100 concurrent users?** - Design with future scalability in mind, start simple with SQLite
+2. **Is the token counting accurate and auditable?** - Yes, all tokens stored per attempt in database
+3. **Can this be easily modified via YAML/config?** - Yes, challenges in YAML, session timeout in config file
+4. **Does this work offline?** - No, not for MVP (requires LLM API connection)
+5. **Is the validation fair and deterministic?** - Yes, test cases and exact match only for MVP
+6. **How do we handle ties in scoring?** - Tied players compete in additional challenge (see ADR 003)
+7. **What happens if the LLM API is down?** - "Weather delay" - affected user clears tokens for that hole
+8. **Can challenge authors test their challenges easily?** - Yes, validation scripts planned
+9. **Edit persistence within a hole?** - Yes, edits persist across attempts within same hole
+10. **Session timeout?** - 3 hours from creation (configurable), then marked DNF
+11. **Multiple concurrent sessions?** - Yes, users can join multiple sessions
+12. **Authentication?** - New username each session for MVP, no passwords
+13. **Model selection?** - Haiku only for MVP, hardcoded
+14. **Leaderboard views?** - Three: Global (all sessions), Per-Hole (all sessions), Session (current only)

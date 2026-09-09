@@ -30,9 +30,9 @@ Players can add/remove:
 ## 🏆 Leaderboards
 
 Three leaderboard views:
-1. **Global**: Total score across all completed holes
-2. **Per-Hole**: Best scores for individual challenges
-3. **Session**: Current competition/event rankings
+1. **Global**: Scores across all sessions in current deployment
+2. **Per-Hole**: Best scores for individual challenges across all sessions
+3. **Session**: Current session/competition rankings only
 
 ## 🎨 UI Layout
 
@@ -127,25 +127,45 @@ This project uses **gitflow**:
 ## 🏗️ Roadmap
 
 ### Phase 1: MVP (Current)
-- [ ] Single-player mode
-- [ ] 3-5 basic challenges
-- [ ] Simple leaderboard
+**Included:**
+- [x] Session management (sessions = games on courses)
+- [ ] 3-5 basic challenges (test cases + exact match validation)
+- [ ] Three leaderboard views (Global, Per-Hole, Session)
 - [ ] Local SQLite storage
-- [ ] Claude API backend
+- [ ] Claude API backend (Haiku model)
+- [ ] Auto-generated usernames (new each session)
+- [ ] Context file & system prompt editing (pills UI)
+- [ ] Session timeout (3 hours, configurable)
+- [ ] Edit persistence within holes
 
-### Phase 2: Multi-Player
-- [ ] Real-time competition mode
-- [ ] Session management
-- [ ] WebSocket updates
-- [ ] Name generation system
+**Excluded from MVP:**
+- Skills/agents
+- Model selection
+- Time limits per hole
+- Hints system
+- Persistent authentication
+- Semantic similarity validation
+- Custom validation scripts
+- Offline mode
+- Real-time WebSocket updates
+
+### Phase 2: Advanced Features
+- [ ] Skills/agents system
+- [ ] Additional validation types (semantic, custom scripts)
+- [ ] Model selection per challenge
+- [ ] Hints system (costs tokens)
+- [ ] Persistent authentication (password-based)
+- [ ] Real-time WebSocket updates
+- [ ] Time limits and max iterations
 
 ### Phase 3: Production
 - [ ] OpenShift deployment
 - [ ] OpenShift AI integration
 - [ ] PostgreSQL migration
+- [ ] MLFlow integration (token counting)
 - [ ] High availability
-- [ ] Concurrency handling
-- [ ] Advanced metrics
+- [ ] Advanced metrics and analytics
+- [ ] Multi-region support
 
 ## 🤝 Contributing
 
