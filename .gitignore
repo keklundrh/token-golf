@@ -1,0 +1,132 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual Environments
+venv/
+ENV/
+env/
+.venv
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.log
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+token_golf.db
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Docker
+docker-compose.override.yml
+
+# Temporary Files
+*.tmp
+*.temp
+.tmp/
+.temp/
+
+# Session Data
+sessions/
+
+# User Uploads (if any)
+uploads/
+
+# Static file builds (if we add a build step later)
+static/dist/
+static/.build/
+
+# Challenge test outputs
+challenges/*/test_output/
+
+# Documentation builds
+docs/_build/
+site/
+
+# Alembic (when we add it)
+alembic/versions/*.pyc
+
+# MacOS
+*.swp
+*.swo
+*~
+
+# IDEs
+*.sublime-project
+*.sublime-workspace
+
+# Backup files
+*.bak
+*.backup
+
+# Lock files we don't want to commit (if any)
+# poetry.lock  # Uncomment if not using poetry
+
+# Local configuration overrides
+config.local.py
+settings.local.json
