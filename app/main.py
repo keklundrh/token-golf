@@ -1,17 +1,25 @@
 """
 Token Golf - FastAPI Application Entry Point
 
-This is a minimal FastAPI application for Phase 0.
-Full functionality will be added in Phase 1.
+Phase 0: Minimal app with health check
+Phase 1.2: Configuration management integrated
 """
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app.config import get_settings
+
+# Load settings
+settings = get_settings()
+
 app = FastAPI(
     title="Token Golf",
     description="AI Token Optimization Game - Teaching token efficiency through competition",
     version="0.1.0",
+    debug=settings.debug,
+    docs_url="/docs" if settings.enable_docs else None,
+    redoc_url="/redoc" if settings.enable_docs else None,
 )
 
 
@@ -33,6 +41,8 @@ async def health_check():
             "status": "healthy",
             "service": "token-golf",
             "version": "0.1.0",
+            "environment": settings.env,
+            "database": "sqlite" if settings.using_sqlite else "postgresql",
         },
         status_code=200,
     )
