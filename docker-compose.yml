@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: token-golf-web
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount source code for hot reload
+      - ./app:/app/app
+      - ./challenges:/app/challenges
+      - ./static:/app/static
+      - ./tests:/app/tests
+      # Mount data directory for SQLite database
+      - ./data:/app/data
+    environment:
+      # Load from .env file
+      - ENV=${ENV:-development}
+      - DATABASE_URL=${DATABASE_URL:-sqlite+aiosqlite:///./data/token_golf.db}
+      - CLAUDE_API_KEY=${CLAUDE_API_KEY}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - SESSION_TIMEOUT_HOURS=${SESSION_TIMEOUT_HOURS:-3}
+    env_file:
+      - .env
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # depends_on:
+    #   - postgres  # Commented out for SQLite development; uncomment when using PostgreSQL profile
+    networks:
+      - token-golf-network
+    restart: unless-stopped
+
+  # PostgreSQL for production-like testing
+  # (Can be disabled for MVP development using SQLite)
+  postgres:
+    image: postgres:16-alpine
+    container_name: token-golf-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-token_golf}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - token-golf-network
+    restart: unless-stopped
+    profiles:
+      - postgres
+
+networks:
+  token-golf-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

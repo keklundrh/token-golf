@@ -4,8 +4,10 @@
 
 ## Current Phase
 
-**Phase**: Initial Documentation & Planning  
+**Phase**: Phase 0 - Container Foundation  
 **Status**: ✅ Complete
+
+**Previous Phase**: Initial Documentation & Planning - ✅ Complete
 
 ## What's Been Done
 
@@ -65,22 +67,50 @@
 - ✅ Basic directory structure documented
 - ✅ Development workflow defined (gitflow on dev branch)
 
+## Phase 0: Container Foundation - ✅ COMPLETE
+
+**Completed**: 2026-09-09
+
+### What Was Built
+
+1. ✅ Created `Dockerfile` for development (multi-stage, non-root user)
+2. ✅ Created `docker-compose.yml` for local development
+3. ✅ Created `requirements.txt` with all dependencies
+4. ✅ Created `.env.example` template with all configuration options
+5. ✅ Created `.env` for local development
+6. ✅ Created `.dockerignore` for optimized builds
+7. ✅ Created minimal FastAPI app (`app/main.py`) with health check
+8. ✅ Created `QUICKSTART.md` with setup instructions
+9. ✅ Verified container builds successfully with Podman
+10. ✅ Verified container runs and endpoints respond
+11. ✅ Documented decision to use Podman (ADR 006)
+12. ✅ Hot reload confirmed working
+
+### Verification Results
+
+```bash
+# Container status
+CONTAINER ID  IMAGE                      COMMAND               CREATED        STATUS        PORTS                   NAMES
+41d38b5e2e63  localhost/golf_web:latest  uvicorn app.main:...  8 seconds ago  Up 8 seconds  0.0.0.0:8000->8000/tcp  token-golf-web
+
+# Health check
+$ curl http://localhost:8000/health
+{"status":"healthy","service":"token-golf","version":"0.1.0"}
+
+# Root endpoint
+$ curl http://localhost:8000/
+{"message":"Welcome to Token Golf!","version":"0.1.0","status":"Phase 0 - Container Foundation Complete"}
+```
+
 ## What's Next
 
-### Development Approach
+### Current Phase: Phase 1 - Foundation Components
 
-**Strategy**: Component-by-component incremental development (containerized from the start)
-
-See [docs/DEVELOPMENT_PHASES.md](docs/DEVELOPMENT_PHASES.md) for complete phase breakdown.
-
-### Current Phase: Phase 0 - Container Foundation
-
-**Next Steps**:
-1. Create `Dockerfile` for development
-2. Create `docker-compose.yml` for local development
-3. Create `requirements.txt` with initial dependencies
-4. Create `.env.example` template
-5. Verify container builds and runs
+**Next Steps** (see [docs/DEVELOPMENT_PHASES.md](docs/DEVELOPMENT_PHASES.md)):
+1. Create database models (User, Challenge, Attempt, Score, Session)
+2. Set up Alembic for database migrations
+3. Create configuration management (config.py with Pydantic Settings)
+4. Verify migrations work in container
 
 After Phase 0 is complete, we will proceed through phases sequentially:
 - **Phase 1**: Foundation (FastAPI, config, models, Alembic)
@@ -186,6 +216,7 @@ After Phase 0 is complete, we will proceed through phases sequentially:
 17. **LLM Error Handling**: "Weather delay" - clear tokens for affected user/hole only
 18. **Multiple Sessions**: Users can participate in multiple concurrent sessions
 19. **No Offline Mode**: Requires internet connection for MVP
+20. **Containerization**: Use Podman (not Docker) for all container operations (ADR 006)
 
 ### MVP Exclusions
 - Skills/agents (predefined skill files)
