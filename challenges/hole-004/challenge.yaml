@@ -21,14 +21,14 @@ validation:
     similarity_threshold: 0.85
     model: "text-embedding-3-small"
 
-context_files:
-  # TODO: Add context files that contain information needed
-  # - name: "document1.txt"
-  #   path: "./challenges/hole-004/assets/document1.txt"
-  #   description: "Primary source document"
-  #   removable: false
-  #   editable: false
-  #   default_included: true
+# context_files:
+#   # TODO: Add context files that contain information needed
+#   # - name: "document1.txt"
+#   #   path: "./challenges/hole-004/assets/document1.txt"
+#   #   description: "Primary source document"
+#   #   removable: false
+#   #   editable: false
+#   #   default_included: true
 
 system_prompt:
   default: "You are a helpful assistant that analyzes documents and answers questions."

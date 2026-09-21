@@ -5,6 +5,8 @@ Phase 0: Minimal app with health check
 Phase 1.2: Configuration management integrated
 Phase 2.1: Challenge loader service integrated
 Phase 3.1: Challenge API endpoints
+Phase 3.2: Game API endpoints
+Phase 3.3: Leaderboard API endpoints
 """
 
 import logging
@@ -14,9 +16,9 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
-from app.api import challenges_router
+from app.api import challenges_router, game_router, leaderboard_router
 from app.config import get_settings
-from app.database import async_session_factory, close_db
+from app.database import async_session_factory, close_db, init_db
 from app.services import ChallengeLoaderService
 
 # Load settings
@@ -40,6 +42,8 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Token Golf starting up...")
 
+    # Create tables if needed (dev convenience; use Alembic in production)
+    await init_db()
     # Preload challenges if configured
     if settings.preload_challenges:
         logger.info("Preloading challenges...")
@@ -79,6 +83,8 @@ app = FastAPI(
 
 # Include API routers
 app.include_router(challenges_router)
+app.include_router(game_router)
+app.include_router(leaderboard_router)
 
 
 @app.get("/")
@@ -87,7 +93,7 @@ async def root():
     return {
         "message": "Welcome to Token Golf!",
         "version": "0.1.0",
-        "status": "Phase 3.1 - Challenge API Complete",
+        "status": "Phase 3 Complete - Full REST API Operational",
     }
 
 

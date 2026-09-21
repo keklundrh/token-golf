@@ -9,11 +9,13 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import desc, func, select
+from sqlalchemy import Integer, desc, func, select
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.attempt import Attempt
 from app.models.score import Score
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,9 @@ class ScoringService:
             db_session: SQLAlchemy async database session
         """
         self.db = db_session
+        # Tracks (user, session, challenge) -> completed status within this
+        # service instance, so completion logging fires only on transition.
+        self._was_completed: dict[tuple, bool] = {}
 
     async def record_attempt(
         self,
@@ -189,33 +194,20 @@ class ScoringService:
             tokens_to_add: Tokens to add to total
             is_correct: Whether this attempt was correct
 
-        Returns:
             Updated or created Score object
         """
-        # Try to get existing score
-        stmt = select(Score).where(
-            Score.user_id == user_id,
-            Score.session_id == session_id,
-            Score.challenge_id == challenge_id,
-        )
-        result = await self.db.execute(stmt)
-        score = result.scalar_one_or_none()
-
-        if score:
-            # Update existing score
-            score.total_attempts += 1
-            score.total_tokens += tokens_to_add
-
-            # Mark completion on first correct attempt
-            if is_correct and score.completed_at is None:
-                score.completed_at = datetime.utcnow()
-                logger.info(
-                    f"User {user_id} completed challenge {challenge_id} "
-                    f"in session {session_id} with {score.total_tokens} tokens"
-                )
-        else:
-            # Create new score
-            score = Score(
+        # Atomic increment (no read-modify-write race); insert row if missing.
+        values = {
+            "total_attempts": Score.total_attempts + 1,
+            "total_tokens": Score.total_tokens + tokens_to_add,
+        }
+        if is_correct:
+            values["completed_at"] = func.coalesce(
+                Score.completed_at, datetime.utcnow()
+            )
+        stmt = (
+            sqlite_insert(Score)
+            .values(
                 user_id=user_id,
                 session_id=session_id,
                 challenge_id=challenge_id,
@@ -223,13 +215,32 @@ class ScoringService:
                 total_tokens=tokens_to_add,
                 completed_at=datetime.utcnow() if is_correct else None,
             )
-            self.db.add(score)
+            .on_conflict_do_update(
+                index_elements=["user_id", "session_id", "challenge_id"],
+                set_=values,
+            )
+        )
+        await self.db.execute(stmt)
 
-            if is_correct:
-                logger.info(
-                    f"User {user_id} completed challenge {challenge_id} "
-                    f"on first attempt with {tokens_to_add} tokens"
-                )
+        # Re-fetch the upserted row to return it
+        stmt = select(Score).where(
+            Score.user_id == user_id,
+            Score.session_id == session_id,
+            Score.challenge_id == challenge_id,
+        )
+        result = await self.db.execute(stmt)
+        score = result.scalar_one()
+
+        if is_correct and score.completed_at is not None and not self._was_completed.get(
+            (user_id, session_id, challenge_id)
+        ):
+            logger.info(
+                f"User {user_id} completed challenge {challenge_id} "
+                f"in session {session_id} with {score.total_tokens} tokens"
+            )
+        self._was_completed[(user_id, session_id, challenge_id)] = (
+            score.completed_at is not None
+        )
 
         return score
 
@@ -334,21 +345,24 @@ class ScoringService:
             limit: Max number of entries to return
 
         Returns:
-            List of dicts with user_id, username, total_tokens, completed_count
+            List of dicts with user_id, username, total_tokens,
+            completed_challenges, total_attempts.
             Ordered by total_tokens (ascending)
         """
-        # Aggregate scores per user in session
+        # Aggregate scores per user in session, joined to usernames
         stmt = (
             select(
                 Score.user_id,
+                User.username,
                 func.sum(Score.total_tokens).label("total_tokens"),
-                func.count(Score.id).label("challenges_attempted"),
+                func.count(Score.id).label("total_attempts"),
                 func.sum(
                     func.cast(Score.completed_at.is_not(None), Integer)
-                ).label("completed_count"),
+                ).label("completed_challenges"),
             )
+            .join(User, User.id == Score.user_id)
             .where(Score.session_id == session_id)
-            .group_by(Score.user_id)
+            .group_by(Score.user_id, User.username)
             .order_by(func.sum(Score.total_tokens).asc())
             .limit(limit)
         )
@@ -356,13 +370,13 @@ class ScoringService:
         result = await self.db.execute(stmt)
         rows = result.all()
 
-        # Convert to list of dicts
         return [
             {
                 "user_id": row.user_id,
+                "username": row.username,
                 "total_tokens": row.total_tokens or 0,
-                "challenges_attempted": row.challenges_attempted or 0,
-                "completed_count": row.completed_count or 0,
+                "total_attempts": row.total_attempts or 0,
+                "completed_challenges": row.completed_challenges or 0,
             }
             for row in rows
         ]
@@ -380,20 +394,23 @@ class ScoringService:
             limit: Max number of entries to return
 
         Returns:
-            List of dicts with user_id, total_tokens, completed_count
+            List of dicts with user_id, username, total_tokens,
+            completed_challenges, total_attempts.
             Ordered by total_tokens (ascending)
         """
-        # Aggregate all scores per user
+        # Aggregate all scores per user, joined to usernames
         stmt = (
             select(
                 Score.user_id,
+                User.username,
                 func.sum(Score.total_tokens).label("total_tokens"),
-                func.count(Score.id).label("challenges_attempted"),
+                func.count(Score.id).label("total_attempts"),
                 func.sum(
                     func.cast(Score.completed_at.is_not(None), Integer)
-                ).label("completed_count"),
+                ).label("completed_challenges"),
             )
-            .group_by(Score.user_id)
+            .join(User, User.id == Score.user_id)
+            .group_by(Score.user_id, User.username)
             .order_by(func.sum(Score.total_tokens).asc())
             .limit(limit)
         )
@@ -404,9 +421,62 @@ class ScoringService:
         return [
             {
                 "user_id": row.user_id,
+                "username": row.username,
                 "total_tokens": row.total_tokens or 0,
-                "challenges_attempted": row.challenges_attempted or 0,
-                "completed_count": row.completed_count or 0,
+                "total_attempts": row.total_attempts or 0,
+                "completed_challenges": row.completed_challenges or 0,
+            }
+            for row in rows
+        ]
+
+    async def get_per_hole_leaderboard(
+        self,
+        challenge_id: str,
+        limit: int = 10,
+    ) -> list[dict]:
+        """
+        Get leaderboard for a specific challenge across all sessions.
+
+        Only users who completed the challenge are ranked; best score
+        (lowest total_tokens) per user is used.
+
+        Args:
+            challenge_id: Challenge ID (e.g., "hole-001")
+            limit: Max number of entries to return
+
+        Returns:
+            List of dicts with user_id, username, session_id, total_tokens,
+            total_attempts, completed_at. Ordered by total_tokens (ascending).
+        """
+        stmt = (
+            select(
+                Score.user_id,
+                User.username,
+                Score.session_id,
+                Score.total_tokens,
+                Score.total_attempts,
+                Score.completed_at,
+            )
+            .join(User, User.id == Score.user_id)
+            .where(
+                Score.challenge_id == challenge_id,
+                Score.completed_at.is_not(None),
+            )
+            .order_by(Score.total_tokens.asc(), Score.completed_at.asc())
+            .limit(limit)
+        )
+
+        result = await self.db.execute(stmt)
+        rows = result.all()
+
+        return [
+            {
+                "user_id": row.user_id,
+                "username": row.username,
+                "session_id": row.session_id,
+                "total_tokens": row.total_tokens or 0,
+                "total_attempts": row.total_attempts or 0,
+                "completed_at": row.completed_at,
             }
             for row in rows
         ]

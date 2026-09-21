@@ -23,10 +23,9 @@ class User(Base):
     """
     User model - represents a player in Token Golf.
 
-    In MVP, users are anonymous with auto-generated usernames.
-    Each time a player starts a session, they get a new username.
-
-    Future: Add authentication to allow reclaiming usernames.
+    Users can either:
+    - Sign in with existing username + password
+    - Generate new username + password
     """
 
     __tablename__ = "users"
@@ -44,7 +43,13 @@ class User(Base):
         unique=True,
         nullable=False,
         index=True,
-        comment="Auto-generated username (Color-Course-Club format)",
+        comment="Username (auto-generated or user-provided)",
+    )
+
+    password_hash: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
+        comment="Bcrypt hashed password",
     )
 
     created_at: Mapped[datetime] = mapped_column(

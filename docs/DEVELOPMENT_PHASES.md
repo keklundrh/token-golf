@@ -134,45 +134,45 @@
 
 ## Phase 3: API Endpoints
 
-### 3.1 Challenge API
+### 3.1 Challenge API ✅ COMPLETE
 **Goal**: Endpoints for challenge operations
 
-- [ ] Create `app/api/__init__.py`
-- [ ] Create `app/api/challenges.py`
-- [ ] `GET /api/challenges` - List all challenges
-- [ ] `GET /api/challenges/{id}` - Get specific challenge
-- [ ] Add filtering by difficulty/type
-- [ ] Add request/response models (Pydantic)
-- [ ] Write integration tests
-- [ ] Test in container
+- [x] Create `app/api/__init__.py`
+- [x] Create `app/api/challenges.py`
+- [x] `GET /api/challenges` - List all challenges
+- [x] `GET /api/challenges/{id}` - Get specific challenge
+- [x] Add filtering by difficulty/type
+- [x] Add request/response models (Pydantic)
+- [ ] Write integration tests (Phase 7)
+- [x] Test in container
 
-**Deliverable**: Can list and retrieve challenges via API
+**Deliverable**: ✅ Can list and retrieve challenges via API
 
-### 3.2 Game API
+### 3.2 Game API ✅ COMPLETE
 **Goal**: Endpoints for game session management
 
-- [ ] Create `app/api/game.py`
-- [ ] `POST /api/game/start` - Start new game session
-- [ ] `POST /api/game/submit` - Submit prompt attempt
-- [ ] `GET /api/game/status/{session}` - Get game state
-- [ ] Integrate LLM client, validator, scoring services
-- [ ] Handle errors gracefully
-- [ ] Write integration tests
+- [x] Create `app/api/game.py`
+- [x] `POST /api/game/start` - Start new game session
+- [x] `POST /api/game/submit` - Submit prompt attempt
+- [x] `GET /api/game/status/{session}` - Get game state
+- [x] Integrate LLM client, validator, scoring services
+- [x] Handle errors gracefully (weather delay)
+- [ ] Write integration tests (Phase 7)
 
-**Deliverable**: Can start game, submit prompts, get validation results
+**Deliverable**: ✅ Can start game, submit prompts, get validation results
 
-### 3.3 Leaderboard API
+### 3.3 Leaderboard API ✅ COMPLETE
 **Goal**: Endpoints for leaderboard views
 
-- [ ] Create `app/api/leaderboard.py`
-- [ ] `GET /api/leaderboard/global` - Global leaderboard
-- [ ] `GET /api/leaderboard/hole/{id}` - Per-hole leaderboard
-- [ ] `GET /api/leaderboard/session` - Session leaderboard
-- [ ] Implement ranking logic
-- [ ] Add pagination
-- [ ] Write integration tests
+- [x] Create `app/api/leaderboard.py`
+- [x] `GET /api/leaderboard/global` - Global leaderboard
+- [x] `GET /api/leaderboard/hole/{id}` - Per-hole leaderboard
+- [x] `GET /api/leaderboard/session/{id}` - Session leaderboard
+- [x] Implement ranking logic (golf scoring)
+- [x] Add pagination (limit, offset)
+- [ ] Write integration tests (Phase 7)
 
-**Deliverable**: Can retrieve leaderboards in all three views
+**Deliverable**: ✅ Can retrieve leaderboards in all three views
 
 ---
 
@@ -389,8 +389,6 @@
 - **Containerization**: Always test in Docker, not just local Python
 - **ADRs**: Create ADR for any significant decisions made during development
 
-## Current Status
+---
 
-**Last Updated**: 2026-09-09  
-**Current Phase**: Phase 0 - Container Foundation  
-**Next Step**: Create Dockerfile and docker-compose.yml
+**For current project status and phase tracking, see [PROJECT_STATUS.md](../PROJECT_STATUS.md)**

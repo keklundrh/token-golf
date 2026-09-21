@@ -1,0 +1,647 @@
+"""
+Token Golf - Game API Endpoints
+
+Orchestrates the game flow:
+- Start new game session (with sign-in or new user creation)
+- Submit prompt attempts
+- Get game state
+"""
+
+import hashlib
+import logging
+import secrets
+import string
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.config import get_settings
+from app.database import get_db
+from app.models import Attempt, Challenge, Score, Session, SessionParticipant, User
+from app.services import (
+    ChallengeLoaderService,
+    LLMClient,
+    ScoringService,
+    ValidatorService,
+)
+
+logger = logging.getLogger(__name__)
+settings = get_settings()
+
+router = APIRouter(prefix="/api/game", tags=["game"])
+
+
+# ============================================================================
+# Pydantic Models
+# ============================================================================
+
+
+class StartGameRequest(BaseModel):
+    """Request to start a new game session."""
+
+    # Authentication options (one must be provided)
+    username: Optional[str] = Field(
+        None, description="Existing username (for sign-in)"
+    )
+    password: Optional[str] = Field(None, description="Password (for sign-in)")
+    generate_new_user: Optional[bool] = Field(
+        False, description="Generate new username and password"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "generate_new_user": True,
+            }
+        }
+
+
+class StartGameResponse(BaseModel):
+    """Response after starting a game session."""
+
+    session_id: str = Field(..., description="Unique session identifier")
+    user_id: int = Field(..., description="User ID")
+    username: str = Field(..., description="Username")
+    password: Optional[str] = Field(
+        None, description="Generated password (only if new user)"
+    )
+    course_id: str = Field(..., description="Course identifier")
+    challenges: List[str] = Field(..., description="List of challenge IDs in order")
+    current_challenge_id: Optional[str] = Field(
+        None, description="Current challenge to attempt"
+    )
+    message: str = Field(..., description="Welcome message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "session_id": "session-abc123",
+                "user_id": 42,
+                "username": "Blue-Pebblebeach-7",
+                "password": "X7mK9nP2qR5t",
+                "course_id": "beginner-course",
+                "challenges": ["hole-001", "hole-002"],
+                "current_challenge_id": "hole-001",
+                "message": "Welcome Blue-Pebblebeach-7! Your course has 2 holes.",
+            }
+        }
+
+
+class SubmitAttemptRequest(BaseModel):
+    """Request to submit a prompt attempt."""
+
+    session_id: str = Field(..., description="Session identifier")
+    challenge_id: str = Field(..., description="Challenge identifier")
+    user_prompt: str = Field(..., description="User's prompt")
+    system_prompt: Optional[str] = Field(None, description="Custom system prompt")
+    context_files: Optional[List[dict]] = Field(
+        None, description="Context files to include"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "session_id": "session-abc123",
+                "challenge_id": "hole-001",
+                "user_prompt": "Write a function to add two numbers",
+                "system_prompt": "You are a helpful coding assistant.",
+                "context_files": [],
+            }
+        }
+
+
+class SubmitAttemptResponse(BaseModel):
+    """Response after submitting an attempt."""
+
+    attempt_id: int = Field(..., description="Attempt identifier")
+    is_correct: bool = Field(..., description="Whether the answer was correct")
+    validation_message: str = Field(..., description="Validation feedback")
+    input_tokens: int = Field(..., description="Input tokens used")
+    output_tokens: int = Field(..., description="Output tokens used")
+    total_tokens: int = Field(..., description="Total tokens for this attempt")
+    cumulative_tokens: int = Field(
+        ..., description="Cumulative tokens for this challenge"
+    )
+    attempt_number: int = Field(..., description="Attempt number for this challenge")
+    llm_response: str = Field(..., description="LLM's response")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "attempt_id": 123,
+                "is_correct": True,
+                "validation_message": "All test cases passed!",
+                "input_tokens": 150,
+                "output_tokens": 75,
+                "total_tokens": 225,
+                "cumulative_tokens": 450,
+                "attempt_number": 2,
+                "llm_response": "def add(a, b):\n    return a + b",
+            }
+        }
+
+
+class GameStatusResponse(BaseModel):
+    """Response with current game state."""
+
+    session_id: str
+    user_id: int
+    username: str
+    course_id: str
+    session_status: str
+    challenges: List[dict]
+    current_challenge_id: Optional[str]
+    total_tokens: int
+    completed_challenges: int
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "session_id": "session-abc123",
+                "user_id": 42,
+                "username": "Blue-Pebblebeach-7",
+                "course_id": "beginner-course",
+                "session_status": "active",
+                "challenges": [
+                    {
+                        "id": "hole-001",
+                        "name": "Add Two Numbers",
+                        "completed": True,
+                        "attempts": 2,
+                        "tokens": 450,
+                    }
+                ],
+                "current_challenge_id": "hole-002",
+                "total_tokens": 450,
+                "completed_challenges": 1,
+            }
+        }
+
+
+# ============================================================================
+# Helper Functions
+# ============================================================================
+
+
+def generate_username() -> str:
+    """Generate a username in Color-Course-Club format."""
+    colors = [
+        "Red",
+        "Blue",
+        "Green",
+        "Yellow",
+        "Orange",
+        "Purple",
+        "Pink",
+        "Teal",
+        "Gold",
+        "Silver",
+    ]
+    courses = [
+        "Augusta",
+        "Pebblebeach",
+        "StAndrews",
+        "Pinehurst",
+        "Oakmont",
+        "Shinnecock",
+        "Merion",
+        "Cypress",
+    ]
+    clubs = list(range(1, 15))  # Golf clubs 1-14
+
+    color = secrets.choice(colors)
+    course = secrets.choice(courses)
+    club = secrets.choice(clubs)
+
+    return f"{color}-{course}-{club}"
+
+
+def generate_password(length: int = 12) -> str:
+    """Generate a random password."""
+    alphabet = string.ascii_letters + string.digits
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def hash_password(password: str) -> str:
+    """
+    Hash a password using SHA256 with salt.
+
+    Note: For MVP/demo purposes. Production should use bcrypt/argon2.
+    """
+    # Use a fixed salt for simplicity in MVP
+    # TODO: Use proper password hashing (bcrypt/argon2) for production
+    salt = "token-golf-mvp-salt"
+    return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against its hash."""
+    return hash_password(plain_password) == hashed_password
+
+
+# ============================================================================
+# Endpoints
+# ============================================================================
+
+
+@router.post("/start", response_model=StartGameResponse, status_code=status.HTTP_201_CREATED)
+async def start_game(
+    request: StartGameRequest,
+    db: AsyncSession = Depends(get_db),
+) -> StartGameResponse:
+    """
+    Start a new game session.
+
+    Two options:
+    1. Sign in with existing username + password
+    2. Generate new username + password (generate_new_user=true)
+    """
+    logger.info(f"Starting new game session: {request}")
+
+    user = None
+    generated_password = None
+
+    # Option 1: Sign in with existing credentials
+    if request.username and request.password:
+        logger.info(f"Attempting sign-in for username: {request.username}")
+
+        # Find user by username
+        result = await db.execute(select(User).where(User.username == request.username))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"User '{request.username}' not found",
+            )
+
+        # Verify password
+        if not verify_password(request.password, user.password_hash):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid password",
+            )
+
+        logger.info(f"Sign-in successful for user {user.id}: {user.username}")
+
+    # Option 2: Generate new user
+    elif request.generate_new_user:
+        logger.info("Generating new user")
+
+        # Generate unique username
+        max_attempts = 10
+        for _ in range(max_attempts):
+            username = generate_username()
+            # Check if username exists
+            result = await db.execute(select(User).where(User.username == username))
+            if not result.scalar_one_or_none():
+                break
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to generate unique username",
+            )
+
+        # Generate password
+        generated_password = generate_password()
+
+        # Create user
+        user = User(
+            username=username,
+            password_hash=hash_password(generated_password),
+            created_at=datetime.utcnow(),
+        )
+        db.add(user)
+        await db.flush()  # Get user.id
+
+        logger.info(f"Created new user {user.id}: {user.username}")
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Must provide either (username + password) or generate_new_user=true",
+        )
+
+    # Create session (hardcoded course for MVP)
+    course_id = "beginner-course"
+    challenges_dir = Path(settings.challenges_dir)
+    loader = ChallengeLoaderService(db, challenges_dir)
+
+    # Get all challenges for the course (for MVP, just get all challenges)
+    challenges = await loader.list_challenges()
+    challenge_ids = sorted([c.id for c in challenges])  # Sort for consistent order
+
+    if not challenge_ids:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No challenges found for course",
+        )
+
+    # Create session
+    session = Session(
+        id=f"session-{secrets.token_urlsafe(8)}",
+        course_id=course_id,
+        created_at=datetime.utcnow(),
+        timeout_hours=settings.session_timeout_hours,
+        expires_at=datetime.utcnow()
+        + timedelta(hours=settings.session_timeout_hours),
+        status="active",
+    )
+    db.add(session)
+
+    # Add user to session
+    participant = SessionParticipant(
+        session_id=session.id,
+        user_id=user.id,
+        joined_at=datetime.utcnow(),
+    )
+    db.add(participant)
+
+    await db.commit()
+
+    logger.info(
+        f"Created session {session.id} for user {user.id} with {len(challenge_ids)} challenges"
+    )
+
+    return StartGameResponse(
+        session_id=session.id,
+        user_id=user.id,
+        username=user.username,
+        password=generated_password,  # Only returned for new users
+        course_id=course_id,
+        challenges=challenge_ids,
+        current_challenge_id=challenge_ids[0] if challenge_ids else None,
+        message=f"Welcome {user.username}! Your course has {len(challenge_ids)} holes.",
+    )
+
+
+@router.post("/submit", response_model=SubmitAttemptResponse)
+async def submit_attempt(
+    request: SubmitAttemptRequest,
+    db: AsyncSession = Depends(get_db),
+) -> SubmitAttemptResponse:
+    """
+    Submit a prompt attempt for a challenge.
+
+    Orchestrates: LLM Client → Validator → Scoring
+    """
+    logger.info(
+        f"Submitting attempt for session {request.session_id}, challenge {request.challenge_id}"
+    )
+
+    # Verify session exists and is active
+    result = await db.execute(
+        select(Session).where(Session.id == request.session_id)
+    )
+    session = result.scalar_one_or_none()
+
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session '{request.session_id}' not found",
+        )
+
+    if session.status != "active":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Session is {session.status}, cannot submit attempts",
+        )
+
+    # Check if session expired
+    if datetime.utcnow() > session.expires_at:
+        session.status = "dnf"
+        await db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Session has expired (DNF)",
+        )
+
+    # Get user from session
+    result = await db.execute(
+        select(SessionParticipant)
+        .where(SessionParticipant.session_id == request.session_id)
+        .limit(1)
+    )
+    participant = result.scalar_one_or_none()
+
+    if not participant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No participant found for session",
+        )
+
+    user_id = participant.user_id
+
+    # Load challenge
+    challenges_dir = Path(settings.challenges_dir)
+    loader = ChallengeLoaderService(db, challenges_dir)
+
+    try:
+        challenge = await loader.get_challenge(request.challenge_id)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e),
+        )
+
+    # Step 1: Call LLM
+    llm_client = LLMClient(api_key=settings.claude_api_key)
+
+    # Include active context file contents in the prompt (pills affect tokens)
+    ctx_contents = []
+    for cf in request.context_files or []:
+        content = cf.get("content") if isinstance(cf, dict) else None
+        if content:
+            ctx_contents.append(str(content))
+
+    try:
+        llm_response = await llm_client.complete_with_context(
+            prompt=request.user_prompt,
+            context_files=ctx_contents,
+            system_prompt=request.system_prompt,
+        )
+    except Exception as e:
+        logger.error(f"LLM API error (weather delay): {e}")
+
+        # Weather delay: clear this hole's tokens unless already completed
+        # (CLAUDE.md: "Completed holes remain untouched").
+        scoring_service = ScoringService(db)
+        existing = await scoring_service.get_score(
+            user_id=user_id,
+            session_id=request.session_id,
+            challenge_id=request.challenge_id,
+        )
+        if existing is None or existing.completed_at is None:
+            await scoring_service.clear_challenge_score(
+                user_id=user_id,
+                session_id=request.session_id,
+                challenge_id=request.challenge_id,
+            )
+            await db.commit()
+            detail = "Weather delay - LLM service temporarily unavailable. Your tokens for this hole have been cleared."
+        else:
+            detail = "Weather delay - LLM service temporarily unavailable. Your completed score for this hole is preserved."
+
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=detail,
+        )
+
+    # Step 2: Validate response
+    validator = ValidatorService()
+    validation_result = await validator.validate(
+        response=llm_response.response_text,
+        challenge=challenge,
+    )
+
+    # Step 3: Record attempt and score
+    scoring_service = ScoringService(db)
+
+    attempt = await scoring_service.record_attempt(
+        user_id=user_id,
+        session_id=request.session_id,
+        challenge_id=request.challenge_id,
+        prompt=request.user_prompt,
+        system_prompt=request.system_prompt,
+        context_files=request.context_files or [],
+        response=llm_response.response_text,
+        input_tokens=llm_response.input_tokens,
+        output_tokens=llm_response.output_tokens,
+        is_correct=validation_result.is_correct,
+    )
+
+    await db.commit()
+
+    # Get cumulative score
+    result = await db.execute(
+        select(Score).where(
+            Score.user_id == user_id,
+            Score.session_id == request.session_id,
+            Score.challenge_id == request.challenge_id,
+        )
+    )
+    score = result.scalar_one_or_none()
+
+    cumulative_tokens = score.total_tokens if score else attempt.total_tokens
+
+    logger.info(
+        f"Attempt {attempt.id} recorded: is_correct={validation_result.is_correct}, "
+        f"tokens={attempt.total_tokens}, cumulative={cumulative_tokens}"
+    )
+
+    return SubmitAttemptResponse(
+        attempt_id=attempt.id,
+        is_correct=validation_result.is_correct,
+        validation_message=validation_result.feedback or "",
+        input_tokens=llm_response.input_tokens,
+        output_tokens=llm_response.output_tokens,
+        total_tokens=attempt.total_tokens,
+        cumulative_tokens=cumulative_tokens,
+        attempt_number=attempt.attempt_number,
+        llm_response=llm_response.response_text,
+    )
+
+
+@router.get("/status/{session_id}", response_model=GameStatusResponse)
+async def get_game_status(
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> GameStatusResponse:
+    """Get current game state for a session."""
+    logger.info(f"Getting game status for session {session_id}")
+
+    # Get session
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Session '{session_id}' not found",
+        )
+
+    # Get participant (user)
+    result = await db.execute(
+        select(SessionParticipant)
+        .where(SessionParticipant.session_id == session_id)
+        .limit(1)
+    )
+    participant = result.scalar_one_or_none()
+
+    if not participant:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No participant found for session",
+        )
+
+    # Get user
+    result = await db.execute(select(User).where(User.id == participant.user_id))
+    user = result.scalar_one_or_none()
+
+    # Get all scores for this session
+    result = await db.execute(
+        select(Score).where(
+            Score.user_id == participant.user_id,
+            Score.session_id == session_id,
+        )
+    )
+    scores = result.scalars().all()
+
+    # Get all challenges for the course (names come from the loaded Challenge
+    # objects directly -- no relationship lazy-load, which fails in async)
+    challenges_dir = Path(settings.challenges_dir)
+    loader = ChallengeLoaderService(db, challenges_dir)
+    all_challenges = await loader.list_challenges()
+    challenge_names = {c.id: (c.name or c.id) for c in all_challenges}
+    challenge_ids = sorted(challenge_names)
+
+    # Build challenge status
+    challenge_status = []
+    total_tokens = 0
+    completed_count = 0
+
+    for chal_id in challenge_ids:
+        score = next((s for s in scores if s.challenge_id == chal_id), None)
+        if score:
+            challenge_status.append({
+                "id": chal_id,
+                "name": challenge_names.get(chal_id, chal_id),
+                "completed": score.completed_at is not None,
+                "attempts": score.total_attempts,
+                "tokens": score.total_tokens,
+            })
+            total_tokens += score.total_tokens
+            if score.completed_at:
+                completed_count += 1
+        else:
+            challenge_status.append({
+                "id": chal_id,
+                "name": chal_id,
+                "completed": False,
+                "attempts": 0,
+                "tokens": 0,
+            })
+
+    # Determine current challenge (first incomplete)
+    current_challenge_id = None
+    for chal in challenge_status:
+        if not chal["completed"]:
+            current_challenge_id = chal["id"]
+            break
+
+    return GameStatusResponse(
+        session_id=session.id,
+        user_id=user.id,
+        username=user.username,
+        course_id=session.course_id,
+        session_status=session.status,
+        challenges=challenge_status,
+        current_challenge_id=current_challenge_id,
+        total_tokens=total_tokens,
+        completed_challenges=completed_count,
+    )

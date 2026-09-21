@@ -23,14 +23,14 @@ validation:
     description: "TODO: Describe what pattern matches"
     flags: []
 
-context_files:
-  # TODO: Add context file with data to extract from
-  # - name: "data_source.csv"
-  #   path: "./challenges/hole-002/assets/data_source.csv"
-  #   description: "Data source for extraction"
-  #   removable: false
-  #   editable: false
-  #   default_included: true
+# context_files:
+#   # TODO: Add context file with data to extract from
+#   # - name: "data_source.csv"
+#   #   path: "./challenges/hole-002/assets/data_source.csv"
+#   #   description: "Data source for extraction"
+#   #   removable: false
+#   #   editable: false
+#   #   default_included: true
 
 system_prompt:
   default: "You are a helpful assistant that extracts structured data."

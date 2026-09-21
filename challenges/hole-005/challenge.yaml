@@ -12,7 +12,7 @@ description: |
   - Clear classification rules
   - Simple, unambiguous cases
 
-task_type: classification
+task_type: extraction
 
 validation:
   type: exact_match

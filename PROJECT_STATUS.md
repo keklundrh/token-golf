@@ -4,10 +4,10 @@
 
 ## Current Phase
 
-**Phase**: Phase 2.4 - Scoring Service  
-**Status**: ✅ Complete (All Phase 2 services done!)
+**Phase**: Phase 3 - API Endpoints  
+**Status**: ✅ COMPLETE (Full REST API operational!)
 
-**Next Phase**: Phase 3.1 - Challenge API
+**Next Phase**: Phase 4 - Frontend Templates
 
 ## What's Been Done
 
@@ -117,33 +117,49 @@
 - Three leaderboard views (session, per-hole, global)
 - Weather delay handling
 
-### Code Statistics (Phase 2 Complete)
+### Phase 3: API Endpoints - ✅ COMPLETE
 
-**Total Code**: 2,939 lines
-- Models: 799 lines (6 files)
+**Phase 3.1: Challenge API** ✅ COMPLETE (2026-09-21)
+- Challenge API endpoints (290 lines)
+- GET /api/challenges - List with filtering
+- GET /api/challenges/{id} - Get specific challenge
+- Pydantic request/response models
+- OpenAPI documentation
+
+**Phase 3.2: Game API** ✅ COMPLETE (2026-09-21)
+- Game API endpoints (647 lines)
+- POST /api/game/start - Start session with authentication
+- POST /api/game/submit - Submit attempt (LLM → Validator → Scoring)
+- GET /api/game/status/{id} - Get game state
+- Username/password authentication (sign-in or generate new)
+- Username generation (Color-Course-Club format)
+- Weather delay error handling for LLM failures
+- Database migration for password_hash field
+
+**Phase 3.3: Leaderboard API** ✅ COMPLETE (2026-09-21)
+- Leaderboard API endpoints (328 lines)
+- GET /api/leaderboard/global - Global rankings across all sessions
+- GET /api/leaderboard/hole/{id} - Per-challenge rankings
+- GET /api/leaderboard/session/{id} - Session-specific rankings
+- Pagination support (limit, offset)
+- Username resolution from User model
+- Golf scoring (lower tokens = better)
+
+### Code Statistics (Phase 3 Complete)
+
+**Total Code**: 4,196 lines
+- Models: 799 lines (6 files) + password_hash field added
 - Services: 1,710 lines (4 files)
-- Config/DB/Main: 430 lines
+- API: 1,281 lines (4 files)
+- Config/DB/Main: 406 lines
 
-**Service Layer Complete**: All 4 core services implemented
-- ChallengeLoaderService ✅
-- LLMClient + MockLLMClient ✅
-- ValidatorService ✅
-- ScoringService ✅
+**Layers Complete**:
+- Service Layer ✅ - All 4 core services
+- API Layer ✅ - Challenge + Game + Leaderboard (complete REST API)
 
 ## What's Next
 
-### Current Phase: Phase 3 - API Endpoints
-
-**Next Steps** (see [docs/DEVELOPMENT_PHASES.md](docs/DEVELOPMENT_PHASES.md)):
-
-**Phase 3.1: Challenge API** (Next - estimated 2-3 hours)
-1. Create `app/api/challenges.py`
-2. `GET /api/challenges` - List all challenges
-3. `GET /api/challenges/{id}` - Get specific challenge
-4. Pydantic request/response models
-5. Integration tests
-
-**Phase 3.2: Game API** (estimated 4-6 hours)
+**Phase 4: Frontend Templates** (Next - estimated 6-8 hours)
 1. Create `app/api/game.py`
 2. `POST /api/game/start` - Start new game session
 3. `POST /api/game/submit` - Submit prompt attempt
