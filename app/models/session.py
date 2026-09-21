@@ -8,7 +8,7 @@ SessionParticipant: Join table linking users to sessions
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Integer, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -29,6 +29,11 @@ class Session(Base):
     """
 
     __tablename__ = "sessions"
+
+    # Indexes for efficient timeout queries
+    __table_args__ = (
+        Index("ix_sessions_status_expires", "status", "expires_at"),
+    )
 
     # Primary Key (using string UUID)
     id: Mapped[str] = mapped_column(

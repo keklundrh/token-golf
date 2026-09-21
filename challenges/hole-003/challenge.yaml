@@ -1,16 +1,16 @@
-# PLACEHOLDER - Medium Coding Challenge
-# TODO: Complete this challenge definition
-
 id: hole-003
-name: "[PLACEHOLDER] Medium Coding Task"
+name: "String Reversal"
 difficulty: medium
 description: |
-  TODO: Write a medium-complexity coding task.
+  Write a Python function called `reverse_string` that takes a string and returns it reversed.
 
-  Example template:
-  - Multiple steps or edge cases
-  - Requires some reasoning
-  - Clear success criteria
+  Your function should:
+  - Accept one parameter: `s` (a string)
+  - Return the string reversed
+  - Handle edge cases like empty strings and single characters
+  - Preserve all characters including spaces and special characters
+
+  Function signature: `def reverse_string(s):`
 
 task_type: coding
 
@@ -18,31 +18,50 @@ validation:
   type: test_cases
   language: python
   criteria:
-    # TODO: Add comprehensive test cases
-    - name: "Basic case"
+    - name: "Basic reversal"
       input:
-        param1: value1
-      expected_output: result1
+        s: "hello"
+      expected_output: "olleh"
 
-    - name: "Edge case 1"
+    - name: "Empty string"
       input:
-        param1: edge_value
-      expected_output: edge_result
+        s: ""
+      expected_output: ""
+
+    - name: "Single character"
+      input:
+        s: "a"
+      expected_output: "a"
+
+    - name: "With spaces"
+      input:
+        s: "hello world"
+      expected_output: "dlrow olleh"
+
+    - name: "Special characters"
+      input:
+        s: "Hello, World!"
+      expected_output: "!dlroW ,olleH"
+
+    - name: "Numbers and symbols"
+      input:
+        s: "Python3.11"
+      expected_output: "11.3nohtyP"
 
 system_prompt:
-  default: "You are a helpful Python programming assistant."
+  default: "You are a helpful Python coding assistant. Write efficient, clean code."
   removable: false
   editable: true
 
 parameters:
-  max_iterations: 15
+  max_iterations: null
   time_limit_seconds: null
   hints_available: 0
 
 metadata:
   author: "Token Golf Team"
-  created_date: "2026-09-09"
-  tags: ["placeholder", "coding", "medium"]
-  estimated_tokens_expert: 400  # TODO: Update after testing
-  estimated_tokens_beginner: 1200  # TODO: Update after testing
-  estimated_difficulty: 4.0
+  created_date: "2026-09-21"
+  tags: ["python", "strings", "basics", "edge_cases"]
+  estimated_tokens_expert: 150
+  estimated_tokens_beginner: 400
+  estimated_difficulty: 2.5

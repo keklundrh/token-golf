@@ -107,8 +107,11 @@ class ChallengeListResponse(BaseModel):
     """Response for challenge listing."""
 
     challenges: List[ChallengeMetadata] = Field(..., description="List of challenges")
-    total: int = Field(..., description="Total number of challenges")
-    filtered: int = Field(..., description="Number after filtering")
+    total: int = Field(..., description="Total number of challenges (unfiltered)")
+    filtered: int = Field(..., description="Number of challenges after filtering")
+    page: int = Field(..., description="Current page number (1-based)")
+    per_page: int = Field(..., description="Number of challenges per page")
+    has_more: bool = Field(..., description="Whether there are more challenges to load")
 
 
 # API Endpoints
@@ -118,7 +121,7 @@ class ChallengeListResponse(BaseModel):
     "",
     response_model=ChallengeListResponse,
     summary="List all challenges",
-    description="Retrieve a list of all available challenges with optional filtering",
+    description="Retrieve a list of all available challenges with optional filtering and pagination",
 )
 async def list_challenges(
     difficulty: Optional[str] = Query(
@@ -129,18 +132,67 @@ async def list_challenges(
         None,
         description="Filter by task type (coding, extraction, question_answering, generation)",
     ),
+    page: int = Query(
+        1,
+        ge=1,
+        description="Page number (1-based)",
+    ),
+    per_page: int = Query(
+        20,
+        ge=1,
+        le=100,
+        description="Number of challenges per page (max 100)",
+    ),
     db: AsyncSession = Depends(get_db),
 ) -> ChallengeListResponse:
     """
-    List all challenges with optional filtering.
+    List all challenges with optional filtering and pagination.
 
     Filters:
     - difficulty: easy, medium, hard, expert
     - task_type: coding, extraction, question_answering, generation
 
-    Returns list of challenge metadata (id, name, difficulty, type, estimates).
+    Returns paginated list of challenge metadata (id, name, difficulty, type, estimates).
     """
     try:
+        # Validate difficulty filter
+        valid_difficulties = ["easy", "medium", "hard", "expert"]
+        if difficulty and difficulty not in valid_difficulties:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "invalid_difficulty",
+                    "message": f"Invalid difficulty '{difficulty}'.",
+                    "details": {
+                        "field": "difficulty",
+                        "value": difficulty,
+                        "valid_values": valid_difficulties,
+                    },
+                    "suggestions": [
+                        f"Use one of: {', '.join(valid_difficulties)}",
+                    ],
+                },
+            )
+
+        # Validate task_type filter
+        valid_task_types = ["coding", "extraction", "question_answering", "generation"]
+        if task_type and task_type not in valid_task_types:
+            raise HTTPException(
+                status_code=400,
+                detail={
+                    "error": "invalid_task_type",
+                    "message": f"Invalid task_type '{task_type}'.",
+                    "details": {
+                        "field": "task_type",
+                        "value": task_type,
+                        "valid_values": valid_task_types,
+                    },
+                    "suggestions": [
+                        f"Use one of: {', '.join(valid_task_types)}",
+                    ],
+                },
+            )
+
         # Get challenge loader service
         challenges_dir = Path(settings.challenges_dir)
         loader = ChallengeLoaderService(db, challenges_dir)
@@ -175,21 +227,45 @@ async def list_challenges(
 
         # Get total count (unfiltered)
         all_challenges = await loader.list_challenges()
+        total_count = len(all_challenges)
+        filtered_count = len(challenge_metadata)
+
+        # Apply pagination
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated_challenges = challenge_metadata[start_idx:end_idx]
+        has_more = end_idx < filtered_count
 
         logger.info(
-            f"Listed {len(challenge_metadata)} challenges "
-            f"(filtered from {len(all_challenges)} total)"
+            f"Listed {len(paginated_challenges)} challenges on page {page} "
+            f"(filtered: {filtered_count}, total: {total_count})"
         )
 
         return ChallengeListResponse(
-            challenges=challenge_metadata,
-            total=len(all_challenges),
-            filtered=len(challenge_metadata),
+            challenges=paginated_challenges,
+            total=total_count,
+            filtered=filtered_count,
+            page=page,
+            per_page=per_page,
+            has_more=has_more,
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error listing challenges: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to list challenges: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "internal_error",
+                "message": "Failed to list challenges.",
+                "details": {"exception": str(e)},
+                "suggestions": [
+                    "Try again in a moment",
+                    "Contact support if the problem persists",
+                ],
+            },
+        )
 
 
 @router.get(
@@ -223,12 +299,35 @@ async def get_challenge(
         loader = ChallengeLoaderService(db, challenges_dir)
 
         # Get challenge
-        challenge = await loader.get_challenge(challenge_id)
+        try:
+            challenge = await loader.get_challenge(challenge_id)
+        except ValueError:
+            # Challenge not found
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "error": "challenge_not_found",
+                    "message": f"Challenge '{challenge_id}' not found.",
+                    "details": {"challenge_id": challenge_id},
+                    "suggestions": [
+                        "Check that the challenge ID is correct",
+                        "Use GET /api/challenges to see all available challenges",
+                    ],
+                },
+            )
 
         if not challenge:
             raise HTTPException(
                 status_code=404,
-                detail=f"Challenge '{challenge_id}' not found",
+                detail={
+                    "error": "challenge_not_found",
+                    "message": f"Challenge '{challenge_id}' not found.",
+                    "details": {"challenge_id": challenge_id},
+                    "suggestions": [
+                        "Check that the challenge ID is correct",
+                        "Use GET /api/challenges to see all available challenges",
+                    ],
+                },
             )
 
         # Parse config
@@ -286,5 +385,13 @@ async def get_challenge(
         logger.error(f"Error retrieving challenge {challenge_id}: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to retrieve challenge: {str(e)}",
+            detail={
+                "error": "internal_error",
+                "message": "Failed to retrieve challenge.",
+                "details": {"challenge_id": challenge_id, "exception": str(e)},
+                "suggestions": [
+                    "Try again in a moment",
+                    "Contact support if the problem persists",
+                ],
+            },
         )

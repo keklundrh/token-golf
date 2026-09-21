@@ -70,6 +70,11 @@ class LeaderboardResponse(BaseModel):
     total_entries: int = Field(..., description="Total number of entries")
     limit: int = Field(..., description="Maximum entries returned")
     offset: int = Field(..., description="Offset for pagination")
+    current_page: int = Field(..., description="Current page number (1-based)")
+    has_more: bool = Field(..., description="Whether there are more entries to load")
+    user_rank: Optional[int] = Field(
+        None, description="Current user's rank (if applicable)"
+    )
     challenge_id: Optional[str] = Field(
         None, description="Challenge ID (for per-hole leaderboard)"
     )
@@ -94,6 +99,9 @@ class LeaderboardResponse(BaseModel):
                 "total_entries": 50,
                 "limit": 10,
                 "offset": 0,
+                "current_page": 1,
+                "has_more": True,
+                "user_rank": None,
             }
         }
 
@@ -168,12 +176,19 @@ async def get_global_leaderboard(
 
     logger.info(f"Returning {len(entries)} global leaderboard entries")
 
+    # Calculate pagination metadata
+    current_page = (offset // limit) + 1 if limit > 0 else 1
+    has_more = (offset + len(entries)) < total_entries
+
     return LeaderboardResponse(
         leaderboard_type="global",
         entries=entries,
         total_entries=total_entries,
         limit=limit,
         offset=offset,
+        current_page=current_page,
+        has_more=has_more,
+        user_rank=None,  # Would need user_id parameter to determine
     )
 
 
@@ -235,12 +250,19 @@ async def get_per_hole_leaderboard(
         f"Returning {len(entries)} per-hole leaderboard entries for {challenge_id}"
     )
 
+    # Calculate pagination metadata
+    current_page = (offset // limit) + 1 if limit > 0 else 1
+    has_more = (offset + len(entries)) < total_entries
+
     return LeaderboardResponse(
         leaderboard_type="per_hole",
         entries=entries,
         total_entries=total_entries,
         limit=limit,
         offset=offset,
+        current_page=current_page,
+        has_more=has_more,
+        user_rank=None,  # Would need user_id parameter to determine
         challenge_id=challenge_id,
     )
 
@@ -279,7 +301,15 @@ async def get_session_leaderboard(
     if not session:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Session '{session_id}' not found",
+            detail={
+                "error": "session_not_found",
+                "message": f"Session '{session_id}' not found.",
+                "details": {"session_id": session_id},
+                "suggestions": [
+                    "Check that the session ID is correct",
+                    "Start a new game session with POST /api/game/start",
+                ],
+            },
         )
 
     scoring_service = ScoringService(db)
@@ -318,11 +348,18 @@ async def get_session_leaderboard(
         f"Returning {len(entries)} session leaderboard entries for {session_id}"
     )
 
+    # Calculate pagination metadata
+    current_page = (offset // limit) + 1 if limit > 0 else 1
+    has_more = (offset + len(entries)) < total_entries
+
     return LeaderboardResponse(
         leaderboard_type="session",
         entries=entries,
         total_entries=total_entries,
         limit=limit,
         offset=offset,
+        current_page=current_page,
+        has_more=has_more,
+        user_rank=None,  # Would need user_id parameter to determine
         session_id=session_id,
     )

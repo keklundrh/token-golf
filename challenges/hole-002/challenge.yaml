@@ -1,51 +1,60 @@
-# PLACEHOLDER - Medium Extraction Challenge
-# TODO: Complete this challenge definition
-
 id: hole-002
-name: "[PLACEHOLDER] Data Extraction Task"
-difficulty: medium
+name: "Addition Function"
+difficulty: easy
 description: |
-  TODO: Write a clear extraction task.
+  Write a Python function called `add` that takes two numbers and returns their sum.
 
-  Example template:
-  - What data should be extracted?
-  - From what source (context file)?
-  - What format should the output be?
-  - How should edge cases be handled?
+  Your function should:
+  - Accept two parameters: `a` and `b`
+  - Return the sum of `a` and `b`
+  - Handle both integers and floating-point numbers
 
-task_type: extraction
+  Function signature: `def add(a, b):`
+
+task_type: coding
 
 validation:
-  type: pattern_match
+  type: test_cases
+  language: python
   criteria:
-    # TODO: Define the pattern that validates correct extraction
-    pattern: "TODO: Add regex pattern"
-    description: "TODO: Describe what pattern matches"
-    flags: []
+    - name: "Basic addition"
+      input:
+        a: 2
+        b: 3
+      expected_output: 5
 
-# context_files:
-#   # TODO: Add context file with data to extract from
-#   # - name: "data_source.csv"
-#   #   path: "./challenges/hole-002/assets/data_source.csv"
-#   #   description: "Data source for extraction"
-#   #   removable: false
-#   #   editable: false
-#   #   default_included: true
+    - name: "Negative numbers"
+      input:
+        a: -5
+        b: 10
+      expected_output: 5
+
+    - name: "Floating point"
+      input:
+        a: 2.5
+        b: 3.7
+      expected_output: 6.2
+
+    - name: "Zero addition"
+      input:
+        a: 0
+        b: 42
+      expected_output: 42
 
 system_prompt:
-  default: "You are a helpful assistant that extracts structured data."
+  default: "You are a helpful Python coding assistant. Write clean, concise code."
   removable: false
   editable: true
 
 parameters:
-  max_iterations: 10
+  max_iterations: null
   time_limit_seconds: null
   hints_available: 0
 
 metadata:
   author: "Token Golf Team"
-  created_date: "2026-09-09"
-  tags: ["placeholder", "extraction", "medium"]
-  estimated_tokens_expert: 300  # TODO: Update after testing
-  estimated_tokens_beginner: 1000  # TODO: Update after testing
-  estimated_difficulty: 3.0
+  created_date: "2026-09-21"
+  tags: ["python", "basics", "functions", "arithmetic"]
+  estimated_tokens_expert: 100
+  estimated_tokens_beginner: 300
+  estimated_difficulty: 1.5

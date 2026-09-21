@@ -108,3 +108,171 @@
     background: linear-gradient(135deg, #d4af37 0%, #ffd700 100%);
   }
 }
+
+/**
+ * Custom Animations
+ */
+@layer utilities {
+  /* Fade in animation */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+
+  /* Fade out animation */
+  @keyframes fade-out {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+
+  .animate-fade-out {
+    animation: fade-out 0.3s ease-out forwards;
+  }
+
+  /* Success checkmark animation */
+  @keyframes success-bounce {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.2);
+    }
+  }
+
+  .animate-success {
+    animation: success-bounce 0.6s ease-out;
+  }
+
+  /* Error shake animation */
+  @keyframes shake {
+    0%, 100% {
+      transform: translateX(0);
+    }
+    10%, 30%, 50%, 70%, 90% {
+      transform: translateX(-10px);
+    }
+    20%, 40%, 60%, 80% {
+      transform: translateX(10px);
+    }
+  }
+
+  .animate-shake {
+    animation: shake 0.6s ease-out;
+  }
+
+  /* Golf ball rolling animation (spinner) */
+  @keyframes golf-roll {
+    0% {
+      transform: rotate(0deg) translateX(0);
+    }
+    50% {
+      transform: rotate(180deg) translateX(10px);
+    }
+    100% {
+      transform: rotate(360deg) translateX(0);
+    }
+  }
+
+  .animate-golf-roll {
+    animation: golf-roll 1s ease-in-out infinite;
+  }
+
+  /* Pulse animation for loading */
+  @keyframes pulse-slow {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .animate-pulse-slow {
+    animation: pulse-slow 2s ease-in-out infinite;
+  }
+
+  /* Skeleton loader */
+  @keyframes skeleton-loading {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      #f0f0f0 25%,
+      #e0e0e0 50%,
+      #f0f0f0 75%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+  }
+
+  /* Slide up animation */
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out;
+  }
+
+  /* Scale in animation */
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.8);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-scale-in {
+    animation: scale-in 0.3s ease-out;
+  }
+
+  /* Confetti effect for success */
+  @keyframes confetti-fall {
+    0% {
+      transform: translateY(-100%) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(100vh) rotate(360deg);
+      opacity: 0;
+    }
+  }
+
+  .animate-confetti {
+    animation: confetti-fall 3s ease-out forwards;
+  }
+}

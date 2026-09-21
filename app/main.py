@@ -8,8 +8,10 @@ Phase 3.1: Challenge API endpoints
 Phase 3.2: Game API endpoints
 Phase 3.3: Leaderboard API endpoints
 Phase 4: Frontend integration - static files and template routes
+Phase 6: Session timeout enforcement
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -23,7 +25,7 @@ from fastapi.templating import Jinja2Templates
 from app.api import challenges_router, game_router, leaderboard_router
 from app.config import get_settings
 from app.database import async_session_factory, close_db, init_db
-from app.services import ChallengeLoaderService
+from app.services import ChallengeLoaderService, SessionManager
 
 # Load settings
 settings = get_settings()
@@ -34,6 +36,36 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# Background task handle for session timeout checker
+_timeout_task = None
+
+
+async def check_expired_sessions_loop():
+    """
+    Background task to periodically mark expired sessions as DNF.
+
+    Runs every 5 minutes to check for sessions that have exceeded their timeout.
+    This ensures sessions are marked DNF even if no API calls are made.
+    """
+    while True:
+        try:
+            await asyncio.sleep(300)  # Check every 5 minutes
+            logger.debug("Running expired session check...")
+
+            async with async_session_factory() as session:
+                manager = SessionManager(session)
+                marked_count = await manager.mark_expired_sessions()
+
+                if marked_count > 0:
+                    logger.info(f"Background task: marked {marked_count} expired sessions as DNF")
+
+        except asyncio.CancelledError:
+            logger.info("Expired session checker task cancelled")
+            break
+        except Exception as e:
+            logger.error(f"Error in expired session checker: {e}", exc_info=True)
+            # Continue running despite errors
 
 
 @asynccontextmanager
@@ -65,12 +97,26 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Challenge preload disabled (PRELOAD_CHALLENGES=false)")
 
+    # Start background task for session timeout checking
+    global _timeout_task
+    _timeout_task = asyncio.create_task(check_expired_sessions_loop())
+    logger.info("Started background task for session timeout checking")
+
     logger.info("Token Golf startup complete")
 
     yield
 
     # Shutdown
     logger.info("Token Golf shutting down...")
+
+    # Cancel background task
+    if _timeout_task:
+        _timeout_task.cancel()
+        try:
+            await _timeout_task
+        except asyncio.CancelledError:
+            pass
+
     await close_db()
     logger.info("Token Golf shutdown complete")
 
@@ -97,39 +143,238 @@ templates_dir = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(templates_dir))
 
 
-# Custom exception handlers
-@app.exception_handler(404)
-async def not_found_handler(request: Request, exc: HTTPException):
-    """Custom 404 page handler"""
-    # Check if request is for API (JSON response) or web page (HTML response)
-    if request.url.path.startswith("/api/"):
+# ============================================================================
+# Custom Exception Handlers
+# ============================================================================
+
+
+def is_api_request(request: Request) -> bool:
+    """Check if request is for an API endpoint (expects JSON response)."""
+    return request.url.path.startswith("/api/") or request.headers.get("accept", "").startswith("application/json")
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """
+    Global HTTP exception handler.
+    Returns JSON for API requests, HTML for web requests.
+    """
+    # API requests get JSON
+    if is_api_request(request):
         return JSONResponse(
-            status_code=404,
-            content={"detail": "API endpoint not found"},
+            status_code=exc.status_code,
+            content={"detail": exc.detail},
         )
 
-    # Return HTML 404 page for web requests
+    # Web requests get HTML pages
+    # 404 Not Found
+    if exc.status_code == 404:
+        try:
+            return templates.TemplateResponse(
+                "404.html",
+                {"request": request},
+                status_code=404,
+            )
+        except Exception as e:
+            logger.error(f"Error rendering 404 template: {e}")
+            return HTMLResponse(
+                content="""
+                <!DOCTYPE html>
+                <html>
+                <head><title>404 - Not Found</title></head>
+                <body>
+                    <h1>404 - Page Not Found</h1>
+                    <p>The page you're looking for doesn't exist.</p>
+                    <p><a href="/">Go to Home</a></p>
+                </body>
+                </html>
+                """,
+                status_code=404,
+            )
+
+    # 503 Service Unavailable (LLM Weather Delay)
+    elif exc.status_code == 503:
+        try:
+            return templates.TemplateResponse(
+                "error.html",
+                {
+                    "request": request,
+                    "title": "Weather Delay",
+                    "icon": "&#9788;&#65039;&#9729;&#65039;",
+                    "heading": "Weather Delay",
+                    "status_code": 503,
+                    "message": "The LLM service is temporarily unavailable.",
+                    "detail": exc.detail,
+                    "show_retry": True,
+                    "back_text": "Return to Clubhouse",
+                },
+                status_code=503,
+            )
+        except Exception as e:
+            logger.error(f"Error rendering 503 template: {e}")
+            return JSONResponse(
+                status_code=503,
+                content={"detail": exc.detail},
+            )
+
+    # 400 Bad Request / Validation Errors
+    elif exc.status_code == 400:
+        try:
+            return templates.TemplateResponse(
+                "error.html",
+                {
+                    "request": request,
+                    "title": "Invalid Request",
+                    "icon": "&#9888;&#65039;",
+                    "heading": "Penalty Stroke",
+                    "status_code": 400,
+                    "message": "There was a problem with your request.",
+                    "detail": exc.detail,
+                    "back_text": "Try Again",
+                },
+                status_code=400,
+            )
+        except Exception as e:
+            logger.error(f"Error rendering 400 template: {e}")
+            return JSONResponse(
+                status_code=400,
+                content={"detail": exc.detail},
+            )
+
+    # 401 Unauthorized
+    elif exc.status_code == 401:
+        try:
+            return templates.TemplateResponse(
+                "error.html",
+                {
+                    "request": request,
+                    "title": "Unauthorized",
+                    "icon": "&#128274;",
+                    "heading": "Access Denied",
+                    "status_code": 401,
+                    "message": "You need to sign in to access this.",
+                    "detail": exc.detail,
+                    "back_url": "/",
+                    "back_text": "Sign In",
+                },
+                status_code=401,
+            )
+        except Exception as e:
+            logger.error(f"Error rendering 401 template: {e}")
+            return JSONResponse(
+                status_code=401,
+                content={"detail": exc.detail},
+            )
+
+    # Other HTTP errors - use generic error template
+    else:
+        try:
+            return templates.TemplateResponse(
+                "error.html",
+                {
+                    "request": request,
+                    "title": f"Error {exc.status_code}",
+                    "status_code": exc.status_code,
+                    "message": str(exc.detail),
+                },
+                status_code=exc.status_code,
+            )
+        except Exception as e:
+            logger.error(f"Error rendering error template: {e}")
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={"detail": exc.detail},
+            )
+
+
+@app.exception_handler(500)
+async def internal_server_error_handler(request: Request, exc: Exception):
+    """
+    Handle 500 Internal Server Error.
+    Shows golf-themed "Weather Delay" page.
+    """
+    logger.error(f"Internal server error: {exc}", exc_info=True)
+
+    # API requests get JSON
+    if is_api_request(request):
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "Internal server error",
+                "message": "The course is experiencing technical difficulties.",
+            },
+        )
+
+    # Web requests get HTML
     try:
         return templates.TemplateResponse(
-            "404.html",
-            {"request": request},
-            status_code=404,
+            "500.html",
+            {
+                "request": request,
+                "error_message": str(exc) if settings.debug else None,
+            },
+            status_code=500,
         )
     except Exception as e:
-        logger.error(f"Error rendering 404 template: {e}")
+        logger.error(f"Error rendering 500 template: {e}")
         return HTMLResponse(
             content="""
             <!DOCTYPE html>
             <html>
-            <head><title>404 - Not Found</title></head>
+            <head><title>500 - Server Error</title></head>
             <body>
-                <h1>404 - Page Not Found</h1>
-                <p>The page you're looking for doesn't exist.</p>
+                <h1>500 - Server Error</h1>
+                <p>Something went wrong. Please try again later.</p>
                 <p><a href="/">Go to Home</a></p>
             </body>
             </html>
             """,
-            status_code=404,
+            status_code=500,
+        )
+
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """
+    Catch-all exception handler for unhandled exceptions.
+    """
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+
+    # API requests get JSON
+    if is_api_request(request):
+        return JSONResponse(
+            status_code=500,
+            content={
+                "detail": "An unexpected error occurred",
+                "message": str(exc) if settings.debug else "Please try again later.",
+            },
+        )
+
+    # Web requests get HTML
+    try:
+        return templates.TemplateResponse(
+            "500.html",
+            {
+                "request": request,
+                "error_message": str(exc) if settings.debug else None,
+            },
+            status_code=500,
+        )
+    except Exception as e:
+        logger.error(f"Error rendering 500 template: {e}")
+        return HTMLResponse(
+            content="""
+            <!DOCTYPE html>
+            <html>
+            <head><title>500 - Server Error</title></head>
+            <body>
+                <h1>500 - Server Error</h1>
+                <p>Something went wrong. Please try again later.</p>
+                <p><a href="/">Go to Home</a></p>
+            </body>
+            </html>
+            """,
+            status_code=500,
         )
 
 

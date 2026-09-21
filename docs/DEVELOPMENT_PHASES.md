@@ -231,86 +231,138 @@
 
 ---
 
-## Phase 5: Frontend - Interactivity
+## Phase 5: Frontend - Interactivity ✅ COMPLETE
 
-### 5.1 Htmx Prompt Submission
+### 5.1 Htmx Prompt Submission ✅ COMPLETE (mostly done in Phase 4)
 **Goal**: Submit prompts without page reload
 
-- [ ] Add htmx to base template
-- [ ] Create prompt input form
-- [ ] Add htmx attributes for AJAX submission
-- [ ] Create htmx response partial templates
-- [ ] Handle loading states
-- [ ] Display LLM responses
-- [ ] Show validation results
+- [x] Add htmx to base template
+- [x] Create prompt input form
+- [x] Add htmx attributes for AJAX submission
+- [x] Create htmx response partial templates (via game.html)
+- [x] Handle loading states (golf ball rolling animation)
+- [x] Display LLM responses
+- [x] Show validation results
 
-**Deliverable**: Can submit prompts, see results without page reload
+**Deliverable**: ✅ Can submit prompts, see results without page reload
 
-### 5.2 Alpine.js Pills UI
+### 5.2 Alpine.js Pills UI ✅ COMPLETE (mostly done in Phase 4)
 **Goal**: Context file pills for add/remove
 
-- [ ] Create Alpine.js component for pills
-- [ ] Display context files as pills
-- [ ] Add remove (X) functionality
-- [ ] Add pill styling with Tailwind
-- [ ] Include pill data in form submission
-- [ ] Test add/remove interaction
+- [x] Create Alpine.js component for pills
+- [x] Display context files as pills
+- [x] Add remove (X) functionality
+- [x] Add pill styling with Tailwind
+- [x] Include pill data in form submission
+- [x] Test add/remove interaction
+- [x] Add confirmation dialogs (system prompt reset)
+- [x] Fade animations on remove
 
-**Deliverable**: Can add/remove context files via pill UI
+**Deliverable**: ✅ Can add/remove context files via pill UI
 
-### 5.3 Metrics Panel
+### 5.3 Metrics Panel ✅ COMPLETE (mostly done in Phase 4)
 **Goal**: Display real-time stats and leaderboard
 
-- [ ] Create metrics panel template component
-- [ ] Display current token count
-- [ ] Display attempt count
-- [ ] Display user rank
-- [ ] Add leaderboard view (top 10)
-- [ ] Use htmx for auto-refresh
-- [ ] Style with Tailwind
+- [x] Create metrics panel template component
+- [x] Display current token count
+- [x] Display attempt count
+- [x] Display user rank
+- [x] Add leaderboard view (top 10)
+- [x] Use htmx for auto-refresh
+- [x] Style with Tailwind
+- [x] Add manual refresh button
+- [x] Auto-refresh toggle (30-second intervals)
 
-**Deliverable**: Metrics update in real-time as game progresses
+**Deliverable**: ✅ Metrics update in real-time as game progresses
+
+### 5.4 Error Handling ✅ ADDED
+**Goal**: Comprehensive error handling
+
+- [x] Create error templates (404.html, 500.html, error.html)
+- [x] Add global exception handlers to main.py
+- [x] Smart JSON/HTML error detection
+- [x] Golf-themed error messaging
+- [x] Weather delay UI for LLM failures
+
+**Deliverable**: ✅ User-friendly error pages with clear messaging
+
+### 5.5 Frontend Polish ✅ ADDED
+**Goal**: Production-ready UX
+
+- [x] CSS animations (10 new keyframes)
+- [x] Loading states on all pages
+- [x] Token estimate with par comparison
+- [x] Copy-to-clipboard functionality
+- [x] Password strength indicator
+- [x] Keyboard shortcuts (G/H/S/R, Ctrl+Enter)
+- [x] Skeleton loaders
+- [x] Accessibility (ARIA, keyboard navigation)
+
+**Deliverable**: ✅ Polished, accessible, production-ready frontend
 
 ---
 
-## Phase 6: Supporting Features
+## Phase 6: Supporting Features ✅ ~95% COMPLETE (integrated into Phases 3-5)
 
-### 6.1 Name Generator Service
+### 6.1 Name Generator Service ✅ COMPLETE
 **Goal**: Auto-generate user names
 
-- [ ] Create `app/services/name_generator.py`
-- [ ] Create lists: colors, courses, club numbers
-- [ ] Implement name generation algorithm
-- [ ] Ensure uniqueness (check database)
-- [ ] Add inappropriate name filtering
-- [ ] Write unit tests
-- [ ] Integrate into game start
+- [x] ~~Create `app/services/name_generator.py`~~ (implemented inline in game.py)
+- [x] Create lists: colors, courses, club numbers
+- [x] Implement name generation algorithm
+- [x] Ensure uniqueness (check database)
+- [x] Add inappropriate name filtering
+- [ ] Write unit tests (Phase 7)
+- [x] Integrate into game start
 
-**Deliverable**: New users get auto-generated names
+**Deliverable**: ✅ New users get auto-generated names (Phase 3.2)
 
-### 6.2 Session Management
+### 6.2 Session Management ✅ COMPLETE
 **Goal**: Track user sessions
 
-- [ ] Add session middleware to FastAPI
-- [ ] Store session data (in-memory for MVP)
-- [ ] Associate users with sessions
-- [ ] Handle session expiration
-- [ ] Add session cleanup
-- [ ] Test session lifecycle
+- [x] ~~Add session middleware to FastAPI~~ (implemented in database)
+- [x] Store session data (SQLite database)
+- [x] Associate users with sessions (session_participants table)
+- [x] Handle session expiration (3-hour timeout)
+- [x] Add session cleanup (background task marks DNF)
+- [x] Test session lifecycle
 
-**Deliverable**: Sessions persist across requests
+**Deliverable**: ✅ Sessions persist across requests (Phase 3.2 + 5)
 
-### 6.3 Leaderboard Page
+### 6.3 Leaderboard Page ✅ COMPLETE
 **Goal**: Standalone leaderboard view
 
-- [ ] Create `app/templates/leaderboard.html`
-- [ ] Add toggle for three leaderboard types
-- [ ] Display rankings with styling
-- [ ] Highlight current user
-- [ ] Add route in main.py
-- [ ] Style with Tailwind
+- [x] Create `app/templates/leaderboard.html`
+- [x] Add toggle for three leaderboard types
+- [x] Display rankings with styling
+- [x] Highlight current user
+- [x] Add route in main.py
+- [x] Style with Tailwind
+- [x] Add keyboard shortcuts
+- [x] Add refresh functionality
 
-**Deliverable**: Can view leaderboards in standalone page
+**Deliverable**: ✅ Can view leaderboards in standalone page (Phase 4 + 5)
+
+### 6.4 Courses & Challenges ✅ ADDED
+**Goal**: Sample content for testing
+
+- [x] Create 5 sample challenges (hole-001 to hole-005)
+- [x] Create courses.yaml with 4 courses
+- [x] Update challenge_loader with course methods
+- [x] Validate course→challenge references
+
+**Deliverable**: ✅ Working challenges and courses (Phase 5)
+
+### 6.5 Session Timeout Enforcement ✅ ADDED
+**Goal**: Enforce 3-hour session timeout
+
+- [x] Create session_manager.py service
+- [x] Background task to mark expired sessions as DNF
+- [x] Update API endpoints with timeout checks
+- [x] Database index for performance
+- [x] Clear error messages
+
+**Deliverable**: ✅ Sessions automatically timeout and marked DNF (Phase 5)
 
 ---
 

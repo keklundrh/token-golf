@@ -27,6 +27,7 @@ from app.services import (
     ChallengeLoaderService,
     LLMClient,
     ScoringService,
+    SessionManager,
     ValidatorService,
 )
 
@@ -41,22 +42,46 @@ router = APIRouter(prefix="/api/game", tags=["game"])
 # ============================================================================
 
 
+class ErrorDetail(BaseModel):
+    """Structured error detail for validation errors."""
+
+    field: str = Field(..., description="Field that caused the error")
+    issue: str = Field(..., description="Description of the issue")
+
+
+class ErrorResponse(BaseModel):
+    """Consistent error response format."""
+
+    error: str = Field(..., description="Short error code")
+    message: str = Field(..., description="Human-readable error message")
+    details: Optional[dict] = Field(None, description="Additional error details")
+    suggestions: Optional[List[str]] = Field(
+        None, description="Suggestions for fixing the error"
+    )
+
+
 class StartGameRequest(BaseModel):
     """Request to start a new game session."""
 
     # Authentication options (one must be provided)
-    username: Optional[str] = Field(
-        None, description="Existing username (for sign-in)"
+    action: str = Field(
+        ..., description="Action type: 'generate' or 'signin'"
     )
-    password: Optional[str] = Field(None, description="Password (for sign-in)")
-    generate_new_user: Optional[bool] = Field(
-        False, description="Generate new username and password"
+    username: Optional[str] = Field(
+        None, description="Existing username (for sign-in, required if action='signin')"
+    )
+    password: Optional[str] = Field(
+        None, description="Password (for sign-in, required if action='signin')"
+    )
+    course_id: Optional[str] = Field(
+        "beginner-course", description="Course identifier (default: beginner-course)"
     )
 
     class Config:
         json_schema_extra = {
             "example": {
-                "generate_new_user": True,
+                "action": "generate",
+                "course_id": "beginner-course",
             }
         }
 
@@ -76,6 +101,9 @@ class StartGameResponse(BaseModel):
         None, description="Current challenge to attempt"
     )
     message: str = Field(..., description="Welcome message")
+    next_action: str = Field(
+        ..., description="Hint for frontend on what to do next"
+    )
 
     class Config:
         json_schema_extra = {
@@ -88,6 +116,7 @@ class StartGameResponse(BaseModel):
                 "challenges": ["hole-001", "hole-002"],
                 "current_challenge_id": "hole-001",
                 "message": "Welcome Blue-Pebblebeach-7! Your course has 2 holes.",
+                "next_action": "load_challenge",
             }
         }
 
@@ -129,6 +158,12 @@ class SubmitAttemptResponse(BaseModel):
     )
     attempt_number: int = Field(..., description="Attempt number for this challenge")
     llm_response: str = Field(..., description="LLM's response")
+    next_action: str = Field(
+        ..., description="Hint for frontend on what to do next"
+    )
+    suggestions: Optional[List[str]] = Field(
+        None, description="Helpful suggestions if attempt was incorrect"
+    )
 
     class Config:
         json_schema_extra = {
@@ -142,6 +177,8 @@ class SubmitAttemptResponse(BaseModel):
                 "cumulative_tokens": 450,
                 "attempt_number": 2,
                 "llm_response": "def add(a, b):\n    return a + b",
+                "next_action": "next_challenge",
+                "suggestions": None,
             }
         }
 
@@ -258,16 +295,74 @@ async def start_game(
     Start a new game session.
 
     Two options:
-    1. Sign in with existing username + password
-    2. Generate new username + password (generate_new_user=true)
+    1. Generate new user: action="generate"
+    2. Sign in with existing credentials: action="signin" (requires username + password)
     """
-    logger.info(f"Starting new game session: {request}")
+    logger.info(f"Starting new game session: action={request.action}, course_id={request.course_id}")
+
+    # Validate action field
+    if request.action not in ["generate", "signin"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "invalid_action",
+                "message": f"Invalid action '{request.action}'. Must be 'generate' or 'signin'.",
+                "details": {"field": "action", "value": request.action},
+                "suggestions": [
+                    "Use action='generate' to create a new user",
+                    "Use action='signin' with username and password to sign in",
+                ],
+            },
+        )
+
+    # Validate course_id (for now, only beginner-course exists)
+    valid_courses = ["beginner-course"]
+    if request.course_id not in valid_courses:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "invalid_course",
+                "message": f"Course '{request.course_id}' not found.",
+                "details": {"field": "course_id", "valid_courses": valid_courses},
+                "suggestions": [
+                    f"Use one of the available courses: {', '.join(valid_courses)}",
+                ],
+            },
+        )
 
     user = None
     generated_password = None
 
     # Option 1: Sign in with existing credentials
-    if request.username and request.password:
+    if request.action == "signin":
+        # Validate required fields
+        if not request.username:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "missing_username",
+                    "message": "Username is required for sign-in.",
+                    "details": {"field": "username"},
+                    "suggestions": [
+                        "Provide your username in the request",
+                        "Or use action='generate' to create a new user",
+                    ],
+                },
+            )
+
+        if not request.password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "missing_password",
+                    "message": "Password is required for sign-in.",
+                    "details": {"field": "password"},
+                    "suggestions": [
+                        "Provide your password in the request",
+                    ],
+                },
+            )
+
         logger.info(f"Attempting sign-in for username: {request.username}")
 
         # Find user by username
@@ -277,20 +372,36 @@ async def start_game(
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"User '{request.username}' not found",
+                detail={
+                    "error": "user_not_found",
+                    "message": f"User '{request.username}' not found.",
+                    "details": {"username": request.username},
+                    "suggestions": [
+                        "Check that you spelled your username correctly",
+                        "Use action='generate' to create a new account",
+                    ],
+                },
             )
 
         # Verify password
         if not verify_password(request.password, user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid password",
+                detail={
+                    "error": "invalid_password",
+                    "message": "Invalid password.",
+                    "details": {},
+                    "suggestions": [
+                        "Check that you entered the correct password",
+                        "Passwords are case-sensitive",
+                    ],
+                },
             )
 
         logger.info(f"Sign-in successful for user {user.id}: {user.username}")
 
     # Option 2: Generate new user
-    elif request.generate_new_user:
+    elif request.action == "generate":
         logger.info("Generating new user")
 
         # Generate unique username
@@ -304,7 +415,14 @@ async def start_game(
         else:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to generate unique username",
+                detail={
+                    "error": "username_generation_failed",
+                    "message": "Failed to generate unique username after multiple attempts.",
+                    "details": {},
+                    "suggestions": [
+                        "Try again in a moment",
+                    ],
+                },
             )
 
         # Generate password
@@ -321,14 +439,8 @@ async def start_game(
 
         logger.info(f"Created new user {user.id}: {user.username}")
 
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Must provide either (username + password) or generate_new_user=true",
-        )
-
-    # Create session (hardcoded course for MVP)
-    course_id = "beginner-course"
+    # Create session with requested course
+    course_id = request.course_id
     challenges_dir = Path(settings.challenges_dir)
     loader = ChallengeLoaderService(db, challenges_dir)
 
@@ -339,7 +451,14 @@ async def start_game(
     if not challenge_ids:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="No challenges found for course",
+            detail={
+                "error": "no_challenges",
+                "message": f"No challenges found for course '{course_id}'.",
+                "details": {"course_id": course_id},
+                "suggestions": [
+                    "Contact support if this problem persists",
+                ],
+            },
         )
 
     # Create session
@@ -377,6 +496,7 @@ async def start_game(
         challenges=challenge_ids,
         current_challenge_id=challenge_ids[0] if challenge_ids else None,
         message=f"Welcome {user.username}! Your course has {len(challenge_ids)} holes.",
+        next_action="load_challenge",
     )
 
 
@@ -394,32 +514,54 @@ async def submit_attempt(
         f"Submitting attempt for session {request.session_id}, challenge {request.challenge_id}"
     )
 
-    # Verify session exists and is active
-    result = await db.execute(
-        select(Session).where(Session.id == request.session_id)
-    )
-    session = result.scalar_one_or_none()
-
-    if not session:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Session '{request.session_id}' not found",
-        )
-
-    if session.status != "active":
+    # Validate prompt is not empty
+    if not request.user_prompt or not request.user_prompt.strip():
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Session is {session.status}, cannot submit attempts",
+            detail={
+                "error": "empty_prompt",
+                "message": "User prompt cannot be empty.",
+                "details": {"field": "user_prompt"},
+                "suggestions": [
+                    "Provide a prompt for the LLM to generate a response",
+                    "The prompt should describe what you want the LLM to do",
+                ],
+            },
         )
 
-    # Check if session expired
-    if datetime.utcnow() > session.expires_at:
-        session.status = "dnf"
-        await db.commit()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Session has expired (DNF)",
-        )
+    # Verify session exists and is active (checks timeout automatically)
+    session_manager = SessionManager(db)
+    try:
+        session = await session_manager.get_active_session(request.session_id)
+    except HTTPException as e:
+        # Re-raise with better error details
+        if e.status_code == status.HTTP_404_NOT_FOUND:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": "session_not_found",
+                    "message": f"Session '{request.session_id}' not found.",
+                    "details": {"session_id": request.session_id},
+                    "suggestions": [
+                        "Check that you have a valid session ID",
+                        "Start a new game session with POST /api/game/start",
+                    ],
+                },
+            )
+        elif e.status_code == status.HTTP_400_BAD_REQUEST:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "error": "session_not_active",
+                    "message": "Session is not active or has expired.",
+                    "details": {"session_id": request.session_id},
+                    "suggestions": [
+                        "Start a new game session with POST /api/game/start",
+                    ],
+                },
+            )
+        else:
+            raise
 
     # Get user from session
     result = await db.execute(
@@ -432,7 +574,15 @@ async def submit_attempt(
     if not participant:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No participant found for session",
+            detail={
+                "error": "no_participant",
+                "message": "No participant found for this session.",
+                "details": {"session_id": request.session_id},
+                "suggestions": [
+                    "This session may be invalid or corrupted",
+                    "Start a new game session with POST /api/game/start",
+                ],
+            },
         )
 
     user_id = participant.user_id
@@ -446,7 +596,15 @@ async def submit_attempt(
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(e),
+            detail={
+                "error": "challenge_not_found",
+                "message": f"Challenge '{request.challenge_id}' not found.",
+                "details": {"challenge_id": request.challenge_id},
+                "suggestions": [
+                    "Check that the challenge ID is correct",
+                    "Use GET /api/challenges to see available challenges",
+                ],
+            },
         )
 
     # Step 1: Call LLM
@@ -483,9 +641,25 @@ async def submit_attempt(
                 challenge_id=request.challenge_id,
             )
             await db.commit()
-            detail = "Weather delay - LLM service temporarily unavailable. Your tokens for this hole have been cleared."
+            detail = {
+                "error": "weather_delay",
+                "message": "LLM service temporarily unavailable. Your tokens for this hole have been cleared.",
+                "details": {"challenge_id": request.challenge_id},
+                "suggestions": [
+                    "Try again in a few moments",
+                    "The LLM service may be experiencing high load",
+                ],
+            }
         else:
-            detail = "Weather delay - LLM service temporarily unavailable. Your completed score for this hole is preserved."
+            detail = {
+                "error": "weather_delay",
+                "message": "LLM service temporarily unavailable. Your completed score for this hole is preserved.",
+                "details": {"challenge_id": request.challenge_id},
+                "suggestions": [
+                    "Try again in a few moments",
+                    "Your completed score is safe",
+                ],
+            }
 
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -534,6 +708,18 @@ async def submit_attempt(
         f"tokens={attempt.total_tokens}, cumulative={cumulative_tokens}"
     )
 
+    # Determine next action and suggestions
+    if validation_result.is_correct:
+        next_action = "next_challenge"
+        suggestions = None
+    else:
+        next_action = "retry"
+        suggestions = [
+            "Review the validation feedback",
+            "Try a more specific or different prompt",
+            "Check the challenge requirements",
+        ]
+
     return SubmitAttemptResponse(
         attempt_id=attempt.id,
         is_correct=validation_result.is_correct,
@@ -544,6 +730,8 @@ async def submit_attempt(
         cumulative_tokens=cumulative_tokens,
         attempt_number=attempt.attempt_number,
         llm_response=llm_response.response_text,
+        next_action=next_action,
+        suggestions=suggestions,
     )
 
 
@@ -555,15 +743,21 @@ async def get_game_status(
     """Get current game state for a session."""
     logger.info(f"Getting game status for session {session_id}")
 
-    # Get session
-    result = await db.execute(select(Session).where(Session.id == session_id))
-    session = result.scalar_one_or_none()
+    # Get session (checks timeout and updates status if expired)
+    session_manager = SessionManager(db)
+    try:
+        session = await session_manager.get_active_session(session_id)
+    except HTTPException:
+        # Session expired or inactive - still show status but with updated state
+        # Re-fetch to get current status after timeout check
+        result = await db.execute(select(Session).where(Session.id == session_id))
+        session = result.scalar_one_or_none()
 
-    if not session:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Session '{session_id}' not found",
-        )
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Session '{session_id}' not found",
+            )
 
     # Get participant (user)
     result = await db.execute(

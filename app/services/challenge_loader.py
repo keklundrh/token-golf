@@ -13,7 +13,7 @@ See ADR 007 for design decisions.
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict
+from typing import List, Dict, Any
 
 import yaml
 from sqlalchemy import select
@@ -54,6 +54,7 @@ class ChallengeLoaderService:
         self._db = db_session
         self._challenges_dir = Path(challenges_dir)
         self._cache: Dict[str, Challenge] = {}
+        self._courses_cache: Dict[str, Dict[str, Any]] = {}
 
         if not self._challenges_dir.exists():
             logger.warning(f"Challenges directory not found: {self._challenges_dir}")
@@ -196,6 +197,176 @@ class ChallengeLoaderService:
         """
         logger.info("Clearing challenge cache")
         self._cache.clear()
+
+    async def load_courses(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Load all courses from courses.yaml.
+
+        Reads the courses.yaml file and validates that all referenced
+        challenges exist. Caches the course definitions.
+
+        Returns:
+            Dictionary mapping course_id to course configuration
+
+        Raises:
+            FileNotFoundError: If courses.yaml doesn't exist
+            ValueError: If courses.yaml is invalid or references non-existent challenges
+        """
+        # Return cached courses if already loaded
+        if self._courses_cache:
+            logger.debug("Returning cached courses")
+            return self._courses_cache
+
+        courses_file = self._challenges_dir / "courses.yaml"
+
+        if not courses_file.exists():
+            raise FileNotFoundError(f"Courses file not found: {courses_file}")
+
+        try:
+            with open(courses_file, "r") as f:
+                data = yaml.safe_load(f)
+
+            if not data or "courses" not in data:
+                raise ValueError("courses.yaml missing 'courses' key")
+
+            courses = data["courses"]
+            if not isinstance(courses, list):
+                raise ValueError("'courses' must be a list")
+
+            # Validate and cache each course
+            for course in courses:
+                self._validate_course_config(course)
+                course_id = course["id"]
+                self._courses_cache[course_id] = course
+
+            logger.info(f"Loaded {len(self._courses_cache)} courses")
+            return self._courses_cache
+
+        except yaml.YAMLError as e:
+            raise ValueError(f"Invalid YAML in {courses_file}: {e}")
+        except KeyError as e:
+            raise ValueError(f"Missing required field in courses.yaml: {e}")
+
+    def _validate_course_config(self, course: Dict[str, Any]) -> None:
+        """
+        Validate course configuration has required fields.
+
+        Args:
+            course: Course configuration dictionary
+
+        Raises:
+            ValueError: If required fields are missing or invalid
+        """
+        required_fields = ["id", "name", "description", "difficulty", "holes"]
+
+        for field in required_fields:
+            if field not in course:
+                raise ValueError(f"Course missing required field: {field}")
+
+        # Validate holes is a list
+        if not isinstance(course["holes"], list):
+            raise ValueError(f"Course {course['id']}: 'holes' must be a list")
+
+        if not course["holes"]:
+            raise ValueError(f"Course {course['id']}: 'holes' cannot be empty")
+
+        # Validate difficulty
+        valid_difficulties = ["easy", "medium", "hard", "expert"]
+        if course["difficulty"] not in valid_difficulties:
+            raise ValueError(
+                f"Course {course['id']} has invalid difficulty: "
+                f"{course['difficulty']}. Must be one of {valid_difficulties}"
+            )
+
+        logger.debug(f"Course {course['id']} passed validation")
+
+    async def get_course(self, course_id: str) -> Dict[str, Any] | None:
+        """
+        Get a course by ID.
+
+        Args:
+            course_id: Course identifier (e.g., "beginner-course")
+
+        Returns:
+            Course configuration dictionary or None if not found
+
+        Raises:
+            ValueError: If courses.yaml is invalid
+            FileNotFoundError: If courses.yaml doesn't exist
+        """
+        # Load courses if not cached
+        if not self._courses_cache:
+            await self.load_courses()
+
+        return self._courses_cache.get(course_id)
+
+    async def get_course_challenges(self, course_id: str) -> List[Challenge]:
+        """
+        Get all challenges for a course in sequence.
+
+        Args:
+            course_id: Course identifier (e.g., "beginner-course")
+
+        Returns:
+            List of Challenge objects in course order
+
+        Raises:
+            ValueError: If course not found or references invalid challenges
+            FileNotFoundError: If courses.yaml doesn't exist
+        """
+        course = await self.get_course(course_id)
+
+        if not course:
+            raise ValueError(f"Course not found: {course_id}")
+
+        challenges = []
+        missing_challenges = []
+
+        for challenge_id in course["holes"]:
+            challenge = await self.get_challenge(challenge_id)
+            if challenge:
+                challenges.append(challenge)
+            else:
+                missing_challenges.append(challenge_id)
+
+        if missing_challenges:
+            raise ValueError(
+                f"Course {course_id} references non-existent challenges: "
+                f"{', '.join(missing_challenges)}"
+            )
+
+        logger.debug(
+            f"Loaded {len(challenges)} challenges for course {course_id}"
+        )
+        return challenges
+
+    async def list_courses(
+        self,
+        difficulty: str | None = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        List all courses with optional difficulty filter.
+
+        Args:
+            difficulty: Filter by difficulty (easy, medium, hard, expert)
+
+        Returns:
+            List of course configuration dictionaries
+
+        Raises:
+            ValueError: If courses.yaml is invalid
+            FileNotFoundError: If courses.yaml doesn't exist
+        """
+        # Load courses if not cached
+        if not self._courses_cache:
+            await self.load_courses()
+
+        courses = list(self._courses_cache.values())
+
+        if difficulty:
+            courses = [c for c in courses if c["difficulty"] == difficulty]
+
+        return courses
 
     # ========================================================================
     # Private Methods

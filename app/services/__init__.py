@@ -11,11 +11,13 @@ Services:
     - ValidatorService: Validate LLM responses against challenge criteria
     - ValidationResult: Structured validation result
     - ScoringService: Record attempts and calculate scores
+    - SessionManager: Manage session lifecycle and timeout enforcement
 """
 
 from app.services.challenge_loader import ChallengeLoaderService
 from app.services.llm_client import LLMClient, LLMResponse, MockLLMClient
 from app.services.scoring import ScoringService
+from app.services.session_manager import SessionManager
 from app.services.validator import ValidatorService, ValidationResult
 
 __all__ = [
@@ -24,6 +26,7 @@ __all__ = [
     "LLMResponse",
     "MockLLMClient",
     "ScoringService",
+    "SessionManager",
     "ValidatorService",
     "ValidationResult",
 ]

@@ -1,0 +1,15 @@
+Subject: Team Meeting Notes
+
+Hi everyone,
+
+Thanks for attending today's meeting. Here are the key contacts:
+
+1. Project Lead: sarah.johnson@techcorp.com
+2. Design Team: marcus.chen@techcorp.com
+3. QA Lead: emily.rodriguez@techcorp.com
+4. Support: help@techcorp.com
+
+Please reach out if you have any questions. You can also contact our external consultant at david.kim@consultingfirm.net
+
+Best regards,
+The Team

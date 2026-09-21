@@ -1,49 +1,49 @@
-# PLACEHOLDER - Hard Question Answering Challenge
-# TODO: Complete this challenge definition
-
 id: hole-004
-name: "[PLACEHOLDER] Complex Question Answering"
-difficulty: hard
+name: "Email Extraction"
+difficulty: medium
 description: |
-  TODO: Write a challenging question-answering task.
+  Extract all email addresses from the provided text file and return them as a JSON array.
 
-  Example template:
-  - Requires analyzing multiple context files
-  - Non-obvious answer requiring reasoning
-  - Specific format for answer
+  Requirements:
+  - Extract ALL email addresses from the text
+  - Return them as a valid JSON array
+  - Sort the emails alphabetically
+  - Each email should be a string in the array
+  - No duplicates
 
-task_type: question_answering
+  Expected format: ["email1@domain.com", "email2@domain.com", ...]
+
+task_type: extraction
 
 validation:
-  type: semantic_similarity
+  type: exact_match
   criteria:
-    reference_answer: "TODO: Write the reference correct answer here"
-    similarity_threshold: 0.85
-    model: "text-embedding-3-small"
+    expected_answer: '["david.kim@consultingfirm.net", "emily.rodriguez@techcorp.com", "help@techcorp.com", "marcus.chen@techcorp.com", "sarah.johnson@techcorp.com"]'
+    case_sensitive: true
+    trim_whitespace: true
 
-# context_files:
-#   # TODO: Add context files that contain information needed
-#   # - name: "document1.txt"
-#   #   path: "./challenges/hole-004/assets/document1.txt"
-#   #   description: "Primary source document"
-#   #   removable: false
-#   #   editable: false
-#   #   default_included: true
+context_files:
+  - name: "sample_text.txt"
+    path: "./challenges/hole-004/assets/sample_text.txt"
+    description: "Text containing email addresses to extract"
+    removable: false
+    editable: false
+    default_included: true
 
 system_prompt:
-  default: "You are a helpful assistant that analyzes documents and answers questions."
+  default: "You are a helpful assistant skilled at extracting information from text."
   removable: false
   editable: true
 
 parameters:
-  max_iterations: 15
+  max_iterations: null
   time_limit_seconds: null
-  hints_available: 1
+  hints_available: 0
 
 metadata:
   author: "Token Golf Team"
-  created_date: "2026-09-09"
-  tags: ["placeholder", "question_answering", "hard"]
-  estimated_tokens_expert: 800  # TODO: Update after testing
-  estimated_tokens_beginner: 2500  # TODO: Update after testing
-  estimated_difficulty: 7.0
+  created_date: "2026-09-21"
+  tags: ["extraction", "regex", "text_processing", "json"]
+  estimated_tokens_expert: 200
+  estimated_tokens_beginner: 500
+  estimated_difficulty: 3.0
