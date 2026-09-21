@@ -120,6 +120,11 @@ class Settings(BaseSettings):
         description="Optional limit on attempts per challenge"
     )
 
+    challenges_dir: str = Field(
+        default="./challenges",
+        description="Path to challenges directory"
+    )
+
     preload_challenges: bool = Field(
         default=True,
         description="Preload challenges on startup"
