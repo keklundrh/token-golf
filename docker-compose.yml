@@ -30,11 +30,38 @@ services:
     env_file:
       - .env
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    # depends_on:
-    #   - postgres  # Commented out for SQLite development; uncomment when using PostgreSQL profile
+    depends_on:
+      - tailwind
     networks:
       - token-golf-network
     restart: unless-stopped
+
+  # Tailwind CSS builder for development
+  # Rebuilds CSS when templates or styles change
+  # Run manually: podman-compose run --rm tailwind npm run tailwind:build
+  tailwind:
+    image: node:20-alpine
+    container_name: token-golf-tailwind
+    working_dir: /app
+    volumes:
+      - ./static:/app/static
+      - ./app:/app/app
+      - ./templates:/app/templates
+      - ./tailwind.config.js:/app/tailwind.config.js
+      - ./package.json:/app/package.json
+      - tailwind_node_modules:/app/node_modules
+    command: >
+      sh -c "
+        npm install --silent &&
+        echo 'Building Tailwind CSS...' &&
+        npm run tailwind:build &&
+        echo 'CSS built successfully. Use npm run tailwind:build to rebuild.' &&
+        tail -f /dev/null
+      "
+    networks:
+      - token-golf-network
+    profiles:
+      - tools
 
   # PostgreSQL for production-like testing
   # (Can be disabled for MVP development using SQLite)
@@ -61,3 +88,4 @@ networks:
 
 volumes:
   postgres_data:
+  tailwind_node_modules:

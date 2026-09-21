@@ -101,6 +101,13 @@ uploads/
 static/dist/
 static/.build/
 
+# Tailwind CSS generated output
+static/css/output.css
+
+# Node.js (for Tailwind CSS)
+node_modules/
+package-lock.json
+
 # Challenge test outputs
 challenges/*/test_output/
 

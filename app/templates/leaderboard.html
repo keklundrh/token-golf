@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard - Token Golf{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto"
+     x-data="{
+         view: 'global',
+         selectedHole: null,
+         sessionId: localStorage.getItem('token_golf_session_id') || null,
+         currentUserId: null,
+         challenges: [],
+         stats: {
+             totalPlayers: 0,
+             averageScore: 0,
+             bestScore: 0,
+             yourRank: null
+         }
+     }"
+     x-init="
+         // Load challenges for per-hole dropdown
+         fetch('/api/challenges')
+             .then(r => r.json())
+             .then(data => {
+                 challenges = data.challenges;
+                 if (challenges.length > 0) {
+                     selectedHole = challenges[0].id;
+                 }
+             });
+
+         // Get current user info if session exists
+         if (sessionId) {
+             fetch(`/api/game/status/${sessionId}`)
+                 .then(r => r.json())
+                 .then(data => {
+                     currentUserId = data.user_id;
+                 })
+                 .catch(() => {
+                     // Session doesn't exist or expired
+                     localStorage.removeItem('token_golf_session_id');
+                     sessionId = null;
+                 });
+         }
+     ">
+
+    <!-- Page Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-4xl font-bold text-green-900 mb-2">Leaderboard</h1>
+        <p class="text-lg text-green-700">See how you stack up against other players</p>
+        <p class="text-sm text-green-600 mt-2">Remember: Lower scores are better in golf!</p>
+    </div>
+
+    <!-- View Toggle Buttons -->
+    <div class="bg-white rounded-lg shadow-md p-4 mb-6">
+        <div class="flex flex-wrap justify-center gap-3">
+            <button
+                @click="view = 'global'"
+                :class="view === 'global'
+                    ? 'bg-green-700 text-white shadow-lg scale-105'
+                    : 'bg-white text-green-700 border-2 border-green-700 hover:bg-green-50'"
+                class="px-6 py-3 rounded-lg font-semibold transition-all duration-200 ease-in-out transform">
+                <span class="text-xl mr-2">🌍</span>
+                Global Rankings
+            </button>
+
+            <button
+                @click="view = 'perHole'"
+                :class="view === 'perHole'
+                    ? 'bg-green-700 text-white shadow-lg scale-105'
+                    : 'bg-white text-green-700 border-2 border-green-700 hover:bg-green-50'"
+                class="px-6 py-3 rounded-lg font-semibold transition-all duration-200 ease-in-out transform">
+                <span class="text-xl mr-2">&#9971;</span>
+                Per-Hole Records
+            </button>
+
+            <button
+                @click="view = 'session'"
+                :class="view === 'session'
+                    ? 'bg-green-700 text-white shadow-lg scale-105'
+                    : 'bg-white text-green-700 border-2 border-green-700 hover:bg-green-50'"
+                class="px-6 py-3 rounded-lg font-semibold transition-all duration-200 ease-in-out transform"
+                :disabled="!sessionId"
+                x-show="sessionId">
+                <span class="text-xl mr-2">🏆</span>
+                Current Session
+            </button>
+        </div>
+
+        <!-- Per-Hole Challenge Selector -->
+        <div x-show="view === 'perHole'"
+             x-transition
+             class="mt-4 flex justify-center">
+            <div class="w-full max-w-md">
+                <label class="block text-sm font-semibold text-green-900 mb-2 text-center">
+                    Select Challenge:
+                </label>
+                <select
+                    x-model="selectedHole"
+                    @change="$refs.perHoleBoard.dispatchEvent(new Event('refreshLeaderboard'))"
+                    class="w-full px-4 py-2 border-2 border-green-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                    <template x-for="challenge in challenges" :key="challenge.id">
+                        <option :value="challenge.id" x-text="`${challenge.name} (${challenge.difficulty})`"></option>
+                    </template>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Main Leaderboard -->
+        <div class="lg:col-span-3">
+            <div class="bg-white rounded-lg shadow-lg overflow-hidden">
+                <!-- Global Leaderboard -->
+                <div x-show="view === 'global'" x-transition>
+                    <div class="bg-gradient-to-r from-green-700 to-emerald-600 px-6 py-4">
+                        <h2 class="text-2xl font-bold text-white">Global Rankings</h2>
+                        <p class="text-green-100 text-sm">All-time best scores across all sessions</p>
+                    </div>
+                    <div
+                        hx-get="/api/leaderboard/global?limit=10"
+                        hx-trigger="load, refreshLeaderboard from:body"
+                        hx-swap="innerHTML"
+                        class="p-6">
+                        <!-- Loading state -->
+                        <div class="text-center py-12">
+                            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
+                            <p class="mt-4 text-green-700">Loading leaderboard...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Per-Hole Leaderboard -->
+                <div x-show="view === 'perHole'" x-transition x-ref="perHoleBoard">
+                    <div class="bg-gradient-to-r from-green-700 to-emerald-600 px-6 py-4">
+                        <h2 class="text-2xl font-bold text-white">Challenge Records</h2>
+                        <p class="text-green-100 text-sm">Best scores for this specific challenge</p>
+                    </div>
+                    <div
+                        :hx-get="`/api/leaderboard/hole/${selectedHole}?limit=10`"
+                        hx-trigger="load, refreshLeaderboard"
+                        hx-swap="innerHTML"
+                        class="p-6">
+                        <!-- Loading state -->
+                        <div class="text-center py-12">
+                            <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-green-700"></div>
+                            <p class="mt-4 text-green-700">Loading challenge records...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session Leaderboard -->
+                <div x-show="view === 'session'" x-transition x-cloak>
+                    <div class="bg-gradient-to-r from-green-700 to-emerald-600 px-6 py-4">
+                        <h2 class="text-2xl font-bold text-white">Current Session</h2>
+                        <p class="text-green-100 text-sm">Rankings for your current game session</p>
+                    </div>
+                    <div
+                        :hx-get="sessionId ? `/api/leaderboard/session/${sessionId}?limit=100` : ''"
+                        hx-trigger="load, refreshLeaderboard from:body"
+                        hx-swap="innerHTML"
+                        class="p-6">
+                        <template x-if="!sessionId">
+                            <div class="text-center py-12">
+                                <p class="text-gray-600 mb-4">No active session found</p>
+                                <a href="/" class="inline-block bg-green-700 text-white px-6 py-3 rounded-lg hover:bg-green-800 transition-colors">
+                                    Start a Game
+                                </a>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Panel -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-lg shadow-lg p-6 sticky top-4">
+                <h3 class="text-xl font-bold text-green-900 mb-4 flex items-center">
+                    <span class="text-2xl mr-2">📊</span>
+                    Statistics
+                </h3>
+
+                <div class="space-y-4">
+                    <!-- Total Players -->
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <div class="text-sm text-green-700 font-medium mb-1">Total Players</div>
+                        <div class="text-3xl font-bold text-green-900" x-text="stats.totalPlayers || '-'"></div>
+                    </div>
+
+                    <!-- Best Score -->
+                    <div class="bg-yellow-50 rounded-lg p-4">
+                        <div class="text-sm text-yellow-700 font-medium mb-1">Best Score</div>
+                        <div class="text-3xl font-bold text-yellow-900">
+                            <span x-text="stats.bestScore || '-'"></span>
+                            <span class="text-sm ml-1" x-show="stats.bestScore">tokens</span>
+                        </div>
+                    </div>
+
+                    <!-- Average Score -->
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <div class="text-sm text-blue-700 font-medium mb-1">Average Score</div>
+                        <div class="text-3xl font-bold text-blue-900">
+                            <span x-text="stats.averageScore || '-'"></span>
+                            <span class="text-sm ml-1" x-show="stats.averageScore">tokens</span>
+                        </div>
+                    </div>
+
+                    <!-- Your Rank -->
+                    <div x-show="currentUserId && stats.yourRank" class="bg-purple-50 rounded-lg p-4">
+                        <div class="text-sm text-purple-700 font-medium mb-1">Your Rank</div>
+                        <div class="text-3xl font-bold text-purple-900">
+                            #<span x-text="stats.yourRank"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="mt-6 pt-6 border-t border-gray-200">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">Trophy Key</h4>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center">
+                            <span class="text-xl mr-2">🥇</span>
+                            <span class="text-gray-600">1st Place - Gold</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-xl mr-2">🥈</span>
+                            <span class="text-gray-600">2nd Place - Silver</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-xl mr-2">🥉</span>
+                            <span class="text-gray-600">3rd Place - Bronze</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden template for leaderboard table (htmx will replace this) -->
+<template id="leaderboard-table-template">
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Rank
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Player
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Total Tokens
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Holes Completed
+                    </th>
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Attempts
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                <!-- Rows will be inserted by htmx response -->
+            </tbody>
+        </table>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Process leaderboard data and update statistics
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    // Parse the response if it's JSON
+    try {
+        const response = JSON.parse(event.detail.xhr.response);
+
+        if (response && response.entries) {
+            // Calculate statistics
+            const entries = response.entries;
+            const totalPlayers = response.total_entries || entries.length;
+            const totalTokens = entries.reduce((sum, entry) => sum + entry.total_tokens, 0);
+            const averageScore = entries.length > 0 ? Math.round(totalTokens / entries.length) : 0;
+            const bestScore = entries.length > 0 ? entries[0].total_tokens : 0;
+
+            // Find current user's rank
+            const currentUserId = Alpine.store ? null : window.currentUserId;
+            let yourRank = null;
+            if (currentUserId) {
+                const userEntry = entries.find(e => e.user_id === currentUserId);
+                if (userEntry) {
+                    yourRank = userEntry.rank;
+                }
+            }
+
+            // Update Alpine.js data
+            const alpineComponent = event.detail.target.closest('[x-data]');
+            if (alpineComponent && alpineComponent._x_dataStack) {
+                const data = alpineComponent._x_dataStack[0];
+                data.stats = {
+                    totalPlayers,
+                    averageScore,
+                    bestScore,
+                    yourRank
+                };
+                data.currentUserId = currentUserId;
+            }
+
+            // Build table HTML
+            const tableHtml = buildLeaderboardTable(entries, currentUserId);
+            event.detail.target.innerHTML = tableHtml;
+        }
+    } catch (e) {
+        // If it's not JSON or parsing fails, the response is probably already HTML
+        console.log('Response is not JSON, treating as HTML');
+    }
+});
+
+function buildLeaderboardTable(entries, currentUserId) {
+    if (!entries || entries.length === 0) {
+        return `
+            <div class="text-center py-12">
+                <p class="text-gray-600">No entries found</p>
+            </div>
+        `;
+    }
+
+    let html = `
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Rank
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Player
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Total Tokens
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Holes Completed
+                        </th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Attempts
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+    `;
+
+    entries.forEach(entry => {
+        const isCurrentUser = currentUserId && entry.user_id === currentUserId;
+        const rowClass = isCurrentUser
+            ? 'bg-green-50 border-l-4 border-green-500'
+            : '';
+
+        let trophy = '';
+        let rankClass = 'text-gray-900';
+
+        if (entry.rank === 1) {
+            trophy = '<span class="text-2xl mr-1">🥇</span>';
+            rankClass = 'text-yellow-600 font-bold';
+        } else if (entry.rank === 2) {
+            trophy = '<span class="text-2xl mr-1">🥈</span>';
+            rankClass = 'text-gray-400 font-bold';
+        } else if (entry.rank === 3) {
+            trophy = '<span class="text-2xl mr-1">🥉</span>';
+            rankClass = 'text-orange-600 font-bold';
+        }
+
+        html += `
+            <tr class="${rowClass}">
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                        ${trophy}
+                        <span class="text-lg font-semibold ${rankClass}">#${entry.rank}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm font-medium text-gray-900">
+                        ${entry.username}
+                        ${isCurrentUser ? '<span class="ml-2 px-2 py-1 text-xs font-semibold text-green-800 bg-green-200 rounded-full">You</span>' : ''}
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">
+                        <span class="font-semibold">${entry.total_tokens.toLocaleString()}</span>
+                        <span class="text-xs text-gray-500 ml-1">tokens</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-900">${entry.completed_challenges}</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="text-sm text-gray-500">${entry.total_attempts}</div>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    return html;
+}
+</script>
+{% endblock %}

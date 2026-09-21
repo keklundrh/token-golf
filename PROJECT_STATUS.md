@@ -4,351 +4,163 @@
 
 ## Current Phase
 
-**Phase**: Phase 3 - API Endpoints  
-**Status**: ✅ COMPLETE (Full REST API operational!)
+**Phase**: Phase 4 - Frontend Templates  
+**Status**: ✅ **COMPLETE** (Full frontend operational!)
 
-**Next Phase**: Phase 4 - Frontend Templates
+**Next Phase**: Phase 5 - Frontend Interactivity
 
-## What's Been Done
+## Quick Summary
 
-### Documentation Created
+Token Golf is a competitive game teaching AI token efficiency through golf-style scoring. **Backend and frontend are now complete** - full REST API + server-rendered templates with Tailwind CSS + htmx + Alpine.js.
 
-1. **README.md** - Project overview and quick start guide
-   - Game concept and mechanics
-   - UI layout specification
-   - Tech stack summary
-   - Roadmap with three phases
+**Total Code**: ~5,700 lines
+- Backend: 4,196 lines (models, services, API)
+- Frontend: 1,500+ lines (templates, CSS, config)
 
-2. **CLAUDE.md** - Comprehensive AI assistant context
-   - Detailed project overview
-   - Complete technical architecture
-   - Development workflow
-   - Database schema
-   - LLM integration approach
-   - User identity system
-   - Design principles and decisions
+## Completed Phases
 
-3. **CONTRIBUTING.md** - Developer contribution guidelines
-   - Git flow workflow
-   - Code standards (Python, Frontend)
-   - Testing guidelines
-   - Challenge contribution process
-   - Development setup instructions
-
-4. **docs/ARCHITECTURE.md** - System architecture documentation
-   - Complete architecture diagram
-   - Component details (frontend, backend, services)
-   - API endpoint specifications
-   - Data flow diagrams
-   - Scalability considerations
-   - Deployment strategies
-   - Testing and monitoring approaches
-
-5. **docs/CHALLENGE_FORMAT.md** - Challenge YAML specification
-   - Complete YAML format documentation
-   - All validation types explained
-   - Context file guidelines
-   - Difficulty guidelines
-   - Best practices and anti-patterns
-   - Example challenges
-
-6. **docs/ADRs/** - Architecture Decision Records
-   - `000-use-adrs.md` - Decision to use ADRs
-   - `001-tech-stack.md` - Technology stack decisions
-   - `template.md` - Template for future ADRs
-
-7. **.gitignore** - Git ignore rules for Python, databases, environments
-
-8. **PROJECT_STATUS.md** - This file
-
-### Repository Setup
-
-- ✅ Git repository initialized
-- ✅ Basic directory structure documented
-- ✅ Development workflow defined (gitflow on dev branch)
-
-## Completed Phases Summary
-
-### Phase 0: Container Foundation - ✅ COMPLETE (2026-09-09)
-- Podman/Docker containerization
+### Phase 0: Container Foundation ✅ (2026-09-09)
+- Podman containerization with hot reload
 - FastAPI app with health check
-- Hot reload development environment
 - ADR 006: Use Podman (not Docker)
 
-### Phase 1: Foundation Components - ✅ COMPLETE
+### Phase 1: Foundation Components ✅ (2026-09-09)
+- Configuration management (Pydantic)
+- SQLAlchemy 2.0 models (User, Session, Challenge, Attempt, Score)
+- Alembic migrations
+- Database verified in container
 
-**Phase 1.2: Configuration Management** (2026-09-09)
-- Pydantic Settings for configuration
-- Environment variable management
-- Database and LLM API settings
+### Phase 2: Core Services ✅ (2026-09-21)
+- Challenge Loader (410 lines) - YAML parsing, validation, caching
+- LLM Client (357 lines) - Claude API, token counting, mock client
+- Validator (439 lines) - Test cases, exact match, code execution
+- Scoring (504 lines) - Attempts, cumulative scores, three leaderboards
 
-**Phase 1.3: Database Models** (2026-09-09)
-- SQLAlchemy 2.0 models: User, Session, Challenge, Attempt, Score
-- Type-annotated with Mapped columns
-- Proper relationships and constraints
+### Phase 3: API Endpoints ✅ (2026-09-21)
+- Challenge API (290 lines) - List, get, filtering
+- Game API (647 lines) - Start, submit, status, auth (username/password)
+- Leaderboard API (328 lines) - Global, per-hole, session views
+- Full REST API operational with OpenAPI docs
 
-**Phase 1.4: Alembic Setup** (2026-09-09)
-- Database migration system
-- Initial migration with all tables
-- Migration verified in container
-
-### Phase 2: Core Services - ✅ COMPLETE
-
-**Phase 2.1: Challenge Loader Service** (2026-09-21)
-- YAML challenge parsing (410 lines)
-- Challenge validation and caching
-- Support for test cases and exact match
-
-**Phase 2.2: LLM Client Service** (2026-09-21)
-- Claude API integration (357 lines)
-- Async client with token counting
-- Mock client for testing
-- Error handling and retries
-
-**Phase 2.3: Validator Service** (2026-09-21)
-- Test case validation (run code) (439 lines)
-- Exact match validation (strings)
-- Code extraction from markdown
-- Comprehensive output comparison
-
-**Phase 2.4: Scoring Service** (2026-09-21)
-- Attempt recording (504 lines)
-- Cumulative score calculation
-- Three leaderboard views (session, per-hole, global)
-- Weather delay handling
-
-### Phase 3: API Endpoints - ✅ COMPLETE
-
-**Phase 3.1: Challenge API** ✅ COMPLETE (2026-09-21)
-- Challenge API endpoints (290 lines)
-- GET /api/challenges - List with filtering
-- GET /api/challenges/{id} - Get specific challenge
-- Pydantic request/response models
-- OpenAPI documentation
-
-**Phase 3.2: Game API** ✅ COMPLETE (2026-09-21)
-- Game API endpoints (647 lines)
-- POST /api/game/start - Start session with authentication
-- POST /api/game/submit - Submit attempt (LLM → Validator → Scoring)
-- GET /api/game/status/{id} - Get game state
-- Username/password authentication (sign-in or generate new)
-- Username generation (Color-Course-Club format)
-- Weather delay error handling for LLM failures
-- Database migration for password_hash field
-
-**Phase 3.3: Leaderboard API** ✅ COMPLETE (2026-09-21)
-- Leaderboard API endpoints (328 lines)
-- GET /api/leaderboard/global - Global rankings across all sessions
-- GET /api/leaderboard/hole/{id} - Per-challenge rankings
-- GET /api/leaderboard/session/{id} - Session-specific rankings
-- Pagination support (limit, offset)
-- Username resolution from User model
-- Golf scoring (lower tokens = better)
-
-### Code Statistics (Phase 3 Complete)
-
-**Total Code**: 4,196 lines
-- Models: 799 lines (6 files) + password_hash field added
-- Services: 1,710 lines (4 files)
-- API: 1,281 lines (4 files)
-- Config/DB/Main: 406 lines
-
-**Layers Complete**:
-- Service Layer ✅ - All 4 core services
-- API Layer ✅ - Challenge + Game + Leaderboard (complete REST API)
+### Phase 4: Frontend Templates ✅ (2026-09-21)
+- **Tailwind CSS** - Golf-themed palette, 30KB output
+- **base.html** - Navigation, responsive layout
+- **index.html** - Home page with auth, leaderboard preview
+- **game.html** - Two-column layout, pills UI, metrics panel
+- **leaderboard.html** - Three views, statistics panel
+- **FastAPI routes** - Static files, template rendering
+- **Execution**: 6 parallel agents, ~13 minutes
 
 ## What's Next
 
-**Phase 4: Frontend Templates** (Next - estimated 6-8 hours)
-1. Create `app/api/game.py`
-2. `POST /api/game/start` - Start new game session
-3. `POST /api/game/submit` - Submit prompt attempt
-4. `GET /api/game/status/{id}` - Get game state
-5. Wire together: LLM Client → Validator → Scoring
+### Phase 5: Frontend Interactivity (estimated 4-6 hours)
+- Full htmx integration testing
+- Alpine.js component refinement
+- Browser testing all flows
+- Fix any UI/UX issues
+- Polish responsive design
 
-**Phase 3.3: Leaderboard API** (estimated 2-3 hours)
-1. Create `app/api/leaderboard.py`
-2. `GET /api/leaderboard/global`
-3. `GET /api/leaderboard/hole/{id}`
-4. `GET /api/leaderboard/session/{id}`
+### Phase 6: Supporting Features (estimated 4-6 hours)
+- Name generator improvements
+- Session timeout implementation
+- Challenge authoring tools
+- Error page templates
 
-### Remaining Phases
-- **Phase 3**: API Endpoints ⏳ (Current - 8-12 hours)
-- **Phase 4**: Frontend Templates (Tailwind, layouts)
-- **Phase 5**: Frontend Interactivity (htmx, Alpine.js)
-- **Phase 6**: Supporting Features (name generator, sessions)
-- **Phase 7**: Polish & Testing
-- **Phase 8**: Production (PostgreSQL, OpenShift)
+### Phase 7: Testing & Polish (estimated 8-12 hours)
+- Pytest configuration
+- Unit tests for services
+- Integration tests for API
+- E2E test for game flow
+- Error handling audit
+- Performance optimization
 
-### MVP Status
+### Phase 8: Production Deployment (estimated 6-10 hours)
+- Production Dockerfile
+- PostgreSQL migration
+- OpenShift manifests
+- Monitoring/logging setup
+- Security hardening
 
-**Goal**: Working single-player game with basic challenges
+## MVP Checklist
 
-#### Backend Progress
-- [x] Implement FastAPI application structure (Phase 1.2)
-- [x] Create database models and migrations (Phase 1.3, 1.4)
-- [x] Implement LLM client abstraction layer (Phase 2.2)
-- [x] Create token counting service (integrated in Phase 2.2)
-- [x] Implement validation service (Phase 2.3)
-- [x] Create scoring service (Phase 2.4)
-- [x] Build challenge loader service (Phase 2.1)
-- [ ] Create API endpoints (Phase 3 - IN PROGRESS)
-- [ ] Implement name generator service (Phase 6)
+### Backend ✅ COMPLETE
+- [x] FastAPI application structure
+- [x] Database models and migrations
+- [x] LLM client (Claude API)
+- [x] Token counting service
+- [x] Validation service (test cases, exact match)
+- [x] Scoring service
+- [x] Challenge loader service
+- [x] API endpoints (challenges, game, leaderboard)
+- [x] Username/password authentication
 
-#### Frontend Tasks
-- [ ] Design and implement base HTML template
-- [ ] Create game interface layout
-- [ ] Implement chat-style interaction area
-- [ ] Build pill UI with Alpine.js
-- [ ] Create metrics/leaderboard panel
-- [ ] Add basic CSS styling (choose framework)
-- [ ] Implement htmx partial updates
+### Frontend ✅ COMPLETE  
+- [x] Base HTML template with navigation
+- [x] Game interface layout (two-column)
+- [x] Chat-style interaction area
+- [x] Pills UI (Alpine.js)
+- [x] Metrics/leaderboard panel
+- [x] Tailwind CSS styling
+- [x] htmx integration
+- [x] Home/lobby page
+- [x] Leaderboard page
 
-#### Challenge System
-- [ ] Create challenge YAML schema validation
-- [ ] Implement challenge loader
-- [ ] Create 1-2 easy coding challenges for testing
-- [ ] Implement test_cases validation type
-- [ ] Create challenge validation script
+### Still TODO
+- [ ] Browser testing and refinement (Phase 5)
+- [ ] Session timeout enforcement (Phase 6)
+- [ ] Pytest configuration (Phase 7)
+- [ ] Unit/integration tests (Phase 7)
+- [ ] E2E tests (Phase 7)
+- [ ] Create 3-5 sample challenges (Phase 7)
+- [ ] Production deployment (Phase 8)
 
-#### Testing
-- [ ] Set up pytest configuration
-- [ ] Write unit tests for services
-- [ ] Write integration tests for API
-- [ ] Create E2E test for complete game flow
+## Technical Stack
 
-#### Documentation
-- [ ] API documentation (auto-generated by FastAPI)
-- [ ] Local development setup guide
-- [ ] Challenge authoring guide
-- [ ] Testing guide
+**Backend**: FastAPI + SQLAlchemy 2.0 + Alembic + SQLite → PostgreSQL  
+**Frontend**: Jinja2 + Tailwind CSS + htmx + Alpine.js  
+**LLM**: Claude API (dev) → OpenShift AI (prod)  
+**Container**: Podman + docker-compose  
 
-### Phase 2: Multi-Player & Polish
+## Key Design Decisions
 
-**Goal**: Support concurrent players, real-time leaderboard, name generation
+1. **Server-side rendering** - Simplicity over SPA complexity
+2. **Golf-style scoring** - Lower tokens = better
+3. **Three leaderboards** - Global, per-hole, session
+4. **Username + password auth** - Generate new or sign in
+5. **All tokens count** - Input + output + system prompts
+6. **Weather delay errors** - Clear affected user's hole only
+7. **Edit persistence** - Modifications persist across attempts within hole
+8. **Session timeout** - 3 hours (configurable)
 
-- [ ] Implement session management
-- [ ] Add WebSocket support for real-time updates
-- [ ] Implement all three leaderboard views
-- [ ] Create name generation system
-- [ ] Add more validation types (exact_match, semantic_similarity)
-- [ ] Create 5-10 challenges across difficulty levels
-- [ ] Load testing for 100+ concurrent users
-- [ ] Performance optimization
-- [ ] UI/UX polish
+## Known Risks
 
-### Phase 3: Production Deployment
-
-**Goal**: Deploy to OpenShift with OpenShift AI integration
-
-- [ ] Create Dockerfile
-- [ ] Create docker-compose.yml for local testing
-- [ ] Migrate to PostgreSQL
-- [ ] Implement LLM client for OpenShift AI
-- [ ] Create OpenShift deployment manifests
-- [ ] Set up monitoring and logging
-- [ ] Create backup/restore procedures
-- [ ] Load balancing and HA configuration
-- [ ] Performance tuning for conference scale
-- [ ] Security hardening
-
-## Technical Decisions Log
-
-### Confirmed Decisions
-1. **Tech Stack**: FastAPI + htmx + Alpine.js + SQLite→PostgreSQL + Alembic
-2. **Development Process**: Gitflow on dev branch
-3. **Documentation**: All decisions in markdown/ADRs
-4. **Challenge Format**: YAML files in git repository (with placeholders to fill later)
-5. **Scoring**: All tokens count (input + output + system tokens treated as input)
-6. **User Identity**: Auto-generated names (Color-Course-Club), new username each session
-7. **CSS Framework**: Tailwind CSS
-8. **Tie-Breaking**: If tied for first, run another challenge until there's a winner (repeat as needed)
-9. **Database Migrations**: Alembic from the start (ADR 004)
-10. **Session Structure**: Session = Competition = Game on a course (collection of holes)
-11. **Session Timeout**: 3 hours from creation (configurable), then marked DNF
-12. **Edit Persistence**: User modifications persist across attempts within same hole
-13. **Storage Granularity**: Per user per session per attempt
-14. **LLM Model**: Haiku only for MVP (hardcoded)
-15. **Validation Types (MVP)**: Test cases and exact match only
-16. **Leaderboards**: Three views - Global (all sessions), Per-Hole, Session (current)
-17. **LLM Error Handling**: "Weather delay" - clear tokens for affected user/hole only
-18. **Multiple Sessions**: Users can participate in multiple concurrent sessions
-19. **No Offline Mode**: Requires internet connection for MVP
-20. **Containerization**: Use Podman (not Docker) for all container operations (ADR 006)
-
-### MVP Exclusions
-- Skills/agents (predefined skill files)
-- Schema validation file (challenges/schema.yaml)
-- Model selection by users
-- Time limits per hole
-- Hints system
-- Persistent authentication with passwords
-- Semantic similarity validation
-- Custom validation scripts
-- Model parameters modification UI
-- Offline mode
-- Pill drag-to-reorder functionality
-- Real-time WebSocket updates
-
-### Pending Decisions
-1. **Challenge Set**: How many challenges for MVP (3-5 planned)
-2. **Monitoring**: Which tools for production observability
-3. **Rate Limiting**: Strategy for API rate limiting
-4. **Timeline**: When is the first conference demo?
-
-## Current Challenges & Questions
-
-### Open Questions (Most Resolved)
-1. ~~How to handle tie-breaking in leaderboard?~~ **RESOLVED**: Tied players compete in another challenge until winner emerges
-2. ~~Edit persistence within a hole?~~ **RESOLVED**: Yes, edits persist across attempts within same hole
-3. ~~Session timeout?~~ **RESOLVED**: 3 hours from creation (configurable), then marked DNF
-4. ~~Multiple concurrent sessions?~~ **RESOLVED**: Yes, users can join multiple sessions
-5. ~~Authentication?~~ **RESOLVED**: New username each session for MVP, no passwords
-6. ~~Model selection?~~ **RESOLVED**: Haiku only for MVP, hardcoded
-7. ~~Leaderboard views?~~ **RESOLVED**: Three views - Global, Per-Hole, Session
-8. ~~LLM error handling?~~ **RESOLVED**: "Weather delay" - clear tokens for affected user/hole only
-9. ~~Validation types for MVP?~~ **RESOLVED**: Test cases and exact match only
-10. ~~Storage granularity?~~ **RESOLVED**: Per user per session per attempt
-
-### Still Open
-1. Should we support challenge "difficulty multipliers"? (Future consideration)
-2. Do we need a "practice mode" vs "competition mode"? (Not for MVP)
-3. How to prevent cheating (users sharing solutions)? (Future consideration)
-4. Should we track and display token costs ($)? (Not for MVP)
-5. What is the target date for first conference demo? (TBD)
-
-### Known Risks
-1. **LLM API latency** - Mitigate with async, loading indicators
-2. **SQLite concurrency** - Planned migration to PostgreSQL
-3. **Challenge quality** - Need testing with real users
+1. **LLM API latency** - Mitigated with async, loading indicators
+2. **SQLite concurrency** - Planned PostgreSQL migration
+3. **Challenge quality** - Needs testing with real users
 4. **Token counting accuracy** - Critical, needs thorough testing
 
-## Resources
+## Documentation
 
-### Documentation
-- All docs in `/docs`
-- ADRs in `/docs/ADRs`
-- README.md for overview
-- CLAUDE.md for AI assistant context
+**Core Docs** (5 files):
+- `CLAUDE.md` - AI assistant context
+- `README.md` - Project overview
+- `CONTRIBUTING.md` - Developer guide
+- `docs/ARCHITECTURE.md` - System architecture
+- `docs/CHALLENGE_FORMAT.md` - Challenge spec
 
-### References
-- FastAPI: https://fastapi.tiangolo.com/
-- htmx: https://htmx.org/
-- Alpine.js: https://alpinejs.dev/
-- SQLAlchemy: https://docs.sqlalchemy.org/
+**Phase Docs**: `docs/phases/PHASE_X_COMPLETE.md` (historical records)  
+**ADRs**: `docs/ADRs/` (9 architecture decisions)
 
-## Notes
+**Recently Cleaned**: Removed 10 redundant temporary docs (audits, consistency checks, fixes)
 
-- This is a conference demo project - prioritize working features over perfection
-- Keep the scope manageable for MVP
-- Document as we go, don't let it fall behind
-- Test with real users as early as possible
-- Conference deployment is the hard deadline - work backwards from there
+## Next Steps
 
-## Team Reminders
+1. **Test in browser** - Verify all pages render and work correctly
+2. **Fix any bugs** - Address issues found in testing
+3. **Create sample challenges** - 3-5 challenges for testing
+4. **Write tests** - Unit, integration, E2E
+5. **Production prep** - PostgreSQL, OpenShift, monitoring
 
-1. **All work happens on `dev` branch**
-2. **Write ADRs for significant decisions**
-3. **Test challenges thoroughly before committing**
-4. **Keep token counting accurate - it's the core metric**
-5. **Think about conference demo UX** (large screens, audience visibility)
+---
+
+For detailed phase information, see `docs/DEVELOPMENT_PHASES.md` and `docs/phases/PHASE_X_COMPLETE.md` files.

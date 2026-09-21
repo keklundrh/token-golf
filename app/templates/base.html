@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="description" content="Token Golf - Master AI efficiency through competitive prompt optimization">
+
+    <title>{% block title %}Token Golf{% endblock %}</title>
+
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="/static/css/output.css">
+
+    <!-- htmx -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gradient-to-br from-green-50 to-emerald-50 min-h-screen flex flex-col">
+    <!-- Navigation Header -->
+    <header class="bg-gradient-to-r from-green-800 to-emerald-700 text-white shadow-lg">
+        <nav class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <!-- Logo/Brand -->
+                <div class="flex items-center space-x-3">
+                    <div class="text-3xl">&#9971;</div>
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight">Token Golf</h1>
+                        <p class="text-xs text-green-100">Master AI Efficiency</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Links -->
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="/" class="hover:text-yellow-300 transition-colors duration-200 font-medium">Home</a>
+                    <a href="/challenges" class="hover:text-yellow-300 transition-colors duration-200 font-medium">Challenges</a>
+                    <a href="/leaderboard" class="hover:text-yellow-300 transition-colors duration-200 font-medium">Leaderboard</a>
+                    <a href="/how-to-play" class="hover:text-yellow-300 transition-colors duration-200 font-medium">How to Play</a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden" x-data="{ open: false }">
+                    <button @click="open = !open" class="text-white hover:text-yellow-300 focus:outline-none">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path x-show="!open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                            <path x-show="open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+
+                    <!-- Mobile Menu -->
+                    <div x-show="open"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 transform scale-95"
+                         x-transition:enter-end="opacity-100 transform scale-100"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 transform scale-100"
+                         x-transition:leave-end="opacity-0 transform scale-95"
+                         class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl py-2 z-50">
+                        <a href="/" class="block px-4 py-2 text-gray-800 hover:bg-green-100">Home</a>
+                        <a href="/challenges" class="block px-4 py-2 text-gray-800 hover:bg-green-100">Challenges</a>
+                        <a href="/leaderboard" class="block px-4 py-2 text-gray-800 hover:bg-green-100">Leaderboard</a>
+                        <a href="/how-to-play" class="block px-4 py-2 text-gray-800 hover:bg-green-100">How to Play</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-green-900 text-green-100 mt-auto">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="text-center md:text-left">
+                    <p class="font-semibold">Token Golf</p>
+                    <p class="text-sm text-green-300">Teaching AI efficiency through competitive play</p>
+                </div>
+                <div class="flex items-center space-x-4 text-sm">
+                    <span class="text-green-300">Powered by Claude</span>
+                    <span class="text-green-400">|</span>
+                    <span class="text-green-300">&copy; 2026</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

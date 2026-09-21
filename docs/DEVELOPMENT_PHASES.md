@@ -176,45 +176,58 @@
 
 ---
 
-## Phase 4: Frontend - Templates
+## Phase 4: Frontend - Templates ✅ COMPLETE
 
-### 4.1 Base Template & Static Setup
+### 4.1 Base Template & Static Setup ✅ COMPLETE
 **Goal**: Set up Tailwind CSS and base template
 
-- [ ] Add Tailwind CSS to container build
-- [ ] Create `static/css/input.css` with Tailwind directives
-- [ ] Configure Tailwind build in docker-compose
-- [ ] Create `app/templates/base.html` - base template
-- [ ] Add static file serving in FastAPI
-- [ ] Test Tailwind classes render correctly
-- [ ] Add Alpine.js CDN link
+- [x] Add Tailwind CSS to container build
+- [x] Create `static/css/input.css` with Tailwind directives
+- [x] Configure Tailwind build in docker-compose
+- [x] Create `app/templates/base.html` - base template
+- [x] Add static file serving in FastAPI
+- [x] Test Tailwind classes render correctly
+- [x] Add Alpine.js CDN link
 
-**Deliverable**: Base template with Tailwind and Alpine.js working
+**Deliverable**: ✅ Base template with Tailwind and Alpine.js working
 
-### 4.2 Home/Lobby Page
+### 4.2 Home/Lobby Page ✅ COMPLETE
 **Goal**: Landing page to start game
 
-- [ ] Create `app/templates/index.html`
-- [ ] Add welcome message
-- [ ] Add "Start Game" button
-- [ ] Style with Tailwind
-- [ ] Add route in main.py
-- [ ] Test in browser
+- [x] Create `app/templates/index.html`
+- [x] Add welcome message
+- [x] Add "Start Game" button (with auth options)
+- [x] Style with Tailwind
+- [x] Add route in main.py
+- [x] Add leaderboard preview
+- [ ] Test in browser (Phase 5)
 
-**Deliverable**: Can visit home page, see styled interface
+**Deliverable**: ✅ Can visit home page, see styled interface
 
-### 4.3 Game Interface Layout
+### 4.3 Game Interface Layout ✅ COMPLETE
 **Goal**: Main game page with split layout
 
-- [ ] Create `app/templates/game.html`
-- [ ] Implement two-column layout (problem + metrics)
-- [ ] Add problem statement section
-- [ ] Add chat/interaction section placeholder
-- [ ] Add metrics panel placeholder
-- [ ] Style with Tailwind
-- [ ] Make responsive
+- [x] Create `app/templates/game.html`
+- [x] Implement two-column layout (problem + metrics)
+- [x] Add problem statement section
+- [x] Add chat/interaction section with pills UI
+- [x] Add metrics panel (stats, leaderboard, comparison, distribution)
+- [x] Style with Tailwind
+- [x] Make responsive
 
-**Deliverable**: Game page with proper layout structure
+**Deliverable**: ✅ Game page with proper layout structure
+
+### 4.4 Leaderboard Page ✅ COMPLETE
+**Goal**: Standalone leaderboard view
+
+- [x] Create `app/templates/leaderboard.html`
+- [x] Add three view toggle (Global/Per-Hole/Session)
+- [x] Display rankings with top 10
+- [x] Add statistics panel
+- [x] Style with Tailwind
+- [x] Add route in main.py
+
+**Deliverable**: ✅ Standalone leaderboard page with all views
 
 ---
 

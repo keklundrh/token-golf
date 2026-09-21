@@ -130,10 +130,11 @@ token-golf/
 │   │   ├── llm_client.py    # LLM API integration (Claude)
 │   │   ├── validator.py     # Answer validation (test cases, exact match)
 │   │   └── scoring.py       # Token counting & scoring
-│   └── templates/           # Jinja2 templates (planned)
-│       ├── base.html
-│       ├── game.html
-│       └── leaderboard.html
+│   └── templates/           # Jinja2 templates
+│       ├── base.html        # Base template with navigation
+│       ├── index.html       # Home/lobby page
+│       ├── game.html        # Game interface
+│       └── leaderboard.html # Leaderboard page
 ├── alembic/                 # Database migrations
 │   ├── env.py
 │   ├── versions/
@@ -151,9 +152,9 @@ token-golf/
 │   ├── CHALLENGE_FORMAT.md
 │   └── API.md               # API documentation
 ├── static/                  # Frontend assets
-│   ├── css/
-│   ├── js/
-│   └── images/
+│   └── css/
+│       ├── input.css        # Tailwind directives
+│       └── output.css       # Generated CSS
 ├── tests/                   # Test suite
 │   ├── unit/
 │   ├── integration/
@@ -161,10 +162,14 @@ token-golf/
 ├── .env.example             # Environment variables template
 ├── .gitignore
 ├── alembic.ini              # Alembic configuration
+├── scripts/                 # Utility scripts
+│   └── rebuild-css.sh       # Rebuild Tailwind CSS
 ├── CLAUDE.md                # This file
 ├── CONTRIBUTING.md          # Developer guidelines
 ├── docker-compose.yml       # Local development
 ├── Dockerfile               # Container definition
+├── package.json             # Tailwind CSS dependency
+├── tailwind.config.js       # Tailwind configuration
 ├── PROJECT_STATUS.md        # Current status (see this for implementation progress)
 ├── README.md                # Project overview
 └── requirements.txt         # Python dependencies
