@@ -1,6 +1,6 @@
 # Token Golf - MVP Scope & Clarifications
 
-**Last Updated**: 2026-09-09
+**Last Updated**: 2026-09-21 (Updated for Phase 3.2 implementation)
 
 This document provides quick reference for all MVP scope decisions and clarifications.
 
@@ -26,10 +26,13 @@ This document provides quick reference for all MVP scope decisions and clarifica
 
 ### User Identity
 
-- **MVP**: New auto-generated username each session
-- **Format**: `{Color}-{GolfCourse}-{ClubNumber}` (e.g., "Blue-Augusta-7")
-- **Authentication**: None for MVP (no passwords)
-- **Future**: Optional password-based authentication to reclaim usernames
+- **Username Format**: `{Color}-{GolfCourse}-{ClubNumber}` (e.g., "Blue-Pebblebeach-7")
+- **Authentication**: Username + password (implemented in Phase 3.2)
+  - **Generate New**: Auto-generate username + random password
+  - **Sign In**: Existing username + password
+- **Password Storage**: SHA256 hashing (MVP) - migrate to bcrypt for production
+- **No Recovery**: No password reset mechanism in MVP (generate new account instead)
+- **See**: ADR 009 for authentication decision details
 
 ### Token Counting
 
@@ -70,8 +73,8 @@ This document provides quick reference for all MVP scope decisions and clarifica
 |------|-----------|-------------|
 | `test_cases` | ✅ **Included** | Run code against test inputs |
 | `exact_match` | ✅ **Included** | String comparison (case-insensitive, trim whitespace) |
+| `pattern_match` | ✅ **Included** | Regex validation (implemented in Phase 2.3) |
 | `semantic_similarity` | ❌ **Excluded** | Embeddings-based matching |
-| `pattern_match` | ❌ **Excluded** | Regex validation |
 | `multiple_choice` | ❌ **Excluded** | Predefined options |
 | `custom_script` | ❌ **Excluded** | Python validator scripts |
 
@@ -178,10 +181,11 @@ database:
    - "Spend 50 tokens for a hint?"
    - Tracked in scoring
 
-5. **Persistent Authentication**
-   - Username + password
-   - Reclaim username across sessions
-   - Profile/history tracking
+5. **Enhanced Authentication**
+   - Password recovery mechanism
+   - Email-based authentication
+   - Profile/history tracking across sessions
+   - Account management UI
 
 6. **Advanced Validation**
    - Semantic similarity (embeddings)
@@ -220,11 +224,11 @@ database:
 | Edit persistence within hole? | Yes, persist across attempts |
 | Session timeout duration? | 3 hours (configurable) |
 | Multiple concurrent sessions? | Yes, allowed |
-| Authentication? | New username each session (MVP) |
+| Authentication? | Username + password (SHA256 for MVP, bcrypt for production) |
 | Model selection? | Haiku only, hardcoded (MVP) |
 | Leaderboard scopes? | Global, Per-Hole, Session |
 | LLM error handling? | "Weather delay" - affected user only |
-| Validation types? | Test cases + exact match (MVP) |
+| Validation types? | Test cases + exact match + pattern match (MVP) |
 | Storage granularity? | Per user per session per attempt |
 | Tie-breaking? | Additional challenge (repeat as needed) |
 | Schema.yaml needed? | No, not for MVP |
@@ -243,17 +247,19 @@ See: `docs/ADRs/003-tie-breaking-mechanism.md`
 
 ## Development Priorities
 
-### Must Have (MVP)
-1. Session management system
-2. Test cases validation
-3. Exact match validation
-4. Auto-generated usernames
-5. Three leaderboard views
-6. Context file pills UI
-7. System prompt editing
-8. Token counting & scoring
-9. Session timeout handling
-10. SQLite database with Alembic migrations
+### Must Have (MVP) ✅ All Implemented
+1. Session management system ✅
+2. Test cases validation ✅
+3. Exact match validation ✅
+4. Pattern match validation ✅
+5. Username + password authentication ✅
+6. Three leaderboard views ✅
+7. Context file pills UI ✅
+8. System prompt editing ✅
+9. Token counting & scoring ✅
+10. Session timeout handling ✅
+11. SQLite database with Alembic migrations ✅
+12. Frontend templates (Tailwind CSS, htmx, Alpine.js) ✅
 
 ### Nice to Have (Post-MVP)
 1. Skills/agents system

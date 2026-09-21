@@ -57,12 +57,16 @@ If a user removes a context file on attempt 1 of hole 3:
 This allows users to refine their approach without re-doing modifications each attempt.
 
 ### Authentication (MVP)
-**No persistent authentication for MVP.**
+**Username + password authentication included in MVP.**
 
-- Each time a user starts a session, generate a new username
-- Format: `{Color}-{GolfCourse}-{ClubNumber}` (e.g., "Blue-Augusta-7")
-- No passwords, no account recovery
-- Future: Add optional password-based authentication for username reclaim
+⚠️ **UPDATE**: This section has been superseded by **ADR 009: Password Authentication in MVP** (2026-09-21).
+
+Original decision was no authentication. During Phase 3.2 implementation, password authentication was added to support:
+- Auto-generated username + password (new users)
+- Sign-in with username + password (returning users)
+- SHA256 hashing (MVP) with migration path to bcrypt (production)
+
+See ADR 009 for complete authentication decision details.
 
 ### MVP Feature Boundaries
 
@@ -84,7 +88,7 @@ This allows users to refine their approach without re-doing modifications each a
 - Model selection by users
 - Time limits per hole
 - Hints system
-- Persistent authentication with passwords
+- ~~Persistent authentication with passwords~~ ✅ **ADDED in Phase 3.2** (see ADR 009)
 - Semantic similarity validation
 - Custom validation scripts
 - Model parameters modification UI
@@ -92,6 +96,8 @@ This allows users to refine their approach without re-doing modifications each a
 - Pill drag-to-reorder functionality
 - Real-time WebSocket updates
 - Max iterations per hole enforcement
+
+**NOTE**: Pattern match validation was also added during Phase 2.3 implementation.
 
 ### Database Schema
 New tables:
@@ -254,6 +260,7 @@ database:
 
 - ADR 003: Tie-Breaking Mechanism (related to session competition flow)
 - ADR 004: Database Migrations with Alembic (migration strategy)
+- **ADR 009: Password Authentication in MVP** (supersedes authentication section)
 - Conference demo requirements discussion (internal notes)
 
 ---

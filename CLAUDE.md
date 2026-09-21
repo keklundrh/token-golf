@@ -37,7 +37,7 @@ Conference attendees at major tech conferences who need to learn how different d
 - **Timeout Behavior**: Sessions that timeout are marked "DNF" (Did Not Finish)
 - **Multiple Sessions**: Users can participate in multiple concurrent sessions
 - **Session Resumption**: Players can pause mid-hole, close browser, and return within 3 hours to resume
-- **Username**: Each time a player starts a new session, they get a new auto-generated username (no persistent authentication for MVP)
+- **Username**: Players can generate new credentials (auto-generated username + password) or sign in with existing username + password
 
 ### User Interaction Elements
 Players can modify these during gameplay (pill UI with X buttons):

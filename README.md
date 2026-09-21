@@ -58,12 +58,26 @@ Three leaderboard views:
 - **LLM Backend**: 
   - Development: Claude API
   - Production: OpenShift AI Models as a Service
-- **Deployment**: Docker containers for OpenShift
+- **Deployment**: Podman containers for OpenShift (see ADR 006)
 
-## 🚀 Quick Start (Local Development)
+## 🚀 Quick Start
 
+### Containerized Development (Recommended)
 ```bash
-# Setup (coming soon)
+# Setup environment
+cp .env.example .env
+# Add your Claude API key to .env
+
+# Start with Podman
+podman-compose up
+
+# Visit
+# http://localhost:8000
+```
+
+### Local Python (Alternative)
+```bash
+# Setup virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -72,12 +86,17 @@ pip install -r requirements.txt
 cp .env.example .env
 # Add your Claude API key to .env
 
+# Run database migrations
+alembic upgrade head
+
 # Run
 uvicorn app.main:app --reload
 
 # Visit
 # http://localhost:8000
 ```
+
+**Note**: Containerized development includes all dependencies (Tailwind CSS, database, etc.) pre-configured.
 
 ## 📁 Project Structure
 
@@ -124,48 +143,25 @@ This project uses **gitflow**:
 - Feature branches created from `dev`
 - All decisions documented in ADRs
 
-## 🏗️ Roadmap
+## 🏗️ Project Status
 
-### Phase 1: MVP (Current)
-**Included:**
-- [x] Session management (sessions = games on courses)
-- [ ] 3-5 basic challenges (test cases + exact match validation)
-- [ ] Three leaderboard views (Global, Per-Hole, Session)
-- [ ] Local SQLite storage
-- [ ] Claude API backend (Haiku model)
-- [ ] Auto-generated usernames (new each session)
-- [ ] Context file & system prompt editing (pills UI)
-- [ ] Session timeout (3 hours, configurable)
-- [ ] Edit persistence within holes
+**Current Phase**: Phase 4 - Frontend Templates ✅ COMPLETE
 
-**Excluded from MVP:**
-- Skills/agents
-- Model selection
-- Time limits per hole
-- Hints system
-- Persistent authentication
-- Semantic similarity validation
-- Custom validation scripts
-- Offline mode
-- Real-time WebSocket updates
+**Completed**:
+- ✅ Phase 0: Container Foundation (Podman)
+- ✅ Phase 1: Foundation Components (FastAPI, Database, Alembic)
+- ✅ Phase 2: Core Services (Challenge Loader, LLM Client, Validator, Scoring)
+- ✅ Phase 3: API Endpoints (Challenge, Game, Leaderboard APIs)
+- ✅ Phase 4: Frontend Templates (Tailwind CSS, htmx, Alpine.js)
 
-### Phase 2: Advanced Features
-- [ ] Skills/agents system
-- [ ] Additional validation types (semantic, custom scripts)
-- [ ] Model selection per challenge
-- [ ] Hints system (costs tokens)
-- [ ] Persistent authentication (password-based)
-- [ ] Real-time WebSocket updates
-- [ ] Time limits and max iterations
+**Next**: Phase 5 - Frontend Interactivity (browser testing, refinement)
 
-### Phase 3: Production
-- [ ] OpenShift deployment
-- [ ] OpenShift AI integration
-- [ ] PostgreSQL migration
-- [ ] MLFlow integration (token counting)
-- [ ] High availability
-- [ ] Advanced metrics and analytics
-- [ ] Multi-region support
+**For detailed roadmap and phase documentation**, see:
+- [DEVELOPMENT_PHASES.md](docs/DEVELOPMENT_PHASES.md) - Complete 8-phase plan
+- [PROJECT_STATUS.md](PROJECT_STATUS.md) - Current status and progress
+- [docs/phases/](docs/phases/) - Individual phase completion records
+
+**MVP Scope**: See [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md) for included/excluded features.
 
 ## 🤝 Contributing
 
