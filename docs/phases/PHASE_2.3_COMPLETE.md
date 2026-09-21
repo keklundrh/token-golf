@@ -457,51 +457,9 @@ result = await validator.validate(challenge, "x = 5")
 
 ## Testing Strategy
 
-### Unit Tests (Future Phase 7)
+## Testing
 
-```python
-import pytest
-from app.services import ValidatorService, ValidationResult
-
-@pytest.mark.asyncio
-async def test_exact_match_success():
-    validator = ValidatorService()
-    
-    # Mock challenge with exact_match validation
-    challenge = MockChallenge(
-        config_yaml="""
-        validation:
-          type: exact_match
-          criteria: "42"
-        """
-    )
-    
-    result = await validator.validate(challenge, "42")
-    assert result.is_correct == True
-
-@pytest.mark.asyncio
-async def test_test_cases_simple():
-    validator = ValidatorService()
-    
-    challenge = MockChallenge(
-        config_yaml="""
-        validation:
-          type: test_cases
-          criteria:
-            - name: "Test add"
-              input:
-                args: [2, 3]
-              expected_output: 5
-        """
-    )
-    
-    response = "def main(a, b): return a + b"
-    result = await validator.validate(challenge, response)
-    
-    assert result.is_correct == True
-    assert len(result.test_results) == 1
-    assert result.test_results[0]["passed"] == True
-```
+Unit and integration tests will be implemented in Phase 7. See `docs/TESTING_PLAN.md`.
 
 ---
 

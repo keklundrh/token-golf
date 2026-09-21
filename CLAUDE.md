@@ -97,66 +97,114 @@ Each challenge must have clear, verifiable correct answers (MVP only includes fi
 5. **Modern & Common**: Use widely-adopted, well-maintained technologies
 6. **Documentation-Driven**: All decisions recorded in markdown/ADRs
 
-### Directory Structure
+## Current Implementation Status (Phase 2.4 Complete)
+
+### ✅ Implemented Components
+
+**Container & Infrastructure**:
+- Podman/Docker setup with hot reload
+- FastAPI application with health check endpoints
+- SQLAlchemy 2.0 async database integration
+- Alembic migrations (initial migration created)
+
+**Database Models** (6 models, 799 lines):
+- `User` - Auto-generated usernames
+- `Session` - Game sessions with timeout
+- `SessionParticipant` - User-session join table
+- `Challenge` - Challenge definitions from YAML
+- `Attempt` - Individual prompt submissions
+- `Score` - Cumulative scoring per user/session/challenge
+
+**Service Layer** (4 services, 1,710 lines):
+- `ChallengeLoaderService` - YAML challenge parsing (410 lines)
+- `LLMClient` + `MockLLMClient` - Claude API integration (357 lines)
+- `ValidatorService` - Test cases & exact match validation (439 lines)
+- `ScoringService` - Attempt recording & leaderboards (504 lines)
+
+**Configuration**:
+- Pydantic Settings with environment variables
+- Database connection management
+- LLM API configuration
+
+### ⏳ Not Yet Implemented
+
+- **API Endpoints** (Phase 3) - REST API for challenges, game, leaderboards
+- **Frontend** (Phase 4-5) - HTML templates, htmx, Alpine.js
+- **Name Generator** (Phase 6) - Auto-generate usernames
+- **Tests** (Phase 7) - Unit and integration tests
+- **Challenges** (Phase 6) - Actual challenge content (infrastructure ready)
+
+### Target Directory Structure
+
+**Legend**: ✅ Implemented | ⏳ Planned
 
 ```
 token-golf/
 ├── app/
-│   ├── main.py              # FastAPI entry point
-│   ├── api/
+│   ├── main.py              # ✅ FastAPI entry point
+│   ├── config.py            # ✅ Configuration management (Pydantic)
+│   ├── database.py          # ✅ SQLAlchemy async session
+│   ├── api/                 # ⏳ REST API endpoints (Phase 3)
 │   │   ├── __init__.py
 │   │   ├── challenges.py    # Challenge endpoints
 │   │   ├── leaderboard.py   # Leaderboard endpoints
 │   │   └── game.py          # Game session endpoints
-│   ├── models/
+│   ├── models/              # ✅ SQLAlchemy 2.0 models (6 files)
 │   │   ├── __init__.py
-│   │   ├── user.py          # User/session models
-│   │   ├── challenge.py     # Challenge models
-│   │   └── attempt.py       # Attempt/score models
-│   ├── services/
+│   │   ├── base.py          # Base class
+│   │   ├── user.py          # User model
+│   │   ├── session.py       # Session + SessionParticipant models
+│   │   ├── challenge.py     # Challenge model
+│   │   ├── attempt.py       # Attempt model
+│   │   └── score.py         # Score model
+│   ├── services/            # ✅ Business logic (4 services)
 │   │   ├── __init__.py
-│   │   ├── llm_client.py    # LLM API integration
-│   │   ├── validator.py     # Answer validation
+│   │   ├── challenge_loader.py  # Challenge YAML parsing
+│   │   ├── llm_client.py    # LLM API integration (Claude)
+│   │   ├── validator.py     # Answer validation (test cases, exact match)
 │   │   ├── scoring.py       # Token counting & scoring
-│   │   └── name_generator.py # User name generation
-│   ├── templates/           # Jinja2 templates
-│   │   ├── base.html
-│   │   ├── game.html
-│   │   └── leaderboard.html
-│   └── config.py            # Configuration management
-├── challenges/
+│   │   └── name_generator.py # ⏳ User name generation (Phase 6)
+│   └── templates/           # ⏳ Jinja2 templates (Phase 4)
+│       ├── base.html
+│       ├── game.html
+│       └── leaderboard.html
+├── alembic/                 # ✅ Database migrations
+│   ├── env.py
+│   ├── versions/
+│   └── ...
+├── challenges/              # ⏳ Challenge content (infrastructure ready)
 │   ├── README.md            # Challenge authoring guide
 │   ├── hole-001/
 │   │   ├── challenge.yaml   # Challenge definition
 │   │   └── assets/          # Context files, test data
-│   ├── hole-002/
-│   │   └── ...
-│   └── courses.yaml         # Course definitions (which holes belong to which course)
-├── docs/
+│   └── courses.yaml         # Course definitions
+├── docs/                    # ✅ Project documentation
 │   ├── ADRs/                # Architecture Decision Records
-│   │   ├── 000-use-adrs.md
-│   │   ├── 001-tech-stack.md
-│   │   └── template.md
-│   ├── ARCHITECTURE.md      # System architecture
-│   ├── CHALLENGE_FORMAT.md  # Challenge YAML specification
-│   └── API.md               # API documentation
-├── static/
+│   ├── phases/              # Phase completion docs
+│   ├── ARCHITECTURE.md
+│   ├── CHALLENGE_FORMAT.md
+│   └── API.md               # ⏳ API documentation (Phase 3)
+├── static/                  # ⏳ Frontend assets (Phase 4)
 │   ├── css/
-│   ├── js/                  # Minimal JS only
+│   ├── js/
 │   └── images/
-├── tests/
+├── tests/                   # ⏳ Test suite (Phase 7)
 │   ├── unit/
 │   ├── integration/
-│   └── challenges/          # Challenge validation tests
-├── .env.example             # Environment variables template
-├── .gitignore
-├── CLAUDE.md                # This file
-├── CONTRIBUTING.md          # Development guidelines
-├── docker-compose.yml       # Local development setup
-├── Dockerfile               # Production container
-├── README.md                # Project overview
-└── requirements.txt         # Python dependencies
+│   └── challenges/
+├── .env.example             # ✅ Environment variables template
+├── .gitignore               # ✅
+├── alembic.ini              # ✅ Alembic configuration
+├── CLAUDE.md                # ✅ This file
+├── CONTRIBUTING.md          # ✅ Developer guidelines
+├── docker-compose.yml       # ✅ Local development
+├── Dockerfile               # ✅ Container definition
+├── PROJECT_STATUS.md        # ✅ Current status (updated)
+├── README.md                # ✅ Project overview
+└── requirements.txt         # ✅ Python dependencies
 ```
+
+**Note**: Directory structure shows complete target architecture. See "Current Implementation Status" above for what's built vs planned.
 
 ## User Identity System
 

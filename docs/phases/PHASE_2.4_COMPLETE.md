@@ -574,69 +574,9 @@ else:
 
 ## Testing Strategy
 
-### Unit Tests (Future Phase 7)
+## Testing
 
-```python
-import pytest
-from app.services import ScoringService
-from app.models import Attempt, Score
-
-@pytest.mark.asyncio
-async def test_record_first_attempt(db_session):
-    scoring = ScoringService(db_session)
-    
-    attempt = await scoring.record_attempt(
-        user_id=1,
-        session_id="s1",
-        challenge_id="h1",
-        prompt="test",
-        response="response",
-        input_tokens=5,
-        output_tokens=10,
-        is_correct=False
-    )
-    
-    assert attempt.attempt_number == 1
-    assert attempt.total_tokens == 15
-    
-    # Check score created
-    score = await scoring.get_score(1, "s1", "h1")
-    assert score.total_attempts == 1
-    assert score.total_tokens == 15
-    assert score.completed_at is None
-
-@pytest.mark.asyncio
-async def test_completion_marks_time(db_session):
-    scoring = ScoringService(db_session)
-    
-    # Fail first
-    await scoring.record_attempt(..., is_correct=False)
-    
-    # Succeed second
-    await scoring.record_attempt(..., is_correct=True)
-    
-    score = await scoring.get_score(...)
-    assert score.completed_at is not None
-    assert score.total_attempts == 2
-
-@pytest.mark.asyncio
-async def test_retry_after_success_adds_tokens(db_session):
-    scoring = ScoringService(db_session)
-    
-    # First success
-    await scoring.record_attempt(..., is_correct=True)
-    score1 = await scoring.get_score(...)
-    original_time = score1.completed_at
-    original_tokens = score1.total_tokens
-    
-    # Retry
-    await scoring.record_attempt(..., is_correct=True)
-    score2 = await scoring.get_score(...)
-    
-    # Tokens increased, time unchanged
-    assert score2.total_tokens > original_tokens
-    assert score2.completed_at == original_time
-```
+Unit and integration tests will be implemented in Phase 7. See `docs/TESTING_PLAN.md`.
 
 ---
 

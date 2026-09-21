@@ -413,40 +413,9 @@ client = LLMClient(api_key=None)
 
 ## Testing Strategy
 
-### Unit Tests (Future Phase 7)
+## Testing
 
-```python
-import pytest
-from app.services import MockLLMClient
-
-@pytest.mark.asyncio
-async def test_llm_completion():
-    client = MockLLMClient(mock_response="Hello world")
-    response = await client.complete("Say hello")
-    
-    assert response.response_text == "Hello world"
-    assert response.total_tokens > 0
-
-@pytest.mark.asyncio
-async def test_empty_prompt_raises():
-    client = MockLLMClient()
-    
-    with pytest.raises(ValueError):
-        await client.complete(prompt="")
-```
-
-### Integration Tests (Future)
-
-```python
-# Test with real Claude API (requires key)
-@pytest.mark.integration
-async def test_real_claude_api():
-    client = LLMClient()
-    response = await client.complete("Say 'test'")
-    
-    assert "test" in response.response_text.lower()
-    assert response.input_tokens > 0
-```
+Unit and integration tests will be implemented in Phase 7. See `docs/TESTING_PLAN.md`.
 
 ---
 

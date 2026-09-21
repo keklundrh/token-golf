@@ -447,15 +447,9 @@ All Phase 2.1 deliverables from DEVELOPMENT_PHASES.md:
 - [ ] Test with invalid YAML (missing field)
 - [ ] Verify startup fails with clear error
 
-### Unit Tests (Phase 7)
+## Testing
 
-- [ ] Test `get_challenge()` with cache hit
-- [ ] Test `get_challenge()` with database hit
-- [ ] Test `get_challenge()` with YAML load
-- [ ] Test `preload_all_challenges()` success
-- [ ] Test `preload_all_challenges()` with invalid challenge
-- [ ] Test `list_challenges()` filtering
-- [ ] Test validation logic
+Unit and integration tests will be implemented in Phase 7. See `docs/TESTING_PLAN.md`.
 
 ---
 

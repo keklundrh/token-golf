@@ -1,13 +1,13 @@
 # Token Golf - Project Status
 
-**Last Updated**: 2026-09-09
+**Last Updated**: 2026-09-21
 
 ## Current Phase
 
-**Phase**: Phase 0 - Container Foundation  
-**Status**: ✅ Complete
+**Phase**: Phase 2.4 - Scoring Service  
+**Status**: ✅ Complete (All Phase 2 services done!)
 
-**Previous Phase**: Initial Documentation & Planning - ✅ Complete
+**Next Phase**: Phase 3.1 - Challenge API
 
 ## What's Been Done
 
@@ -67,75 +67,117 @@
 - ✅ Basic directory structure documented
 - ✅ Development workflow defined (gitflow on dev branch)
 
-## Phase 0: Container Foundation - ✅ COMPLETE
+## Completed Phases Summary
 
-**Completed**: 2026-09-09
+### Phase 0: Container Foundation - ✅ COMPLETE (2026-09-09)
+- Podman/Docker containerization
+- FastAPI app with health check
+- Hot reload development environment
+- ADR 006: Use Podman (not Docker)
 
-### What Was Built
+### Phase 1: Foundation Components - ✅ COMPLETE
 
-1. ✅ Created `Dockerfile` for development (multi-stage, non-root user)
-2. ✅ Created `docker-compose.yml` for local development
-3. ✅ Created `requirements.txt` with all dependencies
-4. ✅ Created `.env.example` template with all configuration options
-5. ✅ Created `.env` for local development
-6. ✅ Created `.dockerignore` for optimized builds
-7. ✅ Created minimal FastAPI app (`app/main.py`) with health check
-8. ✅ Created `QUICKSTART.md` with setup instructions
-9. ✅ Verified container builds successfully with Podman
-10. ✅ Verified container runs and endpoints respond
-11. ✅ Documented decision to use Podman (ADR 006)
-12. ✅ Hot reload confirmed working
+**Phase 1.2: Configuration Management** (2026-09-09)
+- Pydantic Settings for configuration
+- Environment variable management
+- Database and LLM API settings
 
-### Verification Results
+**Phase 1.3: Database Models** (2026-09-09)
+- SQLAlchemy 2.0 models: User, Session, Challenge, Attempt, Score
+- Type-annotated with Mapped columns
+- Proper relationships and constraints
 
-```bash
-# Container status
-CONTAINER ID  IMAGE                      COMMAND               CREATED        STATUS        PORTS                   NAMES
-41d38b5e2e63  localhost/golf_web:latest  uvicorn app.main:...  8 seconds ago  Up 8 seconds  0.0.0.0:8000->8000/tcp  token-golf-web
+**Phase 1.4: Alembic Setup** (2026-09-09)
+- Database migration system
+- Initial migration with all tables
+- Migration verified in container
 
-# Health check
-$ curl http://localhost:8000/health
-{"status":"healthy","service":"token-golf","version":"0.1.0"}
+### Phase 2: Core Services - ✅ COMPLETE
 
-# Root endpoint
-$ curl http://localhost:8000/
-{"message":"Welcome to Token Golf!","version":"0.1.0","status":"Phase 0 - Container Foundation Complete"}
-```
+**Phase 2.1: Challenge Loader Service** (2026-09-21)
+- YAML challenge parsing (410 lines)
+- Challenge validation and caching
+- Support for test cases and exact match
+
+**Phase 2.2: LLM Client Service** (2026-09-21)
+- Claude API integration (357 lines)
+- Async client with token counting
+- Mock client for testing
+- Error handling and retries
+
+**Phase 2.3: Validator Service** (2026-09-21)
+- Test case validation (run code) (439 lines)
+- Exact match validation (strings)
+- Code extraction from markdown
+- Comprehensive output comparison
+
+**Phase 2.4: Scoring Service** (2026-09-21)
+- Attempt recording (504 lines)
+- Cumulative score calculation
+- Three leaderboard views (session, per-hole, global)
+- Weather delay handling
+
+### Code Statistics (Phase 2 Complete)
+
+**Total Code**: 2,939 lines
+- Models: 799 lines (6 files)
+- Services: 1,710 lines (4 files)
+- Config/DB/Main: 430 lines
+
+**Service Layer Complete**: All 4 core services implemented
+- ChallengeLoaderService ✅
+- LLMClient + MockLLMClient ✅
+- ValidatorService ✅
+- ScoringService ✅
 
 ## What's Next
 
-### Current Phase: Phase 1 - Foundation Components
+### Current Phase: Phase 3 - API Endpoints
 
 **Next Steps** (see [docs/DEVELOPMENT_PHASES.md](docs/DEVELOPMENT_PHASES.md)):
-1. Create database models (User, Challenge, Attempt, Score, Session)
-2. Set up Alembic for database migrations
-3. Create configuration management (config.py with Pydantic Settings)
-4. Verify migrations work in container
 
-After Phase 0 is complete, we will proceed through phases sequentially:
-- **Phase 1**: Foundation (FastAPI, config, models, Alembic)
-- **Phase 2**: Core Services (challenge loader, LLM client, validator, scoring)
-- **Phase 3**: API Endpoints (challenges, game, leaderboard)
+**Phase 3.1: Challenge API** (Next - estimated 2-3 hours)
+1. Create `app/api/challenges.py`
+2. `GET /api/challenges` - List all challenges
+3. `GET /api/challenges/{id}` - Get specific challenge
+4. Pydantic request/response models
+5. Integration tests
+
+**Phase 3.2: Game API** (estimated 4-6 hours)
+1. Create `app/api/game.py`
+2. `POST /api/game/start` - Start new game session
+3. `POST /api/game/submit` - Submit prompt attempt
+4. `GET /api/game/status/{id}` - Get game state
+5. Wire together: LLM Client → Validator → Scoring
+
+**Phase 3.3: Leaderboard API** (estimated 2-3 hours)
+1. Create `app/api/leaderboard.py`
+2. `GET /api/leaderboard/global`
+3. `GET /api/leaderboard/hole/{id}`
+4. `GET /api/leaderboard/session/{id}`
+
+### Remaining Phases
+- **Phase 3**: API Endpoints ⏳ (Current - 8-12 hours)
 - **Phase 4**: Frontend Templates (Tailwind, layouts)
 - **Phase 5**: Frontend Interactivity (htmx, Alpine.js)
-- **Phase 6**: Supporting Features (name generator, sessions, leaderboard page)
+- **Phase 6**: Supporting Features (name generator, sessions)
 - **Phase 7**: Polish & Testing
-- **Phase 8**: Production Preparation (PostgreSQL, OpenShift)
+- **Phase 8**: Production (PostgreSQL, OpenShift)
 
-### Phase 1: MVP Development
+### MVP Status
 
-**Goal**: Working single-player game with 1-3 basic challenges
+**Goal**: Working single-player game with basic challenges
 
-#### Backend Tasks
-- [ ] Implement FastAPI application structure
-- [ ] Create database models and migrations
-- [ ] Implement LLM client abstraction layer
-- [ ] Create token counting service
-- [ ] Implement validation service (start with test_cases type)
-- [ ] Create scoring service
-- [ ] Implement name generator service
-- [ ] Build challenge loader service
-- [ ] Create API endpoints (game, challenges, leaderboard)
+#### Backend Progress
+- [x] Implement FastAPI application structure (Phase 1.2)
+- [x] Create database models and migrations (Phase 1.3, 1.4)
+- [x] Implement LLM client abstraction layer (Phase 2.2)
+- [x] Create token counting service (integrated in Phase 2.2)
+- [x] Implement validation service (Phase 2.3)
+- [x] Create scoring service (Phase 2.4)
+- [x] Build challenge loader service (Phase 2.1)
+- [ ] Create API endpoints (Phase 3 - IN PROGRESS)
+- [ ] Implement name generator service (Phase 6)
 
 #### Frontend Tasks
 - [ ] Design and implement base HTML template
