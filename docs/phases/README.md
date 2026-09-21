@@ -58,6 +58,9 @@ Where:
 **Phase 2.3: Validator Service**
 - [PHASE_2.3_COMPLETE.md](PHASE_2.3_COMPLETE.md) - Response validation
 
+**Phase 2.4: Scoring Service**
+- [PHASE_2.4_COMPLETE.md](PHASE_2.4_COMPLETE.md) - Attempt recording and score calculation
+
 ## Document Structure
 
 ### COMPLETE Documents
@@ -149,9 +152,10 @@ Do not delete or move files once committed.
 | 2.1 | 4 | ✅ Complete + Validated + Fixed + Verified |
 | 2.2 | 1 | ✅ Complete |
 | 2.3 | 1 | ✅ Complete |
+| 2.4 | 1 | ✅ Complete |
 
-**Total Documents**: 10  
-**Total Phases Completed**: 7  
+**Total Documents**: 11  
+**Total Phases Completed**: 8  
 **Average Docs per Phase**: 1.4
 
 ---

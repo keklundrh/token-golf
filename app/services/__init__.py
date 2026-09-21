@@ -10,10 +10,12 @@ Services:
     - MockLLMClient: Mock client for testing
     - ValidatorService: Validate LLM responses against challenge criteria
     - ValidationResult: Structured validation result
+    - ScoringService: Record attempts and calculate scores
 """
 
 from app.services.challenge_loader import ChallengeLoaderService
 from app.services.llm_client import LLMClient, LLMResponse, MockLLMClient
+from app.services.scoring import ScoringService
 from app.services.validator import ValidatorService, ValidationResult
 
 __all__ = [
@@ -21,6 +23,7 @@ __all__ = [
     "LLMClient",
     "LLMResponse",
     "MockLLMClient",
+    "ScoringService",
     "ValidatorService",
     "ValidationResult",
 ]
