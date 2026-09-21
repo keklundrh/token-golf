@@ -92,6 +92,10 @@
                     You'll need them to return.
                 </p>
 
+                <!-- TODO: ISSUE #1 - Fix breaking change in API format
+                     OLD: {"generate_new_user": true}
+                     NEW: {"action": "generate", "course_id": "beginner-course"}
+                     See ISSUES.md for details -->
                 <button
                     hx-post="/api/game/start"
                     hx-vals='{"generate_new_user": true}'
