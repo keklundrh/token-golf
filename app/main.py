@@ -4,6 +4,7 @@ Token Golf - FastAPI Application Entry Point
 Phase 0: Minimal app with health check
 Phase 1.2: Configuration management integrated
 Phase 2.1: Challenge loader service integrated
+Phase 3.1: Challenge API endpoints
 """
 
 import logging
@@ -13,6 +14,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from app.api import challenges_router
 from app.config import get_settings
 from app.database import async_session_factory, close_db
 from app.services import ChallengeLoaderService
@@ -75,6 +77,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Include API routers
+app.include_router(challenges_router)
+
 
 @app.get("/")
 async def root():
@@ -82,7 +87,7 @@ async def root():
     return {
         "message": "Welcome to Token Golf!",
         "version": "0.1.0",
-        "status": "Phase 2.1 - Challenge Loader Complete",
+        "status": "Phase 3.1 - Challenge API Complete",
     }
 
 
