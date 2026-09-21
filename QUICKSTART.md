@@ -186,17 +186,77 @@ token-golf/
 └── .env                    # Environment config (gitignored)
 ```
 
-## Next Steps
+## ⚠️ Known Issues (Current Build - 2026-09-21)
 
-After Phase 0 is complete, we'll build:
+### Issue #1: API Breaking Change ⚠️
+**Status:** Critical - Frontend not updated yet  
+**Impact:** "Generate My Username" button will fail
 
-1. **Phase 1**: Database models, config, Alembic migrations
-2. **Phase 2**: Core services (LLM client, validator, scoring)
-3. **Phase 3**: API endpoints
-4. **Phase 4**: Frontend templates
-5. **Phase 5**: Frontend interactivity
+**Quick Fix:**
+1. Open `app/templates/index.html`
+2. Find line ~97: `hx-vals='{"generate_new_user": true}'`
+3. Change to: `hx-vals='{"action": "generate", "course_id": "beginner-course"}'`
+4. Save and refresh browser
 
-See [docs/DEVELOPMENT_PHASES.md](docs/DEVELOPMENT_PHASES.md) for the complete roadmap.
+**See:** `ISSUES.md` for full details and tracking
+
+### What Works Right Now:
+- ✅ Backend API (all endpoints functional)
+- ✅ Database and migrations  
+- ✅ 5 sample challenges (hole-001 to hole-005)
+- ✅ 4 courses (Beginner's Green, Challenge Valley, etc.)
+- ✅ Error handling and session management
+- ⚠️ Frontend (after fixing Issue #1)
+
+## What You'll See
+
+After starting the server, you can visit:
+
+### Home Page (`http://localhost:8000`)
+- Auto-generated username + password option
+- Sign-in for existing users
+- Leaderboard preview (top 3 players)
+
+### Game Interface (`/game/{session_id}`)
+- **Left**: Challenge description + prompt input area
+- **Right**: Metrics panel (tokens, rank, leaderboard)
+- **Pills UI**: Manage context files and system prompts
+- **Animations**: Golf-themed loading states
+
+### Leaderboard (`/leaderboard`)
+- **Three views**: Global / Per-Hole / Session
+- **Keyboard shortcuts**: G, H, S, R
+- **Auto-refresh**: Toggle 30-second updates
+
+### API Documentation (`/docs`)
+- Interactive OpenAPI/Swagger docs
+- Test all endpoints directly
+- See request/response schemas
+
+## Available Challenges
+
+1. **hole-001**: Hello World (easy, exact_match)
+2. **hole-002**: Addition Function (easy, test_cases)
+3. **hole-003**: String Reversal (medium, test_cases)
+4. **hole-004**: Email Extraction (medium, exact_match)
+5. **hole-005**: FizzBuzz (hard, test_cases)
+
+## Project Status
+
+**Completed Phases:**
+- ✅ Phase 0: Container Foundation
+- ✅ Phase 1: Foundation Components
+- ✅ Phase 2: Core Services
+- ✅ Phase 3: API Endpoints
+- ✅ Phase 4: Frontend Templates
+- ✅ Phase 5: Frontend Interactivity
+- ✅ Phase 6: Supporting Features (~95%)
+
+**MVP Progress:** ~95% complete
+
+**Next:** Phase 7 - Testing & Polish
+
+See [PROJECT_STATUS.md](PROJECT_STATUS.md) for detailed status and [docs/DEVELOPMENT_PHASES.md](docs/DEVELOPMENT_PHASES.md) for the complete roadmap.
 
 ## Getting Help
 
