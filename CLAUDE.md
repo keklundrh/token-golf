@@ -97,59 +97,26 @@ Each challenge must have clear, verifiable correct answers (MVP only includes fi
 5. **Modern & Common**: Use widely-adopted, well-maintained technologies
 6. **Documentation-Driven**: All decisions recorded in markdown/ADRs
 
-## Current Implementation Status (Phase 2.4 Complete)
+## Implementation Status
 
-### ✅ Implemented Components
+**For current project status, phase completion, and progress tracking, see [PROJECT_STATUS.md](PROJECT_STATUS.md)**
 
-**Container & Infrastructure**:
-- Podman/Docker setup with hot reload
-- FastAPI application with health check endpoints
-- SQLAlchemy 2.0 async database integration
-- Alembic migrations (initial migration created)
+This file (CLAUDE.md) provides stable reference documentation for AI assistants. Implementation status changes frequently and is maintained separately.
 
-**Database Models** (6 models, 799 lines):
-- `User` - Auto-generated usernames
-- `Session` - Game sessions with timeout
-- `SessionParticipant` - User-session join table
-- `Challenge` - Challenge definitions from YAML
-- `Attempt` - Individual prompt submissions
-- `Score` - Cumulative scoring per user/session/challenge
-
-**Service Layer** (4 services, 1,710 lines):
-- `ChallengeLoaderService` - YAML challenge parsing (410 lines)
-- `LLMClient` + `MockLLMClient` - Claude API integration (357 lines)
-- `ValidatorService` - Test cases & exact match validation (439 lines)
-- `ScoringService` - Attempt recording & leaderboards (504 lines)
-
-**Configuration**:
-- Pydantic Settings with environment variables
-- Database connection management
-- LLM API configuration
-
-### ⏳ Not Yet Implemented
-
-- **API Endpoints** (Phase 3) - REST API for challenges, game, leaderboards
-- **Frontend** (Phase 4-5) - HTML templates, htmx, Alpine.js
-- **Name Generator** (Phase 6) - Auto-generate usernames
-- **Tests** (Phase 7) - Unit and integration tests
-- **Challenges** (Phase 6) - Actual challenge content (infrastructure ready)
-
-### Target Directory Structure
-
-**Legend**: ✅ Implemented | ⏳ Planned
+## Target Directory Structure
 
 ```
 token-golf/
 ├── app/
-│   ├── main.py              # ✅ FastAPI entry point
-│   ├── config.py            # ✅ Configuration management (Pydantic)
-│   ├── database.py          # ✅ SQLAlchemy async session
-│   ├── api/                 # ⏳ REST API endpoints (Phase 3)
+│   ├── main.py              # FastAPI entry point
+│   ├── config.py            # Configuration management (Pydantic)
+│   ├── database.py          # SQLAlchemy async session
+│   ├── api/                 # REST API endpoints
 │   │   ├── __init__.py
 │   │   ├── challenges.py    # Challenge endpoints
 │   │   ├── leaderboard.py   # Leaderboard endpoints
 │   │   └── game.py          # Game session endpoints
-│   ├── models/              # ✅ SQLAlchemy 2.0 models (6 files)
+│   ├── models/              # SQLAlchemy 2.0 models (6 files)
 │   │   ├── __init__.py
 │   │   ├── base.py          # Base class
 │   │   ├── user.py          # User model
@@ -157,58 +124,55 @@ token-golf/
 │   │   ├── challenge.py     # Challenge model
 │   │   ├── attempt.py       # Attempt model
 │   │   └── score.py         # Score model
-│   ├── services/            # ✅ Business logic (4 services)
+│   ├── services/            # Business logic (4 services)
 │   │   ├── __init__.py
 │   │   ├── challenge_loader.py  # Challenge YAML parsing
 │   │   ├── llm_client.py    # LLM API integration (Claude)
 │   │   ├── validator.py     # Answer validation (test cases, exact match)
-│   │   ├── scoring.py       # Token counting & scoring
-│   │   └── name_generator.py # ⏳ User name generation (Phase 6)
-│   └── templates/           # ⏳ Jinja2 templates (Phase 4)
+│   │   └── scoring.py       # Token counting & scoring
+│   └── templates/           # Jinja2 templates (planned)
 │       ├── base.html
 │       ├── game.html
 │       └── leaderboard.html
-├── alembic/                 # ✅ Database migrations
+├── alembic/                 # Database migrations
 │   ├── env.py
 │   ├── versions/
 │   └── ...
-├── challenges/              # ⏳ Challenge content (infrastructure ready)
+├── challenges/              # Challenge content
 │   ├── README.md            # Challenge authoring guide
 │   ├── hole-001/
 │   │   ├── challenge.yaml   # Challenge definition
 │   │   └── assets/          # Context files, test data
 │   └── courses.yaml         # Course definitions
-├── docs/                    # ✅ Project documentation
+├── docs/                    # Project documentation
 │   ├── ADRs/                # Architecture Decision Records
 │   ├── phases/              # Phase completion docs
 │   ├── ARCHITECTURE.md
 │   ├── CHALLENGE_FORMAT.md
-│   └── API.md               # ⏳ API documentation (Phase 3)
-├── static/                  # ⏳ Frontend assets (Phase 4)
+│   └── API.md               # API documentation
+├── static/                  # Frontend assets
 │   ├── css/
 │   ├── js/
 │   └── images/
-├── tests/                   # ⏳ Test suite (Phase 7)
+├── tests/                   # Test suite
 │   ├── unit/
 │   ├── integration/
 │   └── challenges/
-├── .env.example             # ✅ Environment variables template
-├── .gitignore               # ✅
-├── alembic.ini              # ✅ Alembic configuration
-├── CLAUDE.md                # ✅ This file
-├── CONTRIBUTING.md          # ✅ Developer guidelines
-├── docker-compose.yml       # ✅ Local development
-├── Dockerfile               # ✅ Container definition
-├── PROJECT_STATUS.md        # ✅ Current status (updated)
-├── README.md                # ✅ Project overview
-└── requirements.txt         # ✅ Python dependencies
+├── .env.example             # Environment variables template
+├── .gitignore
+├── alembic.ini              # Alembic configuration
+├── CLAUDE.md                # This file
+├── CONTRIBUTING.md          # Developer guidelines
+├── docker-compose.yml       # Local development
+├── Dockerfile               # Container definition
+├── PROJECT_STATUS.md        # Current status (see this for implementation progress)
+├── README.md                # Project overview
+└── requirements.txt         # Python dependencies
 ```
-
-**Note**: Directory structure shows complete target architecture. See "Current Implementation Status" above for what's built vs planned.
 
 ## User Identity System
 
-### Name Generation
+### Name Generation & Authentication
 Auto-generated usernames ensure professional, family-friendly identifiers:
 - Format: `{Color}-{GolfCourse}-{ClubNumber}`
 - Example: `Blue-Pebblebeach-7`, `Green-Augusta-3`
@@ -217,8 +181,10 @@ Auto-generated usernames ensure professional, family-friendly identifiers:
   - Courses: Famous golf course names (Augusta, Pebblebeach, StAndrews, etc.)
   - Clubs: 1-14 (standard golf club numbers)
 - Validation: Filter inappropriate combinations
-- **MVP Behavior**: New username generated each time a player starts a session (no persistent authentication)
-- **Future**: Password-based authentication to reclaim usernames across sessions (not in MVP)
+- **Authentication Options**:
+  - **Generate New**: Auto-generate username + password
+  - **Sign In**: Use existing username + password
+- **Password Storage**: SHA256 hashed (MVP implementation - production should use bcrypt/argon2)
 
 ## UI Layout Specification
 
@@ -546,7 +512,9 @@ python scripts/validate_challenges.py
 ### Features INCLUDED in MVP
 - Test cases validation (for coding challenges)
 - Exact match validation (for text responses)
-- Auto-generated usernames (new username each session)
+- Auto-generated usernames + passwords
+- Sign-in with username + password
+- Password authentication (SHA256 hashing)
 - Haiku model only (hardcoded)
 - Three leaderboard views (Global, Per-Hole, Session)
 - Session timeout (3 hours, configurable)
@@ -562,13 +530,13 @@ python scripts/validate_challenges.py
 - Model selection by users (Haiku only)
 - Time limits per hole
 - Hints system
-- Persistent authentication with passwords
 - Semantic similarity validation
 - Custom validation scripts
 - Model parameters modification UI
 - Offline mode
 - Pill drag-to-reorder functionality
 - Real-time WebSocket updates
+- Advanced password hashing (bcrypt/argon2 - using SHA256 for MVP)
 
 ### Config File Requirements
 - Session timeout duration (default 3 hours)
@@ -581,7 +549,7 @@ python scripts/validate_challenges.py
 2. **SQLite First**: Start simple, migrate to PostgreSQL via ADR when scaling needs are clear
 3. **YAML Challenges**: Version-controlled, human-readable, easy to edit
 4. **All Tokens Count**: Most realistic measure of efficiency, teaches true optimization
-5. **Auto-Generated Names**: Removes authentication friction for demos, ensures appropriate names (new username each session for MVP)
+5. **Username + Password**: Auto-generated or user-provided, with password authentication (SHA256 for MVP)
 6. **Pill UI**: Clear visual for which context elements are active
 7. **Three Leaderboards**: Different competitive contexts:
    - **Global**: All sessions in current deployment
@@ -617,6 +585,6 @@ python scripts/validate_challenges.py
 9. **Edit persistence within a hole?** - Yes, edits persist across attempts within same hole
 10. **Session timeout?** - 3 hours from creation (configurable), then marked DNF
 11. **Multiple concurrent sessions?** - Yes, users can join multiple sessions
-12. **Authentication?** - New username each session for MVP, no passwords
+12. **Authentication?** - Username + password (generate new or sign in)
 13. **Model selection?** - Haiku only for MVP, hardcoded
 14. **Leaderboard views?** - Three: Global (all sessions), Per-Hole (all sessions), Session (current only)
