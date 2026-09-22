@@ -36,11 +36,39 @@ fi
 
 print_success "Found project directory"
 
+# Check for Python 3.12
+echo ""
+echo "Checking Python version..."
+if command -v python3.12 &> /dev/null; then
+    PYTHON_CMD="python3.12"
+    print_success "Found Python 3.12"
+elif command -v python3 &> /dev/null; then
+    PYTHON_VERSION=$(python3 --version 2>&1 | cut -d' ' -f2 | cut -d'.' -f1-2)
+    if [ "$PYTHON_VERSION" = "3.12" ]; then
+        PYTHON_CMD="python3"
+        print_success "Found Python 3.12"
+    else
+        print_error "Python 3.12 is required (found Python $PYTHON_VERSION)"
+        echo ""
+        echo "Python 3.13+ is not yet supported due to dependency compatibility."
+        echo ""
+        echo "To install Python 3.12:"
+        echo "  macOS:  brew install python@3.12"
+        echo "  Linux:  sudo apt install python3.12  (or equivalent)"
+        echo ""
+        exit 1
+    fi
+else
+    print_error "Python 3 not found"
+    echo "Please install Python 3.12"
+    exit 1
+fi
+
 # Check if virtual environment exists
 if [ ! -d "venv" ]; then
     echo ""
     print_warning "Virtual environment not found. Creating it..."
-    python3 -m venv venv
+    $PYTHON_CMD -m venv venv
     print_success "Virtual environment created"
 fi
 

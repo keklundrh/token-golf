@@ -39,7 +39,7 @@
                 <div class="text-right">
                     <div class="text-sm text-golf-gray mb-1">Expert Par</div>
                     <div class="text-2xl font-bold text-golf-gold">
-                        {{ challenge.metadata.get('estimated_tokens_expert', '150') }}
+                        {{ challenge_data.metadata.get('estimated_tokens_expert', '150') if challenge_data and challenge_data.metadata else '150' }}
                     </div>
                     <div class="text-xs text-golf-gray">tokens</div>
                 </div>
@@ -50,21 +50,26 @@
             <!-- Challenge Description -->
             <div class="mb-6">
                 <h2 class="text-lg font-semibold text-golf-navy mb-2">Challenge</h2>
-                <div class="text-golf-navy-light whitespace-pre-wrap">{{ challenge.description }}</div>
+                <div class="text-golf-navy-light whitespace-pre-wrap">{{ challenge_data.description if challenge_data else 'Loading...' }}</div>
             </div>
 
             <!-- Success Criteria -->
-            {% if challenge.validation and challenge.validation.get('criteria') %}
+            {% if challenge_data.validation and challenge_data.validation.get('type') == 'test_cases' and challenge_data.validation.get('criteria') %}
             <div class="mb-4">
                 <h2 class="text-lg font-semibold text-golf-navy mb-2">Success Criteria</h2>
                 <ul class="list-disc list-inside space-y-1 text-golf-navy-light">
-                    {% for criterion in challenge.validation.criteria[:3] %}
+                    {% for criterion in challenge_data.validation.criteria[:3] %}
                         <li>{{ criterion.get('name', 'Test case ' ~ loop.index) }}</li>
                     {% endfor %}
-                    {% if challenge.validation.criteria|length > 3 %}
-                        <li class="text-golf-gray italic">...and {{ challenge.validation.criteria|length - 3 }} more test cases</li>
+                    {% if challenge_data.validation.criteria|length > 3 %}
+                        <li class="text-golf-gray italic">...and {{ challenge_data.validation.criteria|length - 3 }} more test cases</li>
                     {% endif %}
                 </ul>
+            </div>
+            {% elif challenge_data.validation and challenge_data.validation.get('type') == 'exact_match' %}
+            <div class="mb-4">
+                <h2 class="text-lg font-semibold text-golf-navy mb-2">Success Criteria</h2>
+                <p class="text-golf-navy-light">Your answer must exactly match the expected output.</p>
             </div>
             {% endif %}
 
@@ -301,7 +306,7 @@
                             </span>
                             <span class="text-golf-gray">|</span>
                             <span class="text-golf-gray">
-                                Par: <span class="font-semibold text-golf-gold">{{ challenge.metadata.get('estimated_tokens_expert', '150') }}</span>
+                                Par: <span class="font-semibold text-golf-gold">{{ challenge_data.metadata.get('estimated_tokens_expert', '150') if challenge_data and challenge_data.metadata else '150' }}</span>
                             </span>
                         </div>
                     </div>
@@ -640,11 +645,11 @@
         return {
             // State
             userPrompt: '',
-            systemPrompt: '{{ challenge.system_prompt.get("default", "You are a helpful coding assistant.") }}',
-            defaultSystemPrompt: '{{ challenge.system_prompt.get("default", "You are a helpful coding assistant.") }}',
+            systemPrompt: '{{ challenge_data.system_prompt.get("default", "You are a helpful coding assistant.") if challenge_data and challenge_data.get("system_prompt") else "You are a helpful coding assistant." }}',
+            defaultSystemPrompt: '{{ challenge_data.system_prompt.get("default", "You are a helpful coding assistant.") if challenge_data and challenge_data.get("system_prompt") else "You are a helpful coding assistant." }}',
             editingSystemPrompt: false,
-            contextFiles: {{ challenge.context_files | tojson | safe if challenge.context_files else '[]' }},
-            maxContextFiles: {{ challenge.context_files | length if challenge.context_files else 0 }},
+            contextFiles: {{ challenge_data.context_files | tojson | safe if challenge_data and challenge_data.get('context_files') else '[]' }},
+            maxContextFiles: {{ challenge_data.context_files | length if challenge_data and challenge_data.get('context_files') else 0 }},
             submitting: false,
             hasResponse: false,
             validationResult: {},
@@ -671,7 +676,7 @@
             },
 
             getTokenCountColor(tokenCount) {
-                const par = {{ challenge.metadata.get('estimated_tokens_expert', 150) }};
+                const par = {{ challenge_data.metadata.get('estimated_tokens_expert', 150) if challenge_data and challenge_data.get('metadata') else 150 }};
                 if (tokenCount <= par) {
                     return 'text-golf-green';
                 } else if (tokenCount <= par * 1.5) {

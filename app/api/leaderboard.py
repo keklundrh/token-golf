@@ -147,7 +147,7 @@ async def get_global_leaderboard(
 
     # Filter completed only if requested
     if completed_only:
-        leaderboard = [entry for entry in leaderboard if entry.get("completed_count", 0) > 0]
+        leaderboard = [entry for entry in leaderboard if entry.get("completed_challenges", 0) > 0]
 
     # Apply offset and limit
     total_entries = len(leaderboard)
@@ -168,8 +168,8 @@ async def get_global_leaderboard(
             user_id=entry["user_id"],
             username=users.get(entry["user_id"], f"User-{entry['user_id']}"),
             total_tokens=entry["total_tokens"],
-            completed_challenges=entry.get("completed_count", 0),
-            total_attempts=entry.get("challenges_attempted", 0),
+            completed_challenges=entry.get("completed_challenges", 0),
+            total_attempts=entry.get("total_attempts", 0),
         )
         for idx, entry in enumerate(leaderboard)
     ]
@@ -337,8 +337,8 @@ async def get_session_leaderboard(
             user_id=entry["user_id"],
             username=users.get(entry["user_id"], f"User-{entry['user_id']}"),
             total_tokens=entry["total_tokens"],
-            completed_challenges=entry.get("completed_count", 0),
-            total_attempts=entry.get("challenges_attempted", 0),
+            completed_challenges=entry.get("completed_challenges", 0),
+            total_attempts=entry.get("total_attempts", 0),
             session_id=session_id,
         )
         for idx, entry in enumerate(leaderboard)

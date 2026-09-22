@@ -16,15 +16,18 @@ import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import yaml
 from fastapi import FastAPI, Request
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlalchemy import select
 
 from app.api import challenges_router, game_router, leaderboard_router
 from app.config import get_settings
 from app.database import async_session_factory, close_db, init_db
+from app.models import Challenge, Score, Session, SessionParticipant, User
 from app.services import ChallengeLoaderService, SessionManager
 
 # Load settings
@@ -419,15 +422,104 @@ async def root(request: Request):
 async def game_page(request: Request, session_id: str):
     """Game page - active game session"""
     try:
-        return templates.TemplateResponse(
-            "game.html",
-            {
-                "request": request,
-                "session_id": session_id,
-            },
-        )
+        async with async_session_factory() as db:
+            # Fetch session
+            result = await db.execute(
+                select(Session).where(Session.id == session_id)
+            )
+            session = result.scalar_one_or_none()
+
+            if not session:
+                raise HTTPException(status_code=404, detail="Session not found")
+
+            # Get user from session participants
+            result = await db.execute(
+                select(User)
+                .join(SessionParticipant)
+                .where(SessionParticipant.session_id == session_id)
+                .limit(1)
+            )
+            user = result.scalar_one_or_none()
+
+            # Get course and first challenge (user stays on completed challenge to view stats)
+            challenges_dir = Path(settings.challenges_dir)
+            loader = ChallengeLoaderService(db, challenges_dir)
+            course = await loader.get_course(session.course_id)
+
+            # For now, always load first challenge
+            # TODO: Support navigation between challenges
+            challenge = None
+            if course and course.get("holes"):
+                first_challenge_id = course["holes"][0]
+                result = await db.execute(
+                    select(Challenge).where(Challenge.id == first_challenge_id)
+                )
+                challenge = result.scalar_one_or_none()
+
+            # Parse challenge config if available
+            challenge_data = None
+            if challenge:
+                try:
+                    challenge_data = yaml.safe_load(challenge.config_yaml)
+                except Exception as e:
+                    logger.error(f"Error parsing challenge config: {e}")
+                    challenge_data = {}
+
+            # If no challenge found, provide empty placeholder
+            # (the real data loads via API on page load)
+            if not challenge:
+                challenge = type('obj', (object,), {
+                    'id': 'loading',
+                    'name': 'Loading...',
+                    'difficulty': 'medium',
+                    'task_type': 'loading',
+                })()
+                challenge_data = {
+                    'description': 'Loading challenge...',
+                    'metadata': {}
+                }
+
+            # Create placeholder user stats (actual data loads via API)
+            user_stats = {
+                'total_tokens': 0,
+                'attempts': 0,
+                'rank': '-',
+                'status': 'in_progress'
+            }
+
+            # Create placeholder leaderboard (actual data loads via API)
+            leaderboard = []
+
+            # Create placeholder comparison data (actual data loads via API)
+            comparison_data = None
+
+            # Create placeholder stats (actual data loads via API)
+            stats = {
+                'best_score': None,
+                'average_score': None,
+                'median_score': None,
+                'total_attempts': 0
+            }
+
+            return templates.TemplateResponse(
+                "game.html",
+                {
+                    "request": request,
+                    "session_id": session_id,
+                    "session": session,
+                    "user": user,
+                    "user_stats": user_stats,
+                    "challenge": challenge,
+                    "challenge_data": challenge_data,
+                    "leaderboard": leaderboard,
+                    "comparison_data": comparison_data,
+                    "stats": stats,
+                },
+            )
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Error rendering game template: {e}")
+        logger.error(f"Error rendering game template: {e}", exc_info=True)
         return HTMLResponse(
             content=f"""
             <!DOCTYPE html>

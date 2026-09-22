@@ -2,10 +2,12 @@
 
 ## Prerequisites
 
-- **Podman** and **podman-compose** installed
+- **Podman** and **podman-compose** installed (for containerized setup)
   - macOS: `brew install podman podman-compose`
   - Linux: See [Podman installation guide](https://podman.io/getting-started/installation)
   - Windows: See [Podman Desktop](https://podman-desktop.io/)
+- **Python 3.12** (for local development - 3.13+ not yet supported)
+  - macOS: `brew install python@3.12`
 - Claude API key (get from: https://console.anthropic.com/)
 
 > **Note**: This project uses Podman instead of Docker. See [ADR 006](docs/ADRs/006-use-podman-for-containerization.md) for rationale. If you prefer Docker, most commands work with `alias docker=podman`.

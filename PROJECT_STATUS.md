@@ -1,13 +1,15 @@
 # Token Golf - Project Status
 
-**Last Updated**: 2026-09-21
+**Last Updated**: 2026-09-22
 
 ## Current Phase
 
-**Phase**: Phase 5 - Frontend Interactivity + Enhancements  
-**Status**: ✅ **COMPLETE** (Production-ready MVP!)
+**Phase**: Phase 7 - Testing & Polish  
+**Status**: 🚧 **IN PROGRESS** (Core flow working, comprehensive testing remains)
 
-**Next Phase**: Phase 7 - Testing & Polish (Phase 6 mostly done)
+**Previous Phase**: Phase 5 - Frontend Interactivity + Enhancements ✅ COMPLETE
+
+**Next Phase**: Phase 8 - Production Deployment
 
 ## Quick Summary
 
@@ -106,15 +108,49 @@ Token Golf is a competitive game teaching AI token efficiency through golf-style
 - ✅ Leaderboard page (templates + routes)
 - ✅ Session timeout handling
 
+### Phase 7: Testing & Polish 🚧 IN PROGRESS (started 2026-09-22)
+**Progress**: ~30% complete
+
+✅ **Completed:**
+- [x] Browser testing session #1 (core flow)
+- [x] Fixed 7 critical bugs preventing functionality
+- [x] Verified end-to-end game flow (auth → play → complete → leaderboard)
+- [x] Python version requirements documented
+- [x] Run script with version checking
+
+⏳ **In Progress:**
+- [ ] Challenge completion UI (backend works, frontend needs update)
+- [ ] Challenge navigation controls
+- [ ] Comprehensive browser testing (all features)
+
+⏳ **Remaining:**
+- [ ] Write unit tests for services (>80% coverage)
+- [ ] Write integration tests for APIs (100% coverage)  
+- [ ] Write E2E tests for game flow
+- [ ] Test all error pages (404, 500, weather delay)
+- [ ] Test pills UI (context files, system prompts)
+- [ ] Test keyboard shortcuts
+- [ ] Test responsive design (mobile, tablet)
+- [ ] Performance optimization
+
 ## What's Next
 
-### Phase 7: Testing & Polish (Next - estimated 4-6 hours)
-- [ ] Write unit tests for services (>80% coverage)
-- [ ] Write integration tests for APIs (100% coverage)
-- [ ] Write E2E tests for game flow
-- [ ] Browser testing (manual)
-- [ ] Fix any bugs found in testing
-- [ ] Performance optimization
+### Immediate (Phase 7 Continuation)
+1. **Add Challenge Completion UI** (1-2 hours)
+   - Show success message with stats
+   - Display "Next Challenge →" button
+   - Update game state display
+
+2. **Complete Browser Testing** (2-3 hours)
+   - Test all remaining features
+   - Test error handling
+   - Test responsive design
+   - Fix any new bugs
+
+3. **Write Automated Tests** (4-6 hours)
+   - Unit tests for services
+   - Integration tests for APIs
+   - E2E test for complete flow
 
 ### Phase 8: Production Deployment (estimated 4-6 hours)
 - [ ] Production Dockerfile (multi-stage, security)
@@ -183,12 +219,31 @@ Token Golf is a competitive game teaching AI token efficiency through golf-style
 7. **Weather delay errors** - User-friendly LLM error handling
 8. **Consistent API errors** - error/message/details/suggestions format
 
-## Known Issues
+## Recent Updates (2026-09-22)
 
-1. ⚠️ **Breaking change**: POST /api/game/start API changed - templates need update
+### ✅ Browser Testing Session Complete
+- **7 Critical Bugs Fixed** in ~2 hour session
+- **End-to-end flow verified** - user creation through challenge completion
+- **First successful game completion** - Gold-Shinnecock-14 completed hole-001 (115 tokens, 4 attempts)
+- See `docs/sessions/SESSION_2026-09-22_FIXES.md` for complete details
+
+### Bugs Fixed
+1. ✅ Python 3.13/3.14 incompatibility (docs + run.sh updated to require 3.12)
+2. ✅ Invalid Claude model name (fixed dots to dashes)
+3. ✅ Generate username button (htmx JSON encoding)
+4. ✅ Missing template variables (user, user_stats, leaderboard, etc)
+5. ✅ Template data source errors (challenge vs challenge_data)
+6. ✅ Exact match validation always failing (dict handling)
+7. ✅ Empty leaderboard (field name mismatch)
+
+### Known Remaining Issues
+
+1. ✅ ~~**Breaking change**: POST /api/game/start API changed~~ - **RESOLVED**
 2. **Bcrypt migration**: Need to migrate from SHA256 to bcrypt for production
-3. **Browser testing**: Manual testing needed (Phase 7)
-4. **Test coverage**: Tests written but not executed yet (Phase 7)
+3. ⏳ **Challenge completion UI**: Page reloads but doesn't show completion status
+4. ⏳ **Challenge navigation**: No way to navigate between challenges
+5. **Browser testing**: Comprehensive testing needed (started, not complete)
+6. **Test coverage**: Automated tests not written yet
 
 ## Documentation
 
@@ -205,13 +260,15 @@ Token Golf is a competitive game teaching AI token efficiency through golf-style
 
 ## Next Steps
 
-1. **Fix breaking change** - Update templates for new /api/game/start format
-2. **Write tests** - Unit, integration, E2E (Phase 7)
-3. **Browser test** - Manual testing to find bugs
-4. **Production prep** - Dockerfile, PostgreSQL, OpenShift (Phase 8)
+1. ✅ ~~**Fix breaking change**~~ - **DONE** (2026-09-22)
+2. 🚧 **Browser test** - Core flow working, comprehensive testing in progress
+3. ⏳ **Add completion UI** - Show success, stats, navigation
+4. ⏳ **Write tests** - Unit, integration, E2E (Phase 7)
+5. ⏳ **Production prep** - Dockerfile, PostgreSQL, OpenShift (Phase 8)
 
 ---
 
-**Phase 5 Status**: ✅ **COMPLETE**  
-**MVP Status**: ~95% complete (testing remains)  
-**Next Phase**: Phase 7 - Testing & Polish
+**Phase 7 Status**: 🚧 **IN PROGRESS** (~30% complete)  
+**MVP Status**: ~85% complete (core working, polish + testing remains)  
+**Current Work**: Browser testing + UI polish  
+**Next Milestone**: Complete comprehensive browser testing

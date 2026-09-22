@@ -231,7 +231,42 @@ class ValidatorService:
                 error_message="No match criteria defined"
             )
 
-        # Normalize response (trim whitespace, lowercase)
+        # Handle dict format (expected_answer, case_sensitive, trim_whitespace)
+        if isinstance(criteria, dict):
+            expected_answer = criteria.get("expected_answer")
+            if not expected_answer:
+                return ValidationResult(
+                    is_correct=False,
+                    error_message="No 'expected_answer' in criteria"
+                )
+
+            case_sensitive = criteria.get("case_sensitive", False)
+            trim_whitespace = criteria.get("trim_whitespace", True)
+
+            # Normalize based on criteria settings
+            test_response = response
+            test_expected = expected_answer
+
+            if trim_whitespace:
+                test_response = test_response.strip()
+                test_expected = test_expected.strip()
+
+            if not case_sensitive:
+                test_response = test_response.lower()
+                test_expected = test_expected.lower()
+
+            if test_response == test_expected:
+                return ValidationResult(
+                    is_correct=True,
+                    feedback=f"Response matches expected answer"
+                )
+            else:
+                return ValidationResult(
+                    is_correct=False,
+                    feedback=f"Response does not match. Expected: '{expected_answer}', Got: '{response}'"
+                )
+
+        # Handle legacy format (simple string or list of strings)
         normalized_response = response.strip().lower()
 
         # Support multiple acceptable answers

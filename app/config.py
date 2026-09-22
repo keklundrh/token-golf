@@ -88,7 +88,7 @@ class Settings(BaseSettings):
     )
 
     claude_model: str = Field(
-        default="claude-haiku-4.5-20251001",
+        default="claude-haiku-4-5-20251001",
         description="Claude model to use (Haiku only for MVP)"
     )
 

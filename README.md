@@ -76,9 +76,12 @@ podman-compose up
 ```
 
 ### Local Python (Alternative)
+
+**Requirements**: Python 3.12 (3.13+ not yet supported due to dependency compatibility)
+
 ```bash
 # Setup virtual environment
-python -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 

@@ -1,7 +1,8 @@
 # Token Golf - Known Issues & Technical Debt
 
-**Last Updated**: 2026-09-21  
-**Status**: 4 issues logged (3 critical, 1 medium)
+**Last Updated**: 2026-09-22  
+**Status**: 3 issues logged (2 critical, 1 medium)  
+**Recently Resolved**: 1 critical (Issue #1)
 
 ---
 
@@ -9,7 +10,7 @@
 
 ### Issue #1: Breaking Change in POST /api/game/start Format
 **Priority**: Critical  
-**Status**: Open  
+**Status**: ✅ **RESOLVED** (2026-09-22)  
 **Introduced**: Phase 5 (Agent 4 - API Improvements)  
 **Affects**: Frontend authentication flow
 
@@ -41,16 +42,24 @@ POST /api/game/start
 - `app/templates/index.html` (lines with htmx form submission)
 - Potentially `app/templates/game.html` if it has start game functionality
 
-**Resolution Steps:**
-1. Read `app/templates/index.html`
-2. Find all instances of form submission to `/api/game/start`
-3. Update JavaScript/Alpine.js to use `action` field instead of `generate_new_user`
-4. Test in browser
-5. Mark issue as resolved
+**Resolution** (2026-09-22):
+Fixed in browser testing session. Root cause was htmx sending form-encoded data instead of JSON.
+
+**Changes Made:**
+1. Added htmx JSON encoding extension to `base.html`
+2. Added `hx-ext="json-enc"` to Generate Username button (line 101)
+3. Added `hx-ext="json-enc"` to Sign In form (line 218)
+4. Both forms now properly send JSON with `{"action": "generate"}` or `{"action": "signin"}`
+
+**Files Modified:**
+- `app/templates/base.html:16` - Added json-enc.js script
+- `app/templates/index.html:101, 218` - Added hx-ext attribute
+
+**Verified**: User creation and sign-in now working in browser.
 
 **Related:**
-- See `app/api/game.py` lines ~500-600 for new API implementation
-- See `docs/phases/PHASE_5_COMPLETE.md` for breaking change details
+- See `docs/sessions/SESSION_2026-09-22_FIXES.md` for full testing session details
+- See Bug #3 in that document for technical details
 
 ---
 
@@ -95,7 +104,8 @@ password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
 
 ### Issue #3: Browser Testing Not Performed
 **Priority**: Critical (Quality)  
-**Status**: Blocked by Issue #1  
+**Status**: ✅ **PARTIALLY RESOLVED** (2026-09-22)  
+**Progress**: Core flow tested and working, comprehensive testing remains  
 **Affects**: MVP validation
 
 **Description:**
@@ -136,19 +146,40 @@ Frontend templates created and enhanced but not tested in actual browser. Breaki
    - Desktop view
    - Animations at 60fps
 
-**Resolution Steps:**
-1. Fix Issue #1 (breaking change)
-2. Start development server:
-   ```bash
-   podman-compose up
-   # or
-   uvicorn app.main:app --reload
-   ```
-3. Run through all test scenarios
-4. Log any bugs found
-5. Fix bugs
-6. Re-test
-7. Document testing results
+**Progress Update** (2026-09-22):
+✅ **Tested and Working:**
+- Authentication flow (generate username, sign in)
+- Session creation
+- Challenge loading (hole-001)
+- Prompt submission
+- LLM integration
+- Validation (exact_match type)
+- Score recording
+- Global leaderboard display
+
+🔧 **Found and Fixed 7 Bugs:**
+1. Python 3.13/3.14 incompatibility
+2. Invalid Claude model name
+3. Generate username button broken (htmx JSON)
+4. Missing template variables
+5. Template using wrong data source
+6. Exact match validation always failing
+7. Empty leaderboard (field name mismatch)
+
+⏳ **Still Need to Test:**
+- Test cases validation type
+- Pills UI (context files, system prompts)
+- Error pages (404, 500, weather delay)
+- Session timeout
+- Keyboard shortcuts
+- Mobile responsive design
+- Challenge navigation
+- All leaderboard views (per-hole, session)
+
+**Next Steps:**
+1. Test remaining scenarios above
+2. Fix any new bugs found
+3. Complete comprehensive browser testing per original list
 
 **Related:**
 - Testing scenarios documented in this issue

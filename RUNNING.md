@@ -1,5 +1,7 @@
 # How to Run Token Golf - Super Easy Guide
 
+**⚠️ Python Requirement**: Python 3.12 is required for local development. Python 3.13+ is not yet supported due to dependency compatibility (greenlet, pydantic-core).
+
 ## Choose Your Method
 
 ### 🐍 Method 1: Local Python (Easiest)
@@ -46,8 +48,8 @@ The script will:
 ### Local Python (Manual)
 
 ```bash
-# 1. Create virtual environment
-python3 -m venv venv
+# 1. Create virtual environment (requires Python 3.12)
+python3.12 -m venv venv
 source venv/bin/activate
 
 # 2. Install dependencies

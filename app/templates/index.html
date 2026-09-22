@@ -92,29 +92,26 @@
                     You'll need them to return.
                 </p>
 
-                <!-- TODO: ISSUE #1 - Fix breaking change in API format
-                     OLD: {"generate_new_user": true}
-                     NEW: {"action": "generate", "course_id": "beginner-course"}
-                     See ISSUES.md for details -->
                 <button
                     hx-post="/api/game/start"
-                    hx-vals='{"generate_new_user": true}'
+                    hx-ext="json-enc"
+                    hx-vals='{"action": "generate", "course_id": "beginner-course"}'
                     hx-swap="none"
                     hx-indicator="#generating-spinner"
-                    @click="
-                        generating = true;
-                        $el.setAttribute('hx-on::after-request', `
-                            if(event.detail.successful) {
-                                const data = JSON.parse(event.detail.xhr.response);
-                                generatedUsername = data.username;
-                                generatedPassword = data.password;
-                                showNewUserConfirm = true;
-                                sessionStorage.setItem('token_golf_session_id', data.session_id);
-                                sessionStorage.setItem('token_golf_username', data.username);
-                            } else {
-                                generating = false;
-                            }
-                        `);
+                    @click="generating = true"
+                    @htmx:after-request="
+                        const status = event.detail.xhr.status;
+                        if(event.detail.successful || status === 201) {
+                            const data = JSON.parse(event.detail.xhr.response);
+                            generatedUsername = data.username;
+                            generatedPassword = data.password;
+                            showNewUserConfirm = true;
+                            sessionStorage.setItem('token_golf_session_id', data.session_id);
+                            sessionStorage.setItem('token_golf_username', data.username);
+                        } else {
+                            generating = false;
+                            alert('Error: ' + (event.detail.xhr.response || 'Unknown error'));
+                        }
                     "
                     class="bg-green-600 hover:bg-green-700 text-white font-bold py-6 px-12 rounded-xl shadow-lg text-2xl transform transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                     :disabled="generating">
@@ -219,12 +216,15 @@
 
             <form
                 hx-post="/api/game/start"
+                hx-ext="json-enc"
+                hx-vals='{"action": "signin", "course_id": "beginner-course"}'
                 hx-swap="none"
                 hx-indicator="#signin-spinner"
                 @htmx:before-request="signinError = ''; signingIn = true;"
                 @htmx:after-request="
                     signingIn = false;
-                    if(event.detail.successful) {
+                    const status = event.detail.xhr.status;
+                    if(event.detail.successful || status === 201) {
                         const data = JSON.parse(event.detail.xhr.response);
                         sessionStorage.setItem('token_golf_session_id', data.session_id);
                         sessionStorage.setItem('token_golf_username', data.username);
