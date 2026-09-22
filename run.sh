@@ -161,5 +161,5 @@ echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Start the server
-uvicorn app.main:app --reload --port 8000
+# Start the server (reduced logging: only warnings and errors)
+uvicorn app.main:app --reload --port 8000 --log-level warning

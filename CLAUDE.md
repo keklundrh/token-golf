@@ -347,7 +347,7 @@ See `docs/CHALLENGE_FORMAT.md` for complete specification.
 ```sql
 CREATE TABLE sessions (
     id TEXT PRIMARY KEY,              -- UUID or similar
-    course_id TEXT NOT NULL,          -- Which set of holes (e.g., "beginner-course")
+    course_id TEXT NOT NULL,          -- Which set of holes (currently: "full-tour" - 5 holes)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     timeout_hours INTEGER DEFAULT 3,  -- Configurable, default 3 hours
     status TEXT DEFAULT 'active',     -- 'active', 'completed', 'dnf'

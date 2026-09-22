@@ -25,6 +25,7 @@ from app.database import get_db
 from app.models import Attempt, Challenge, Score, Session, SessionParticipant, User
 from app.services import (
     ChallengeLoaderService,
+    CourseLoaderService,
     LLMClient,
     ScoringService,
     SessionManager,
@@ -195,6 +196,7 @@ class GameStatusResponse(BaseModel):
     current_challenge_id: Optional[str]
     total_tokens: int
     completed_challenges: int
+    rank: str = "-"
 
     class Config:
         json_schema_extra = {
@@ -298,7 +300,7 @@ async def start_game(
     1. Generate new user: action="generate"
     2. Sign in with existing credentials: action="signin" (requires username + password)
     """
-    logger.info(f"Starting new game session: action={request.action}, course_id={request.course_id}")
+    logger.debug(f"Starting new game session: action={request.action}, course_id={request.course_id}")
 
     # Validate action field
     if request.action not in ["generate", "signin"]:
@@ -315,9 +317,12 @@ async def start_game(
             },
         )
 
-    # Validate course_id (for now, only beginner-course exists)
-    valid_courses = ["beginner-course"]
-    if request.course_id not in valid_courses:
+    # Validate course_id using courses.yaml
+    challenges_dir = Path(settings.challenges_dir)
+    course_loader = CourseLoaderService(challenges_dir)
+
+    if not course_loader.validate_course_id(request.course_id):
+        valid_courses = course_loader.list_course_ids()
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={
@@ -363,7 +368,7 @@ async def start_game(
                 },
             )
 
-        logger.info(f"Attempting sign-in for username: {request.username}")
+        logger.debug(f"Attempting sign-in for username: {request.username}")
 
         # Find user by username
         result = await db.execute(select(User).where(User.username == request.username))
@@ -398,11 +403,11 @@ async def start_game(
                 },
             )
 
-        logger.info(f"Sign-in successful for user {user.id}: {user.username}")
+        logger.debug(f"Sign-in successful for user {user.id}: {user.username}")
 
     # Option 2: Generate new user
     elif request.action == "generate":
-        logger.info("Generating new user")
+        logger.debug("Generating new user")
 
         # Generate unique username
         max_attempts = 10
@@ -437,16 +442,13 @@ async def start_game(
         db.add(user)
         await db.flush()  # Get user.id
 
-        logger.info(f"Created new user {user.id}: {user.username}")
+        logger.debug(f"Created new user {user.id}: {user.username}")
 
     # Create session with requested course
     course_id = request.course_id
-    challenges_dir = Path(settings.challenges_dir)
-    loader = ChallengeLoaderService(db, challenges_dir)
 
-    # Get all challenges for the course (for MVP, just get all challenges)
-    challenges = await loader.list_challenges()
-    challenge_ids = sorted([c.id for c in challenges])  # Sort for consistent order
+    # Get challenges for this specific course
+    challenge_ids = course_loader.get_course_challenges(course_id)
 
     if not challenge_ids:
         raise HTTPException(
@@ -483,7 +485,7 @@ async def start_game(
 
     await db.commit()
 
-    logger.info(
+    logger.debug(
         f"Created session {session.id} for user {user.id} with {len(challenge_ids)} challenges"
     )
 
@@ -510,7 +512,7 @@ async def submit_attempt(
 
     Orchestrates: LLM Client → Validator → Scoring
     """
-    logger.info(
+    logger.debug(
         f"Submitting attempt for session {request.session_id}, challenge {request.challenge_id}"
     )
 
@@ -703,7 +705,7 @@ async def submit_attempt(
 
     cumulative_tokens = score.total_tokens if score else attempt.total_tokens
 
-    logger.info(
+    logger.debug(
         f"Attempt {attempt.id} recorded: is_correct={validation_result.is_correct}, "
         f"tokens={attempt.total_tokens}, cumulative={cumulative_tokens}"
     )
@@ -741,7 +743,7 @@ async def get_game_status(
     db: AsyncSession = Depends(get_db),
 ) -> GameStatusResponse:
     """Get current game state for a session."""
-    logger.info(f"Getting game status for session {session_id}")
+    logger.debug(f"Getting game status for session {session_id}")
 
     # Get session (checks timeout and updates status if expired)
     session_manager = SessionManager(db)
@@ -786,13 +788,15 @@ async def get_game_status(
     )
     scores = result.scalars().all()
 
-    # Get all challenges for the course (names come from the loaded Challenge
-    # objects directly -- no relationship lazy-load, which fails in async)
+    # Get challenges for this session's course (not all challenges)
     challenges_dir = Path(settings.challenges_dir)
+    course_loader = CourseLoaderService(challenges_dir)
+    challenge_ids = course_loader.get_course_challenges(session.course_id)
+
+    # Load challenge details for names
     loader = ChallengeLoaderService(db, challenges_dir)
     all_challenges = await loader.list_challenges()
     challenge_names = {c.id: (c.name or c.id) for c in all_challenges}
-    challenge_ids = sorted(challenge_names)
 
     # Build challenge status
     challenge_status = []
@@ -821,6 +825,43 @@ async def get_game_status(
                 "tokens": 0,
             })
 
+    # Calculate rank: compare against players with same number of completed holes
+    rank = '-'
+    if completed_count > 0:
+        # Get all users' scores for this course
+        result = await db.execute(
+            select(Score)
+            .join(SessionParticipant, Score.user_id == SessionParticipant.user_id)
+            .join(Session, SessionParticipant.session_id == Session.id)
+            .where(Session.course_id == session.course_id)
+        )
+        all_course_scores = result.scalars().all()
+
+        # Group by user and calculate their stats
+        from collections import defaultdict
+        user_progress = defaultdict(lambda: {'completed': 0, 'total_tokens': 0})
+
+        for score in all_course_scores:
+            if score.completed_at:
+                user_progress[score.user_id]['completed'] += 1
+                user_progress[score.user_id]['total_tokens'] += score.total_tokens
+
+        # Filter to users with same progress level
+        same_progress_users = [
+            (uid, data['total_tokens'])
+            for uid, data in user_progress.items()
+            if data['completed'] == completed_count
+        ]
+
+        # Sort by tokens (ascending - lower is better)
+        same_progress_users.sort(key=lambda x: x[1])
+
+        # Find current user's rank
+        for idx, (uid, tokens) in enumerate(same_progress_users, start=1):
+            if uid == user.id:
+                rank = f"{idx}/{len(same_progress_users)}"
+                break
+
     # Determine current challenge (first incomplete)
     current_challenge_id = None
     for chal in challenge_status:
@@ -838,4 +879,5 @@ async def get_game_status(
         current_challenge_id=current_challenge_id,
         total_tokens=total_tokens,
         completed_challenges=completed_count,
+        rank=rank,
     )

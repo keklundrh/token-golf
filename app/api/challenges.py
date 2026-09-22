@@ -236,7 +236,7 @@ async def list_challenges(
         paginated_challenges = challenge_metadata[start_idx:end_idx]
         has_more = end_idx < filtered_count
 
-        logger.info(
+        logger.debug(
             f"Listed {len(paginated_challenges)} challenges on page {page} "
             f"(filtered: {filtered_count}, total: {total_count})"
         )
@@ -375,7 +375,7 @@ async def get_challenge(
             ),
         )
 
-        logger.info(f"Retrieved challenge: {challenge_id}")
+        logger.debug(f"Retrieved challenge: {challenge_id}")
 
         return detail
 

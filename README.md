@@ -9,10 +9,10 @@ Token Golf is designed for conference demonstrations and educational workshops w
 ## 🎮 Game Mechanics
 
 - **Golf-Style Scoring**: Fewer tokens = better score
-- **Progressive Difficulty**: Multiple "holes" (challenges) with increasing complexity
+- **Progressive Difficulty**: 5 "holes" (challenges) with increasing complexity
 - **All Tokens Count**: Input, output, system prompts, failed attempts - everything counts
 - **Iterate to Success**: Players can retry until they get the correct answer (all attempts count)
-- **Configurable Competitions**: Choose number of holes and difficulty levels
+- **Single Course Mode**: Currently all sessions play "Complete Championship" (5 holes)
 
 ### Task Types
 - Coding challenges
@@ -148,7 +148,7 @@ This project uses **gitflow**:
 
 ## 🏗️ Project Status
 
-**Current Phase**: Phase 8 - UI Redesign & Challenge Creation (Part 1: UI ✅ COMPLETE)
+**Current Phase**: Phase 8 - UI Redesign & Challenge Creation (Part 1 & 1.5: ✅ COMPLETE)
 
 **Completed**:
 - ✅ Phase 0: Container Foundation (Podman)
@@ -160,6 +160,11 @@ This project uses **gitflow**:
 - ✅ Phase 6: Supporting Features
 - ✅ Phase 7: Testing & Polish (213 pytest tests, 22 browser tests, 74% coverage)
 - ✅ Phase 8 Part 1: UI Redesign (modern game UI, 113 UI validation tests passing)
+- ✅ Phase 8 Part 1.5: Bug Fixes & Game Enhancements (9 bugs fixed, golf terminology, rank calculation)
+
+**Current Configuration**:
+- Single course mode: "Complete Championship" (5 holes)
+- Course selection disabled until more challenges exist
 
 **Next**: Phase 8 Part 2 - Challenge Creation (15-20 new challenges)
 

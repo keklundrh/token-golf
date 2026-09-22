@@ -135,7 +135,7 @@ async def get_global_leaderboard(
     Returns:
         LeaderboardResponse with global rankings
     """
-    logger.info(
+    logger.debug(
         f"Getting global leaderboard: limit={limit}, offset={offset}, "
         f"completed_only={completed_only}"
     )
@@ -174,7 +174,7 @@ async def get_global_leaderboard(
         for idx, entry in enumerate(leaderboard)
     ]
 
-    logger.info(f"Returning {len(entries)} global leaderboard entries")
+    logger.debug(f"Returning {len(entries)} global leaderboard entries")
 
     # Calculate pagination metadata
     current_page = (offset // limit) + 1 if limit > 0 else 1
@@ -214,7 +214,7 @@ async def get_per_hole_leaderboard(
     Returns:
         LeaderboardResponse with per-hole rankings
     """
-    logger.info(
+    logger.debug(
         f"Getting per-hole leaderboard for {challenge_id}: "
         f"limit={limit}, offset={offset}"
     )
@@ -246,7 +246,7 @@ async def get_per_hole_leaderboard(
         for idx, entry in enumerate(leaderboard)
     ]
 
-    logger.info(
+    logger.debug(
         f"Returning {len(entries)} per-hole leaderboard entries for {challenge_id}"
     )
 
@@ -289,7 +289,7 @@ async def get_session_leaderboard(
     Returns:
         LeaderboardResponse with session rankings
     """
-    logger.info(
+    logger.debug(
         f"Getting session leaderboard for {session_id}: "
         f"limit={limit}, offset={offset}"
     )
@@ -344,7 +344,7 @@ async def get_session_leaderboard(
         for idx, entry in enumerate(leaderboard)
     ]
 
-    logger.info(
+    logger.debug(
         f"Returning {len(entries)} session leaderboard entries for {session_id}"
     )
 

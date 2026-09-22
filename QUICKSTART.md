@@ -56,6 +56,15 @@ Expected response:
 }
 ```
 
+## Game Configuration
+
+**Current Mode**: Single course (all sessions play "Complete Championship")  
+**Holes**: 5 challenges (hole-001 through hole-005)  
+**Par Total**: 750 tokens  
+**Duration**: ~150 minutes
+
+For detailed game configuration, see `docs/CURRENT_GAME_CONFIG.md`
+
 ## Development Workflow
 
 ### Hot Reload

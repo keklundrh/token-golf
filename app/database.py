@@ -17,7 +17,7 @@ settings = get_settings()
 # Create async engine
 engine: AsyncEngine = create_async_engine(
     settings.database_url,
-    echo=settings.debug,
+    echo=False,  # Disable SQL logging (was spamming logs)
     # Connection pool settings
     pool_pre_ping=True,  # Verify connections before using
     pool_recycle=3600,   # Recycle connections after 1 hour

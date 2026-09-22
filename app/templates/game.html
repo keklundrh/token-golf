@@ -26,6 +26,18 @@
         <!-- COURSE PROGRESS -->
         <div class="bg-white rounded-xl shadow-md p-4" x-data="courseNavigation()">
             <div class="flex items-center justify-between gap-4">
+                <!-- Home Button -->
+                <a
+                    href="/"
+                    class="flex items-center gap-1 px-3 py-2 rounded-lg font-semibold transition-all duration-200 bg-golf-navy hover:bg-golf-navy-light text-white hover:scale-105"
+                    title="Return to Home"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    <span class="hidden sm:inline">Home</span>
+                </a>
+
                 <!-- Previous Button -->
                 <button
                     @click="navigateToPrevious()"
@@ -333,12 +345,13 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                         <div class="flex-1">
-                            <div class="font-bold text-lg" x-text="validationResult.is_correct ? '⛳ Hole in One!' : '🏌️ Try Again'"></div>
+                            <div class="font-bold text-lg" x-text="getSuccessMessage()"></div>
                             <div class="text-sm" x-text="validationResult.validation_message"></div>
                         </div>
                         <div class="text-right">
                             <div class="text-2xl font-bold" x-text="validationResult.total_tokens"></div>
                             <div class="text-xs opacity-90">tokens</div>
+                            <div class="text-xs font-semibold" x-text="getParComparison()" :class="getParComparisonColor()"></div>
                         </div>
                     </div>
                     <!-- Success confetti effect -->
@@ -476,17 +489,24 @@
                         </svg>
                         Leaderboard
                     </button>
+                    <!-- Next Hole button (if more holes) OR New Course button (if last hole) -->
                     <button
-                        @click="goToNextChallenge()"
-                        :disabled="!hasNextChallenge()"
-                        class="flex-1 font-bold py-4 px-6 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2"
-                        :class="hasNextChallenge() ? 'bg-golf-gold hover:bg-golf-gold-dark text-white shadow-lg' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+                        @click="hasNextChallenge() ? goToNextChallenge() : (window.location.href = '/')"
+                        :class="hasNextChallenge() ? 'bg-golf-gold hover:bg-golf-gold-dark' : 'bg-golf-green hover:bg-golf-green-dark'"
+                        class="flex-1 font-bold py-4 px-6 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2 text-white shadow-lg"
                         type="button"
                     >
-                        Next Hole
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
-                        </svg>
+                        <template x-if="!hasNextChallenge()">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            </svg>
+                        </template>
+                        <span x-text="hasNextChallenge() ? 'Next Hole' : 'New Course'"></span>
+                        <template x-if="hasNextChallenge()">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                            </svg>
+                        </template>
                     </button>
                 </div>
             </div>
@@ -495,7 +515,12 @@
 
     <!-- RIGHT SIDEBAR: Consolidated Stats (35% width, lg:col-span-1) -->
     <div class="lg:col-span-1">
-        <div class="bg-white rounded-2xl shadow-lg overflow-hidden sticky top-6">
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden sticky top-6"
+             x-data="statsPanel()"
+             hx-get="/api/game/status/{{ session_id }}"
+             hx-trigger="every 10s"
+             hx-swap="none"
+             @htmx:after-request="updateStats($event.detail.xhr.response)">
 
             <!-- Player Header -->
             <div class="bg-gradient-to-br from-golf-navy to-golf-navy-light text-white p-6">
@@ -513,19 +538,33 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div class="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
                         <div class="text-xs text-golf-gray-light mb-1">Rank</div>
-                        <div class="text-2xl font-bold">{{ user_stats.rank or '-' }}</div>
+                        <div class="text-2xl font-bold" x-text="rank">{{ user_stats.rank or '-' }}</div>
                     </div>
                     <div class="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
                         <div class="text-xs text-golf-gray-light mb-1">Attempts</div>
-                        <div class="text-2xl font-bold">{{ user_stats.attempts or 0 }}</div>
+                        <div class="text-2xl font-bold" x-text="attempts">{{ user_stats.attempts or 0 }}</div>
                     </div>
                 </div>
 
                 <!-- Total Tokens -->
                 <div class="mt-3 text-center bg-white/10 rounded-lg p-3 backdrop-blur-sm">
                     <div class="text-xs text-golf-gray-light mb-1">Total Tokens</div>
-                    <div class="text-3xl font-bold text-golf-gold">{{ user_stats.total_tokens or 0 }}</div>
+                    <div class="text-3xl font-bold text-golf-gold" x-text="totalTokens">{{ user_stats.total_tokens or 0 }}</div>
                 </div>
+
+                <!-- VS Par Indicator (cumulative across all holes) -->
+                {% if user_stats.cumulative_par %}
+                <div class="mt-3 text-center bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                    <div class="text-xs text-golf-gray-light mb-1">vs Par (All Holes)</div>
+                    <div class="text-xl font-bold {{ 'text-golf-green' if user_stats.total_tokens <= user_stats.cumulative_par else 'text-warning' }}">
+                        {% if user_stats.total_tokens <= user_stats.cumulative_par %}
+                            -{{ user_stats.cumulative_par - user_stats.total_tokens }}
+                        {% else %}
+                            +{{ user_stats.total_tokens - user_stats.cumulative_par }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
 
             <div class="p-6 space-y-6">
@@ -573,7 +612,7 @@
                         {% endfor %}
                     </div>
 
-                    <a href="/leaderboard/{{ session_id }}" class="block mt-3 text-center text-sm text-golf-green hover:text-golf-green-dark font-semibold">
+                    <a href="/leaderboard" class="block mt-3 text-center text-sm text-golf-green hover:text-golf-green-dark font-semibold">
                         View Full Leaderboard →
                     </a>
                 </div>
@@ -610,20 +649,6 @@
                         </div>
                     </div>
 
-                    <!-- VS Par Indicator -->
-                    {% set par = challenge_data.metadata.get('estimated_tokens_expert', 150) if challenge_data and challenge_data.metadata else 150 %}
-                    {% if user_stats.total_tokens %}
-                    <div class="mt-4 p-3 rounded-lg {{ 'bg-success/10' if user_stats.total_tokens <= par else 'bg-warning/10' }}">
-                        <div class="text-xs text-golf-gray mb-1">Your Performance vs Par</div>
-                        <div class="text-xl font-bold {{ 'text-golf-green' if user_stats.total_tokens <= par else 'text-warning' }}">
-                            {% if user_stats.total_tokens <= par %}
-                                -{{ par - user_stats.total_tokens }} (Under Par!)
-                            {% else %}
-                                +{{ user_stats.total_tokens - par }} (Over Par)
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
                 </div>
 
             </div>
@@ -636,6 +661,38 @@
 
 {% block extra_scripts %}
 <script>
+    function statsPanel() {
+        return {
+            rank: '{{ user_stats.rank or "-" }}',
+            attempts: {{ user_stats.attempts or 0 }},
+            totalTokens: {{ user_stats.total_tokens or 0 }},
+            completedChallenges: 0,
+
+            updateStats(responseText) {
+                try {
+                    const data = JSON.parse(responseText);
+
+                    // Update total tokens
+                    this.totalTokens = data.total_tokens || 0;
+
+                    // Update completed challenges count
+                    this.completedChallenges = data.completed_challenges || 0;
+
+                    // Calculate total attempts across all challenges
+                    this.attempts = data.challenges.reduce((sum, c) => sum + (c.attempts || 0), 0);
+
+                    // For rank, we'd need to fetch leaderboard data separately
+                    // For now, keep the initial rank or update if it's in the response
+                    if (data.rank) {
+                        this.rank = data.rank;
+                    }
+                } catch (e) {
+                    console.error('Error updating stats:', e);
+                }
+            }
+        };
+    }
+
     function courseNavigation() {
         return {
             challenges: [],
@@ -724,8 +781,25 @@
 
             // Methods
             estimateTokens(text) {
-                // Rough estimation: ~4 characters per token
-                return Math.ceil((text || '').length / 4);
+                // More accurate token estimation for Claude
+                // Average ~3.5 characters per token for English text
+                const userPromptTokens = Math.ceil((text || '').length / 3.5);
+
+                // Estimate system prompt tokens (if present)
+                const systemPrompt = this.systemPrompt || '';
+                const systemPromptTokens = Math.ceil(systemPrompt.length / 3.5);
+
+                // Estimate output tokens (assume similar length to input, minimum 20)
+                // This is a rough heuristic - actual output varies by task
+                const estimatedOutputTokens = Math.max(20, Math.ceil(userPromptTokens * 0.8));
+
+                // Message structure overhead (roughly 10-15 tokens)
+                const overhead = 12;
+
+                // Total estimate: input + system + output + overhead
+                const total = userPromptTokens + systemPromptTokens + estimatedOutputTokens + overhead;
+
+                return Math.ceil(total);
             },
 
             getTokenCountColor(tokenCount) {
@@ -737,6 +811,51 @@
                 } else {
                     return 'text-warning';
                 }
+            },
+
+            getSuccessMessage() {
+                if (!this.validationResult.is_correct) {
+                    return '🏌️ Try Again';
+                }
+                // Use attempt_number from API response
+                const attemptNum = this.validationResult.attempt_number || 1;
+                if (attemptNum === 1) {
+                    return '⛳ Hole in One!';
+                } else if (attemptNum === 2) {
+                    return '⛳ Nice Shot!';
+                } else if (attemptNum === 3) {
+                    return '⛳ Well Done!';
+                } else {
+                    return '⛳ Success!';
+                }
+            },
+
+            getParComparison() {
+                if (!this.validationResult.is_correct || !this.validationResult.total_tokens) {
+                    return '';
+                }
+                const par = {{ challenge_data.metadata.get('estimated_tokens_expert', 50) if challenge_data and challenge_data.get('metadata') else 50 }};
+                const tokens = this.validationResult.total_tokens;
+                const diff = tokens - par;
+
+                if (diff <= -2) return `Eagle (${diff})`;
+                if (diff === -1) return 'Birdie (-1)';
+                if (diff === 0) return 'Par (E)';
+                if (diff === 1) return 'Bogey (+1)';
+                if (diff === 2) return 'Double Bogey (+2)';
+                if (diff > 2) return `+${diff} Over Par`;
+                return '';
+            },
+
+            getParComparisonColor() {
+                if (!this.validationResult.total_tokens) return '';
+                const par = {{ challenge_data.metadata.get('estimated_tokens_expert', 50) if challenge_data and challenge_data.get('metadata') else 50 }};
+                const diff = this.validationResult.total_tokens - par;
+
+                if (diff < 0) return 'text-golf-green';  // Under par
+                if (diff === 0) return 'text-golf-navy';  // Par
+                if (diff <= 2) return 'text-golf-gold';  // Bogey/Double Bogey
+                return 'text-warning';  // Over par
             },
 
             async copyToClipboard(text) {
@@ -892,6 +1011,11 @@
                 if (!this.courseInfo) return false;
                 const currentIndex = this.courseInfo.challenges.findIndex(c => c.id === this.currentChallengeId);
                 return currentIndex >= 0 && currentIndex < this.courseInfo.challenges.length - 1;
+            },
+
+            goToLeaderboard() {
+                // Navigate to the leaderboard page
+                window.location.href = '/leaderboard';
             },
 
             goToNextChallenge() {

@@ -5,7 +5,7 @@
 ## Current Phase
 
 **Phase**: Phase 8 - UI Redesign & Challenge Creation (Intervention Phase)  
-**Status**: 🚧 **IN PROGRESS** (Part 1: UI Redesign ✅ COMPLETE, Part 2: Challenge Creation)
+**Status**: 🚧 **IN PROGRESS** (Part 1: UI Redesign ✅ COMPLETE, Part 1.5: Bug Fixes ✅ COMPLETE, Part 2: Challenge Creation)
 
 **Previous Phase**: Phase 7 - Testing & Polish ✅ COMPLETE (2026-09-22)
 
@@ -139,6 +139,49 @@ Token Golf is a competitive game teaching AI token efficiency through golf-style
 - Zero critical bugs remaining
 - Application production-ready
 
+### Phase 8 Part 1: UI Redesign ✅ COMPLETE (2026-09-22)
+**Progress**: 100% complete
+
+✅ **Completed:**
+- [x] UI audit and redesign proposal
+- [x] Complete UI redesign (modern card-based layout)
+- [x] Pills UI deprecated (replaced with clean read-only display)
+- [x] Consolidated stats sidebar (from 4 cards to 1 unified panel)
+- [x] Token estimation improvements (from 400% error to ~10-20%)
+- [x] Stats auto-refresh with htmx polling
+- [x] Course navigation fixes (correct hole counts per course)
+- [x] Completion flow fixes (adaptive Next Hole/View Leaderboard button)
+- [x] Logging spam eliminated (SQLAlchemy queries silenced)
+- [x] Documentation consistency audit and fixes
+
+**See**: `docs/phases/PHASE_8_PART_1_UI_REDESIGN_COMPLETE.md` for complete details
+
+### Phase 8 Part 1.5: Bug Fixes & Game Enhancements ✅ COMPLETE (2026-09-22)
+**Progress**: 100% complete - Post-UI redesign bug fixes
+
+✅ **Completed:**
+- [x] Success message variations (Hole in One, Nice Shot, Well Done, Success)
+- [x] Par comparison display (Eagle, Birdie, Par, Bogey, Double Bogey, etc.)
+- [x] Player stats made cumulative across holes (no longer reset)
+- [x] Cumulative par calculation fixed (-65 instead of -25)
+- [x] Rank calculation implemented (X/Y format among same-progress players)
+- [x] Top 5 leaderboard populated with real database data
+- [x] Challenge stats populated (best score, average, total attempts)
+- [x] Incorrect "vs Par" moved from Challenge Stats to Player Stats
+- [x] Home button added to navigation bar
+- [x] New Course button added to completion modal
+- [x] Single course mode (hardcoded to "full-tour" with 5 holes)
+
+**Summary:**
+- 9 critical bugs fixed
+- Golf terminology throughout (Eagle, Birdie, Par, Bogey)
+- Rank shown as "X/Y" among players with same progress
+- Cumulative "vs Par (All Holes)" tracking in Player Stats
+- Home button always accessible
+- Simplified to single course (full-tour - 5 holes)
+
+**See**: `docs/phases/PHASE_8_PART_1.5_BUG_FIXES_AND_ENHANCEMENTS.md` for complete details
+
 ## What's Next
 
 ### Phase 8: Production Deployment (estimated 6-8 hours)
@@ -258,7 +301,12 @@ Token Golf is a competitive game teaching AI token efficiency through golf-style
 ---
 
 **Phase 7 Status**: ✅ **COMPLETE** (100% complete)  
-**Phase 8 Status**: 🚧 **IN PROGRESS** (UI Redesign ✅ complete, Challenge Creation remains)  
-**MVP Status**: ~95% complete (UI modernized, need challenges + production deployment)  
-**Current Work**: Challenge creation (15-20 new challenges)  
+**Phase 8 Status**: 🚧 **IN PROGRESS** (Part 1: UI Redesign ✅, Part 1.5: Bug Fixes ✅, Part 2: Challenge Creation remains)  
+**MVP Status**: ~95% complete (UI modernized + polished, need challenges + production deployment)  
+**Current Work**: Phase 8 Part 2 - Challenge creation (15-20 new challenges)  
 **Next Milestone**: Complete challenge library, then production deployment
+
+**Current Configuration**:
+- **Single Course Mode**: All sessions use "full-tour" course (5 holes: hole-001 through hole-005)
+- **Course Selection**: Disabled for MVP, will re-enable when more challenges exist
+- **Total Par**: 750 tokens (50 + 100 + 150 + 150 + 300)

@@ -89,7 +89,7 @@
                 <button
                     hx-post="/api/game/start"
                     hx-ext="json-enc"
-                    hx-vals='{"action": "generate", "course_id": "beginner-course"}'
+                    hx-vals='{"action": "generate", "course_id": "full-tour"}'
                     hx-swap="none"
                     @click="generating = true"
                     @htmx:after-request="
@@ -191,7 +191,7 @@
             <form
                 hx-post="/api/game/start"
                 hx-ext="json-enc"
-                hx-vals='{"action": "signin", "course_id": "beginner-course"}'
+                hx-vals='{"action": "signin", "course_id": "full-tour"}'
                 hx-swap="none"
                 @htmx:before-request="signinError = ''; signingIn = true;"
                 @htmx:after-request="

@@ -41,6 +41,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Silence SQLAlchemy query logging (prevents spam)
+logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
+
 # Background task handle for session timeout checker
 _timeout_task = None
 
@@ -489,27 +492,153 @@ async def game_page(request: Request, session_id: str, challenge: Optional[str] 
                     'metadata': {}
                 }
 
-            # Create placeholder user stats (actual data loads via API)
+            # Calculate actual session-wide user stats (not placeholder)
+            # Get all scores for this session to compute cumulative stats
+            from app.models import Score, Attempt
+            import yaml as yaml_parser
+            result = await db.execute(
+                select(Score).where(
+                    Score.user_id == user.id,
+                    Score.session_id == session_id,
+                )
+            )
+            session_scores = result.scalars().all()
+
+            total_tokens = sum(s.total_tokens for s in session_scores)
+            total_attempts = sum(s.total_attempts for s in session_scores)
+            completed_holes = sum(1 for s in session_scores if s.completed_at)
+
+            # Calculate cumulative par for completed challenges
+            # Pre-load all challenge pars to avoid repeated queries
+            challenge_pars = {}
+            completed_challenge_ids = [s.challenge_id for s in session_scores if s.completed_at]
+
+            if completed_challenge_ids:
+                result = await db.execute(
+                    select(Challenge).where(Challenge.id.in_(completed_challenge_ids))
+                )
+                challenges_list = result.scalars().all()
+
+                for chal in challenges_list:
+                    chal_config = yaml_parser.safe_load(chal.config_yaml)
+                    par = chal_config.get('metadata', {}).get('estimated_tokens_expert', 50)
+                    challenge_pars[chal.id] = par
+
+            # Sum up the par for completed challenges
+            cumulative_par = sum(challenge_pars.get(s.challenge_id, 50)
+                                for s in session_scores if s.completed_at)
+
+            # Calculate rank: compare against players with same number of completed holes
+            rank = '-'
+            if completed_holes > 0:
+                # Get all users' scores for this course
+                result = await db.execute(
+                    select(Score)
+                    .join(SessionParticipant, Score.user_id == SessionParticipant.user_id)
+                    .join(Session, SessionParticipant.session_id == Session.id)
+                    .where(Session.course_id == session.course_id)
+                )
+                all_course_scores = result.scalars().all()
+
+                # Group by user and calculate their stats
+                from collections import defaultdict
+                user_progress = defaultdict(lambda: {'completed': 0, 'total_tokens': 0})
+
+                for score in all_course_scores:
+                    if score.completed_at:
+                        user_progress[score.user_id]['completed'] += 1
+                        user_progress[score.user_id]['total_tokens'] += score.total_tokens
+
+                # Filter to users with same progress level
+                same_progress_users = [
+                    (uid, data['total_tokens'])
+                    for uid, data in user_progress.items()
+                    if data['completed'] == completed_holes
+                ]
+
+                # Sort by tokens (ascending - lower is better)
+                same_progress_users.sort(key=lambda x: x[1])
+
+                # Find current user's rank
+                for idx, (uid, tokens) in enumerate(same_progress_users, start=1):
+                    if uid == user.id:
+                        rank = f"{idx}/{len(same_progress_users)}"
+                        break
+
             user_stats = {
-                'total_tokens': 0,
-                'attempts': 0,
-                'rank': '-',
-                'status': 'in_progress'
+                'total_tokens': total_tokens,
+                'attempts': total_attempts,
+                'rank': rank,
+                'status': 'in_progress',
+                'cumulative_par': cumulative_par if cumulative_par > 0 else None
             }
 
-            # Create placeholder leaderboard (actual data loads via API)
+            # Get leaderboard for current challenge
             leaderboard = []
+            if challenge_obj and challenge_obj.id != 'loading':
+                # Get top 5 scores for this specific challenge
+                result = await db.execute(
+                    select(Score, User)
+                    .join(User, Score.user_id == User.id)
+                    .where(
+                        Score.challenge_id == challenge_obj.id,
+                        Score.completed_at.isnot(None)
+                    )
+                    .order_by(Score.total_tokens.asc())
+                    .limit(5)
+                )
+                for score, lb_user in result:
+                    leaderboard.append({
+                        'user_id': lb_user.id,
+                        'username': lb_user.username,
+                        'total_tokens': score.total_tokens
+                    })
 
-            # Create placeholder comparison data (actual data loads via API)
-            comparison_data = None
-
-            # Create placeholder stats (actual data loads via API)
+            # Get stats for current challenge
             stats = {
                 'best_score': None,
                 'average_score': None,
                 'median_score': None,
                 'total_attempts': 0
             }
+            if challenge_obj and challenge_obj.id != 'loading':
+                # Best score (lowest tokens)
+                result = await db.execute(
+                    select(Score)
+                    .where(
+                        Score.challenge_id == challenge_obj.id,
+                        Score.completed_at.isnot(None)
+                    )
+                    .order_by(Score.total_tokens.asc())
+                    .limit(1)
+                )
+                best = result.scalar_one_or_none()
+                if best:
+                    stats['best_score'] = best.total_tokens
+
+                # Average score
+                result = await db.execute(
+                    select(Score)
+                    .where(
+                        Score.challenge_id == challenge_obj.id,
+                        Score.completed_at.isnot(None)
+                    )
+                )
+                completed_scores = result.scalars().all()
+                if completed_scores:
+                    avg = sum(s.total_tokens for s in completed_scores) / len(completed_scores)
+                    stats['average_score'] = int(avg)
+
+                # Total attempts across all users for this challenge
+                result = await db.execute(
+                    select(Attempt)
+                    .where(Attempt.challenge_id == challenge_obj.id)
+                )
+                all_attempts = result.scalars().all()
+                stats['total_attempts'] = len(all_attempts)
+
+            # Create placeholder comparison data (actual data loads via API)
+            comparison_data = None
 
             return templates.TemplateResponse(
                 "game.html",

@@ -15,6 +15,7 @@ Services:
 """
 
 from app.services.challenge_loader import ChallengeLoaderService
+from app.services.course_loader import CourseLoaderService
 from app.services.llm_client import LLMClient, LLMResponse, MockLLMClient
 from app.services.scoring import ScoringService
 from app.services.session_manager import SessionManager
@@ -22,6 +23,7 @@ from app.services.validator import ValidatorService, ValidationResult
 
 __all__ = [
     "ChallengeLoaderService",
+    "CourseLoaderService",
     "LLMClient",
     "LLMResponse",
     "MockLLMClient",
