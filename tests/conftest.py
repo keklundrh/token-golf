@@ -15,6 +15,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from passlib.hash import bcrypt
+import hashlib
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -137,6 +138,12 @@ def client(db_session: AsyncSession) -> TestClient:
 # User Fixtures
 # ============================================================================
 
+def _hash_password(password: str) -> str:
+    """Hash password using same method as game API."""
+    salt = "token-golf-mvp-salt"
+    return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
+
+
 @pytest_asyncio.fixture
 async def sample_user(db_session: AsyncSession) -> User:
     """
@@ -152,7 +159,7 @@ async def sample_user(db_session: AsyncSession) -> User:
     """
     user = User(
         username="test-user",
-        password_hash=bcrypt.hash("test-password"),
+        password_hash=_hash_password("test-password"),
         created_at=datetime.utcnow(),
         is_active=True,
     )
@@ -178,7 +185,7 @@ async def multiple_users(db_session: AsyncSession) -> list[User]:
     users = [
         User(
             username=f"player-{i}",
-            password_hash=bcrypt.hash(f"password-{i}"),
+            password_hash=_hash_password(f"password-{i}"),
             created_at=datetime.utcnow(),
             is_active=True,
         )
@@ -350,6 +357,16 @@ async def expired_session(
     db_session.add(session)
     await db_session.commit()
     await db_session.refresh(session)
+
+    # Add user as participant
+    participant = SessionParticipant(
+        session_id=session.id,
+        user_id=sample_user.id,
+        joined_at=datetime.utcnow(),
+    )
+
+    db_session.add(participant)
+    await db_session.commit()
 
     return session
 

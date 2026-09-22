@@ -15,6 +15,7 @@ import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Optional
 
 import yaml
 from fastapi import FastAPI, Request
@@ -419,8 +420,8 @@ async def root(request: Request):
 
 
 @app.get("/game/{session_id}", response_class=HTMLResponse)
-async def game_page(request: Request, session_id: str):
-    """Game page - active game session"""
+async def game_page(request: Request, session_id: str, challenge: Optional[str] = None):
+    """Game page - active game session with optional challenge selection"""
     try:
         async with async_session_factory() as db:
             # Fetch session
@@ -441,34 +442,43 @@ async def game_page(request: Request, session_id: str):
             )
             user = result.scalar_one_or_none()
 
-            # Get course and first challenge (user stays on completed challenge to view stats)
+            # Get course and determine which challenge to load
             challenges_dir = Path(settings.challenges_dir)
             loader = ChallengeLoaderService(db, challenges_dir)
             course = await loader.get_course(session.course_id)
 
-            # For now, always load first challenge
-            # TODO: Support navigation between challenges
-            challenge = None
+            # Load requested challenge, or first challenge if none specified
+            challenge_obj = None
             if course and course.get("holes"):
-                first_challenge_id = course["holes"][0]
-                result = await db.execute(
-                    select(Challenge).where(Challenge.id == first_challenge_id)
-                )
-                challenge = result.scalar_one_or_none()
+                # Use query param if provided, otherwise use first challenge
+                target_challenge_id = challenge if challenge else course["holes"][0]
+
+                # Validate that the challenge is in the course
+                if target_challenge_id in course["holes"]:
+                    result = await db.execute(
+                        select(Challenge).where(Challenge.id == target_challenge_id)
+                    )
+                    challenge_obj = result.scalar_one_or_none()
+                else:
+                    # If invalid challenge, fall back to first
+                    result = await db.execute(
+                        select(Challenge).where(Challenge.id == course["holes"][0])
+                    )
+                    challenge_obj = result.scalar_one_or_none()
 
             # Parse challenge config if available
             challenge_data = None
-            if challenge:
+            if challenge_obj:
                 try:
-                    challenge_data = yaml.safe_load(challenge.config_yaml)
+                    challenge_data = yaml.safe_load(challenge_obj.config_yaml)
                 except Exception as e:
                     logger.error(f"Error parsing challenge config: {e}")
                     challenge_data = {}
 
             # If no challenge found, provide empty placeholder
             # (the real data loads via API on page load)
-            if not challenge:
-                challenge = type('obj', (object,), {
+            if not challenge_obj:
+                challenge_obj = type('obj', (object,), {
                     'id': 'loading',
                     'name': 'Loading...',
                     'difficulty': 'medium',
@@ -509,7 +519,7 @@ async def game_page(request: Request, session_id: str):
                     "session": session,
                     "user": user,
                     "user_stats": user_stats,
-                    "challenge": challenge,
+                    "challenge": challenge_obj,
                     "challenge_data": challenge_data,
                     "leaderboard": leaderboard,
                     "comparison_data": comparison_data,

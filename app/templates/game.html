@@ -9,6 +9,57 @@
     <!-- LEFT COLUMN: Problem Statement + Interaction (60% width, lg:col-span-3) -->
     <div class="lg:col-span-3 space-y-6">
 
+        <!-- COURSE PROGRESS AND NAVIGATION -->
+        <div class="card" x-data="courseNavigation()">
+            <div class="flex items-center justify-between mb-4">
+                <!-- Previous Button -->
+                <button
+                    @click="navigateToPrevious()"
+                    :disabled="!canNavigatePrevious()"
+                    class="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-200"
+                    :class="canNavigatePrevious() ? 'bg-golf-green hover:bg-golf-green-dark text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+                    type="button"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Previous
+                </button>
+
+                <!-- Progress Indicator -->
+                <div class="flex-1 mx-4">
+                    <div class="text-center mb-2">
+                        <span class="text-sm font-semibold text-golf-navy">
+                            Hole <span x-text="currentHoleNumber"></span> of <span x-text="totalHoles"></span>
+                        </span>
+                    </div>
+                    <div class="w-full bg-golf-gray-light rounded-full h-3 overflow-hidden">
+                        <div
+                            class="bg-gradient-to-r from-golf-green to-golf-gold h-full rounded-full transition-all duration-500"
+                            :style="`width: ${completionPercentage}%`"
+                        ></div>
+                    </div>
+                    <div class="text-xs text-center text-golf-gray mt-1">
+                        <span x-text="completedHoles"></span> completed
+                    </div>
+                </div>
+
+                <!-- Next Button -->
+                <button
+                    @click="navigateToNext()"
+                    :disabled="!canNavigateNext()"
+                    class="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all duration-200"
+                    :class="canNavigateNext() ? 'bg-golf-green hover:bg-golf-green-dark text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+                    type="button"
+                >
+                    Next
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
         <!-- PROBLEM STATEMENT SECTION -->
         <div class="card">
             <!-- Challenge Header -->
@@ -425,6 +476,92 @@
                 </div>
             </div>
         </div>
+
+        <!-- COMPLETION MODAL -->
+        <div
+            x-show="showCompletionModal"
+            x-transition
+            @keydown.escape.window="showCompletionModal = false"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+            style="display: none;"
+        >
+            <div
+                class="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full mx-4 animate-scale-in"
+                @click.away="showCompletionModal = false"
+            >
+                <!-- Celebration Header -->
+                <div class="text-center mb-6">
+                    <div class="text-6xl mb-4 animate-success">⛳</div>
+                    <h2 class="text-3xl font-bold text-golf-green mb-2">Hole Complete!</h2>
+                    <p class="text-golf-navy-light">Great job on completing this challenge!</p>
+                </div>
+
+                <!-- Stats Display -->
+                <div class="bg-golf-sand rounded-lg p-6 mb-6">
+                    <h3 class="text-lg font-semibold text-golf-navy mb-4">Your Performance</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-golf-navy-light">Attempts Made:</span>
+                            <span class="font-bold text-golf-navy text-xl" x-text="completionStats.attempts"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-golf-navy-light">Total Tokens:</span>
+                            <span class="font-bold text-golf-gold text-xl" x-text="completionStats.tokens"></span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-golf-navy-light">Your Rank:</span>
+                            <span class="font-bold text-golf-green text-xl" x-text="completionStats.rank || 'Calculating...'"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Confetti Animation -->
+                <div class="text-center text-4xl mb-6">
+                    <span class="inline-block animate-confetti" style="animation-delay: 0s;">🎉</span>
+                    <span class="inline-block animate-confetti" style="animation-delay: 0.2s;">🏆</span>
+                    <span class="inline-block animate-confetti" style="animation-delay: 0.4s;">⭐</span>
+                    <span class="inline-block animate-confetti" style="animation-delay: 0.6s;">🎊</span>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-3">
+                    <button
+                        @click="viewLeaderboard()"
+                        class="flex-1 bg-golf-navy hover:bg-golf-navy-light text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+                        type="button"
+                    >
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
+                        View Leaderboard
+                    </button>
+                    <button
+                        @click="goToNextChallenge()"
+                        :disabled="!hasNextChallenge()"
+                        class="flex-1 font-semibold py-3 px-4 rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+                        :class="hasNextChallenge() ? 'bg-golf-gold hover:bg-golf-gold-dark text-white' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+                        type="button"
+                    >
+                        Next Challenge
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Close Button -->
+                <button
+                    @click="showCompletionModal = false"
+                    class="absolute top-4 right-4 text-golf-gray hover:text-golf-navy transition-colors"
+                    type="button"
+                    aria-label="Close modal"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- RIGHT COLUMN: Metrics Panel (40% width, lg:col-span-2) -->
@@ -641,6 +778,69 @@
 
 {% block extra_scripts %}
 <script>
+    function courseNavigation() {
+        return {
+            challenges: [],
+            currentChallengeId: '{{ challenge.id }}',
+            sessionId: '{{ session_id }}',
+            currentHoleNumber: 1,
+            totalHoles: 0,
+            completedHoles: 0,
+            completionPercentage: 0,
+
+            async init() {
+                await this.loadCourseInfo();
+            },
+
+            async loadCourseInfo() {
+                try {
+                    const response = await fetch(`/api/game/status/${this.sessionId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.challenges = data.challenges || [];
+                        this.totalHoles = this.challenges.length;
+                        this.completedHoles = this.challenges.filter(c => c.completed).length;
+                        this.completionPercentage = this.totalHoles > 0
+                            ? Math.round((this.completedHoles / this.totalHoles) * 100)
+                            : 0;
+
+                        // Find current hole number
+                        const currentIndex = this.challenges.findIndex(c => c.id === this.currentChallengeId);
+                        this.currentHoleNumber = currentIndex >= 0 ? currentIndex + 1 : 1;
+                    }
+                } catch (error) {
+                    console.error('Error loading course info:', error);
+                }
+            },
+
+            canNavigatePrevious() {
+                return this.currentHoleNumber > 1;
+            },
+
+            canNavigateNext() {
+                return this.currentHoleNumber < this.totalHoles;
+            },
+
+            navigateToPrevious() {
+                if (this.canNavigatePrevious()) {
+                    const prevChallenge = this.challenges[this.currentHoleNumber - 2];
+                    if (prevChallenge) {
+                        window.location.href = `/game/${this.sessionId}?challenge=${prevChallenge.id}`;
+                    }
+                }
+            },
+
+            navigateToNext() {
+                if (this.canNavigateNext()) {
+                    const nextChallenge = this.challenges[this.currentHoleNumber];
+                    if (nextChallenge) {
+                        window.location.href = `/game/${this.sessionId}?challenge=${nextChallenge.id}`;
+                    }
+                }
+            }
+        };
+    }
+
     function gameInterface() {
         return {
             // State
@@ -657,6 +857,15 @@
             errorMessage: '',
             errorType: '',
             copied: false,
+            showCompletionModal: false,
+            completionStats: {
+                attempts: 0,
+                tokens: 0,
+                rank: '-'
+            },
+            sessionId: '{{ session_id }}',
+            currentChallengeId: '{{ challenge.id }}',
+            courseInfo: null,
 
             // Init - watch for system prompt editing
             init() {
@@ -815,11 +1024,9 @@
                         }
                     }, 100);
 
-                    // Reload page on success to update leaderboard (longer delay for confetti)
+                    // Show completion modal on success
                     if (result.is_correct) {
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 4000);
+                        await this.showCompletionScreen(result);
                     }
 
                 } catch (error) {
@@ -828,6 +1035,63 @@
                 } finally {
                     this.submitting = false;
                 }
+            },
+
+            async showCompletionScreen(result) {
+                // Fetch current stats for the completion modal
+                try {
+                    const response = await fetch(`/api/game/status/${this.sessionId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const currentChallenge = data.challenges.find(c => c.id === this.currentChallengeId);
+
+                        this.completionStats = {
+                            attempts: currentChallenge?.attempts || result.attempt_number,
+                            tokens: currentChallenge?.tokens || result.total_tokens,
+                            rank: '-'  // We'll calculate this from leaderboard
+                        };
+
+                        // Store course info for navigation
+                        this.courseInfo = data;
+                    }
+                } catch (error) {
+                    console.error('Error fetching completion stats:', error);
+                    // Use fallback from result
+                    this.completionStats = {
+                        attempts: result.attempt_number,
+                        tokens: result.total_tokens,
+                        rank: '-'
+                    };
+                }
+
+                // Show the modal
+                this.showCompletionModal = true;
+            },
+
+            hasNextChallenge() {
+                if (!this.courseInfo) return false;
+                const currentIndex = this.courseInfo.challenges.findIndex(c => c.id === this.currentChallengeId);
+                return currentIndex >= 0 && currentIndex < this.courseInfo.challenges.length - 1;
+            },
+
+            goToNextChallenge() {
+                if (!this.courseInfo) return;
+                const currentIndex = this.courseInfo.challenges.findIndex(c => c.id === this.currentChallengeId);
+                if (currentIndex >= 0 && currentIndex < this.courseInfo.challenges.length - 1) {
+                    const nextChallenge = this.courseInfo.challenges[currentIndex + 1];
+                    window.location.href = `/game/${this.sessionId}?challenge=${nextChallenge.id}`;
+                }
+            },
+
+            viewLeaderboard() {
+                // Close modal and scroll to leaderboard
+                this.showCompletionModal = false;
+                setTimeout(() => {
+                    const leaderboard = document.querySelector('.leaderboard-row');
+                    if (leaderboard) {
+                        leaderboard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                }, 300);
             }
         }
     }
