@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.attempt import Attempt
 from app.models.score import Score
+from app.models.session import Session, SessionParticipant
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -238,11 +239,69 @@ class ScoringService:
                 f"User {user_id} completed challenge {challenge_id} "
                 f"in session {session_id} with {score.total_tokens} tokens"
             )
+            # Check if this completes the entire course
+            await self._check_course_completion(user_id, session_id)
+
         self._was_completed[(user_id, session_id, challenge_id)] = (
             score.completed_at is not None
         )
 
         return score
+
+    async def _check_course_completion(
+        self,
+        user_id: int,
+        session_id: str,
+    ) -> bool:
+        """
+        Check if user completed all holes in the session's course.
+        Updates SessionParticipant.holes_completed and course_completed_at.
+
+        Args:
+            user_id: User ID
+            session_id: Session ID
+
+        Returns:
+            True if user completed the entire course, False otherwise
+        """
+        # Count completed challenges for this user in this session
+        stmt = select(func.count(Score.id)).where(
+            Score.user_id == user_id,
+            Score.session_id == session_id,
+            Score.completed_at.is_not(None),
+        )
+        result = await self.db.execute(stmt)
+        completed_count = result.scalar_one()
+
+        # Get course total holes for this session
+        session_stmt = select(Session.course_total_holes).where(Session.id == session_id)
+        result = await self.db.execute(session_stmt)
+        course_total = result.scalar_one()
+
+        # Update SessionParticipant
+        participant_stmt = select(SessionParticipant).where(
+            SessionParticipant.user_id == user_id,
+            SessionParticipant.session_id == session_id,
+        )
+        result = await self.db.execute(participant_stmt)
+        participant = result.scalar_one_or_none()
+
+        if participant:
+            participant.holes_completed = completed_count
+
+            # Set course_completed_at if user finished all holes
+            if completed_count == course_total and not participant.course_completed_at:
+                participant.course_completed_at = datetime.utcnow()
+                logger.info(
+                    f"User {user_id} completed entire course in session {session_id} "
+                    f"with {completed_count}/{course_total} holes"
+                )
+
+            # Commit the participant update
+            await self.db.commit()
+            return completed_count == course_total
+
+        return False
 
     async def get_score(
         self,
@@ -334,52 +393,119 @@ class ScoringService:
         self,
         session_id: str,
         limit: int = 10,
-    ) -> list[dict]:
+    ) -> dict:
         """
-        Get leaderboard for a session.
+        Get leaderboard for a session with two sections: completed and in-progress.
 
-        Aggregates all challenges in the session to create overall standings.
+        Completed: Users who finished all holes in the course
+        In Progress: Users still playing (not completed all holes)
 
         Args:
             session_id: Session ID
-            limit: Max number of entries to return
+            limit: Max number of entries to return per section
 
         Returns:
-            List of dicts with user_id, username, total_tokens,
-            completed_challenges, total_attempts.
-            Ordered by total_tokens (ascending)
+            Dict with "completed" and "in_progress" keys, each containing
+            a list of player dicts (user_id, username, total_tokens,
+            holes_completed, total_attempts)
         """
-        # Aggregate scores per user in session, joined to usernames
-        stmt = (
+        # Get course_total_holes for this session
+        session_stmt = select(Session.course_total_holes).where(Session.id == session_id)
+        result = await self.db.execute(session_stmt)
+        course_total_holes = result.scalar_one()
+
+        # COMPLETED SECTION: Users who finished all holes
+        # Sort by total_tokens ascending (lower is better, golf scoring)
+        completed_stmt = (
             select(
                 Score.user_id,
                 User.username,
                 func.sum(Score.total_tokens).label("total_tokens"),
-                func.count(Score.id).label("total_attempts"),
-                func.sum(
-                    func.cast(Score.completed_at.is_not(None), Integer)
-                ).label("completed_challenges"),
+                func.sum(Score.total_attempts).label("total_attempts"),
+                SessionParticipant.holes_completed,
+                SessionParticipant.course_completed_at,
             )
             .join(User, User.id == Score.user_id)
-            .where(Score.session_id == session_id)
-            .group_by(Score.user_id, User.username)
+            .join(
+                SessionParticipant,
+                (SessionParticipant.user_id == Score.user_id)
+                & (SessionParticipant.session_id == session_id),
+            )
+            .where(
+                Score.session_id == session_id,
+                SessionParticipant.holes_completed == course_total_holes,
+            )
+            .group_by(
+                Score.user_id,
+                User.username,
+                SessionParticipant.holes_completed,
+                SessionParticipant.course_completed_at,
+            )
             .order_by(func.sum(Score.total_tokens).asc())
             .limit(limit)
         )
 
-        result = await self.db.execute(stmt)
-        rows = result.all()
+        result = await self.db.execute(completed_stmt)
+        completed_rows = result.all()
 
-        return [
-            {
-                "user_id": row.user_id,
-                "username": row.username,
-                "total_tokens": row.total_tokens or 0,
-                "total_attempts": row.total_attempts or 0,
-                "completed_challenges": row.completed_challenges or 0,
-            }
-            for row in rows
-        ]
+        # IN PROGRESS SECTION: Users who haven't finished all holes
+        # Sort by holes_completed descending (more holes = better), then tokens ascending
+        in_progress_stmt = (
+            select(
+                Score.user_id,
+                User.username,
+                func.sum(Score.total_tokens).label("total_tokens"),
+                func.sum(Score.total_attempts).label("total_attempts"),
+                SessionParticipant.holes_completed,
+            )
+            .join(User, User.id == Score.user_id)
+            .join(
+                SessionParticipant,
+                (SessionParticipant.user_id == Score.user_id)
+                & (SessionParticipant.session_id == session_id),
+            )
+            .where(
+                Score.session_id == session_id,
+                SessionParticipant.holes_completed < course_total_holes,
+            )
+            .group_by(
+                Score.user_id, User.username, SessionParticipant.holes_completed
+            )
+            .order_by(
+                SessionParticipant.holes_completed.desc(),
+                func.sum(Score.total_tokens).asc(),
+            )
+            .limit(limit)
+        )
+
+        result = await self.db.execute(in_progress_stmt)
+        in_progress_rows = result.all()
+
+        return {
+            "completed": [
+                {
+                    "user_id": row.user_id,
+                    "username": row.username,
+                    "total_tokens": row.total_tokens or 0,
+                    "total_attempts": row.total_attempts or 0,
+                    "holes_completed": row.holes_completed,
+                    "course_completed_at": row.course_completed_at.isoformat()
+                    if row.course_completed_at
+                    else None,
+                }
+                for row in completed_rows
+            ],
+            "in_progress": [
+                {
+                    "user_id": row.user_id,
+                    "username": row.username,
+                    "total_tokens": row.total_tokens or 0,
+                    "total_attempts": row.total_attempts or 0,
+                    "holes_completed": row.holes_completed,
+                }
+                for row in in_progress_rows
+            ],
+        }
 
     async def get_global_leaderboard(
         self,
@@ -388,7 +514,9 @@ class ScoringService:
         """
         Get global leaderboard across all sessions.
 
-        Shows best performers historically.
+        Shows best performers historically - only users who completed at least
+        one full course (all holes). Each user's best (minimum) total_tokens
+        across all their completed courses is shown.
 
         Args:
             limit: Max number of entries to return
@@ -396,22 +524,51 @@ class ScoringService:
         Returns:
             List of dicts with user_id, username, total_tokens,
             completed_challenges, total_attempts.
-            Ordered by total_tokens (ascending)
+            Ordered by best total_tokens (ascending)
         """
-        # Aggregate all scores per user, joined to usernames
-        stmt = (
+        # Step 1: Get each user's session totals for COMPLETED courses only
+        # A course is completed when SessionParticipant.course_completed_at IS NOT NULL
+        session_totals_subq = (
             select(
                 Score.user_id,
-                User.username,
-                func.sum(Score.total_tokens).label("total_tokens"),
-                func.count(Score.id).label("total_attempts"),
-                func.sum(
-                    func.cast(Score.completed_at.is_not(None), Integer)
-                ).label("completed_challenges"),
+                Score.session_id,
+                func.sum(Score.total_tokens).label("session_total_tokens"),
+                func.sum(Score.total_attempts).label("session_total_attempts"),
+                SessionParticipant.course_completed_at,
             )
-            .join(User, User.id == Score.user_id)
-            .group_by(Score.user_id, User.username)
-            .order_by(func.sum(Score.total_tokens).asc())
+            .join(
+                SessionParticipant,
+                (SessionParticipant.user_id == Score.user_id)
+                & (SessionParticipant.session_id == Score.session_id),
+            )
+            .join(Session, Session.id == Score.session_id)
+            .where(
+                # Only completed courses
+                SessionParticipant.course_completed_at.is_not(None),
+                # Exclude DNF sessions
+                Session.status != "dnf",
+            )
+            .group_by(
+                Score.user_id,
+                Score.session_id,
+                SessionParticipant.course_completed_at,
+            )
+        ).subquery()
+
+        # Step 2: For each user, take their minimum session_total_tokens (best score)
+        stmt = (
+            select(
+                session_totals_subq.c.user_id,
+                User.username,
+                func.min(session_totals_subq.c.session_total_tokens).label("total_tokens"),
+                func.count(session_totals_subq.c.session_id).label("completed_challenges"),
+                func.sum(session_totals_subq.c.session_total_attempts).label(
+                    "total_attempts"
+                ),
+            )
+            .join(User, User.id == session_totals_subq.c.user_id)
+            .group_by(session_totals_subq.c.user_id, User.username)
+            .order_by(func.min(session_totals_subq.c.session_total_tokens).asc())
             .limit(limit)
         )
 

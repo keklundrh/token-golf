@@ -535,7 +535,12 @@
                 </div>
 
                 <!-- Quick Stats Grid -->
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                        <div class="text-xs text-golf-gray-light mb-1">Holes</div>
+                        <div class="text-2xl font-bold" x-text="holesCompleted">{{ user_stats.holes_completed or 0 }}</div>
+                        <div class="text-xs text-golf-gray-light">/5</div>
+                    </div>
                     <div class="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
                         <div class="text-xs text-golf-gray-light mb-1">Rank</div>
                         <div class="text-2xl font-bold" x-text="rank">{{ user_stats.rank or '-' }}</div>

@@ -74,6 +74,13 @@ class Session(Base):
         comment="When session expires (created_at + timeout_hours)",
     )
 
+    course_total_holes: Mapped[int] = mapped_column(
+        Integer,
+        default=5,
+        nullable=False,
+        comment="Total number of holes in this course (denormalized from courses.yaml)",
+    )
+
     # Relationships
     participants: Mapped[list["SessionParticipant"]] = relationship(
         "SessionParticipant",
@@ -146,6 +153,18 @@ class SessionParticipant(Base):
     joined_at: Mapped[datetime] = mapped_column(
         nullable=False,
         comment="When user joined this session",
+    )
+
+    holes_completed: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+        comment="Number of challenges completed by this user in this session",
+    )
+
+    course_completed_at: Mapped[datetime | None] = mapped_column(
+        nullable=True,
+        comment="Timestamp when user completed all holes in the course (NULL if incomplete)",
     )
 
     # Relationships

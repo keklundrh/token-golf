@@ -18,16 +18,17 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api import challenges_router, game_router, leaderboard_router
 from app.config import get_settings
-from app.database import async_session_factory, close_db, init_db
+from app.database import async_session_factory, close_db, get_db, init_db
 from app.models import Challenge, Score, Session, SessionParticipant, User
 from app.services import ChallengeLoaderService, SessionManager
 
@@ -570,7 +571,8 @@ async def game_page(request: Request, session_id: str, challenge: Optional[str] 
                 'attempts': total_attempts,
                 'rank': rank,
                 'status': 'in_progress',
-                'cumulative_par': cumulative_par if cumulative_par > 0 else None
+                'cumulative_par': cumulative_par if cumulative_par > 0 else None,
+                'holes_completed': completed_holes
             }
 
             # Get leaderboard for current challenge
@@ -701,6 +703,72 @@ async def leaderboard_page(request: Request):
             """,
             status_code=200,
         )
+
+
+@app.get("/htmx/leaderboard/global", response_class=HTMLResponse)
+async def htmx_global_leaderboard(
+    request: Request,
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db),
+):
+    """HTML partial for global leaderboard (htmx)"""
+    try:
+        from app.services import ScoringService
+
+        scoring_service = ScoringService(db)
+        leaderboard = await scoring_service.get_global_leaderboard(limit=limit)
+
+        return templates.TemplateResponse(
+            "partials/leaderboard_global.html",
+            {
+                "request": request,
+                "entries": leaderboard,
+            },
+        )
+    except Exception as e:
+        logger.error(f"Error rendering global leaderboard: {e}")
+        return "<div class='text-center py-8 text-red-600'>Error loading leaderboard</div>"
+
+
+@app.get("/htmx/leaderboard/session/{session_id}", response_class=HTMLResponse)
+async def htmx_session_leaderboard(
+    request: Request,
+    session_id: str,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db),
+):
+    """HTML partial for session leaderboard (htmx)"""
+    try:
+        from app.services import ScoringService
+        from app.models import Session
+
+        # Get session to verify it exists and get course_total_holes
+        result = await db.execute(select(Session).where(Session.id == session_id))
+        session = result.scalar_one_or_none()
+
+        if not session:
+            return "<div class='text-center py-8 text-red-600'>Session not found</div>"
+
+        scoring_service = ScoringService(db)
+        leaderboard_data = await scoring_service.get_session_leaderboard(
+            session_id=session_id, limit=limit
+        )
+
+        return templates.TemplateResponse(
+            "partials/leaderboard_session.html",
+            {
+                "request": request,
+                "completed": leaderboard_data["completed"],
+                "in_progress": leaderboard_data["in_progress"],
+                "course_total_holes": session.course_total_holes,
+            },
+        )
+    except Exception as e:
+        logger.error(f"Error rendering session leaderboard: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return "<div class='text-center py-8 text-red-600'>Error loading leaderboard</div>"
 
 
 @app.get("/health")

@@ -173,7 +173,7 @@
                     </div>
                 </div>
                 <div
-                    hx-get="/api/leaderboard/global?limit=20"
+                    hx-get="/htmx/leaderboard/global?limit=20"
                     hx-trigger="load, refreshLeaderboard from:body"
                     hx-swap="innerHTML"
                     class="bg-gray-50 p-6 rounded-b-xl">
@@ -246,7 +246,7 @@
                     </div>
                 </div>
                 <div
-                    :hx-get="sessionId ? `/api/leaderboard/session/${sessionId}?limit=100` : ''"
+                    :hx-get="sessionId ? `/htmx/leaderboard/session/${sessionId}?limit=100` : ''"
                     hx-trigger="load, refreshLeaderboard from:body"
                     hx-swap="innerHTML"
                     class="bg-gray-50 p-6 rounded-b-xl">

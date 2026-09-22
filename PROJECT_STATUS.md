@@ -5,7 +5,7 @@
 ## Current Phase
 
 **Phase**: Phase 8 - UI Redesign & Challenge Creation (Intervention Phase)  
-**Status**: 🚧 **IN PROGRESS** (Part 1: UI Redesign ✅ COMPLETE, Part 1.5: Bug Fixes ✅ COMPLETE, Part 2: Challenge Creation)
+**Status**: 🚧 **IN PROGRESS** (Part 1: UI Redesign ✅, Part 1.5: Bug Fixes ✅, Part 1.6: Leaderboard Fix ✅, Part 2: Challenge Creation)
 
 **Previous Phase**: Phase 7 - Testing & Polish ✅ COMPLETE (2026-09-22)
 
@@ -181,6 +181,81 @@ Token Golf is a competitive game teaching AI token efficiency through golf-style
 - Simplified to single course (full-tour - 5 holes)
 
 **See**: `docs/phases/PHASE_8_PART_1.5_BUG_FIXES_AND_ENHANCEMENTS.md` for complete details
+
+### Phase 8 Part 1.6: Leaderboard Completion-Based Ranking ✅ COMPLETE (2026-09-22)
+**Progress**: 100% complete - Professional golf-style leaderboard ranking
+
+✅ **Completed:**
+- [x] Success message variations (Hole in One, Nice Shot, Well Done, Success)
+- [x] Par comparison display (Eagle, Birdie, Par, Bogey, Double Bogey, etc.)
+- [x] Player stats made cumulative across holes (no longer reset)
+- [x] Cumulative par calculation fixed (-65 instead of -25)
+- [x] Rank calculation implemented (X/Y format among same-progress players)
+- [x] Top 5 leaderboard populated with real database data
+- [x] Challenge stats populated (best score, average, total attempts)
+- [x] Incorrect "vs Par" moved from Challenge Stats to Player Stats
+- [x] Home button added to navigation bar
+- [x] New Course button added to completion modal
+- [x] Single course mode (hardcoded to "full-tour" with 5 holes)
+
+**Summary:**
+- 9 critical bugs fixed
+- Golf terminology throughout (Eagle, Birdie, Par, Bogey)
+- Rank shown as "X/Y" among players with same progress
+- Cumulative "vs Par (All Holes)" tracking in Player Stats
+- Home button always accessible
+- Simplified to single course (full-tour - 5 holes)
+
+**See**: `docs/phases/PHASE_8_PART_1.5_BUG_FIXES_AND_ENHANCEMENTS.md` for complete details
+
+### Phase 8 Part 1.6: Leaderboard Completion-Based Ranking ✅ COMPLETE (2026-09-22)
+**Progress**: 100% complete - Professional golf-style leaderboard ranking
+
+✅ **Completed:**
+- [x] Database migration for completion tracking (3 new columns + index)
+- [x] Backfill script for existing data (38 sessions, 38 participants)
+- [x] Global leaderboard: only shows completed courses (fairness)
+- [x] Session leaderboard: two-section display (Completed vs In Progress)
+- [x] Visual status badges (F = Finished, IP = In Progress, DNF)
+- [x] Progress indicators (●●●○○ visual)
+- [x] Holes completed tracking (X/5 format)
+- [x] Completion-first ranking (can't win by quitting early)
+- [x] HTML partial templates for htmx
+- [x] Updated game.html stats panel
+- [x] ADR 010 documenting the decision
+
+**Problem Solved:**
+```
+BEFORE (Broken):
+Rank  Player              Tokens  Holes
+1.    Green-Oakmont-7        15      1  ← Abandoned!
+2.    Pink-Augusta-2         26      1  ← Abandoned!
+8.    Pink-Merion-13         85      2  ← Actually played more!
+
+AFTER (Fixed):
+Completed Section:
+Rank  Player              Tokens  Holes  Progress
+1.    Pink-Merion-13         85    2/2   ●●
+───────────────────────────────────────────────────
+In Progress Section (Not Ranked):
+--    Green-Oakmont-7        15    1/2   ●○
+--    Pink-Augusta-2         26    1/2   ●○
+```
+
+**Technical Changes:**
+- `sessions.course_total_holes` (INTEGER, tracks holes in course)
+- `session_participants.holes_completed` (INTEGER, running count)
+- `session_participants.course_completed_at` (TIMESTAMP, finish time)
+- `ScoringService._check_course_completion()` method
+- New htmx routes: `/htmx/leaderboard/global`, `/htmx/leaderboard/session/{id}`
+- Template partials: `leaderboard_global.html`, `leaderboard_session.html`
+
+**Research Sources:**
+- [PGA Golf Scoring](https://primetopgolf.com/pga-golf-scoring/)
+- [Golf Leaderboard Explained](https://www.livetourney.com/blog/golf-scoreboard-explained)
+- [Golf Tournament Scoring](https://www.livetourney.com/blog/golf-tournament-scoring)
+
+**See**: `docs/ADRs/010-leaderboard-completion-ranking.md` for complete technical documentation
 
 ## What's Next
 

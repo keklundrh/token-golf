@@ -38,6 +38,9 @@ class LeaderboardEntry(BaseModel):
     total_tokens: int = Field(..., description="Total tokens used")
     completed_challenges: int = Field(..., description="Number of challenges completed")
     total_attempts: int = Field(..., description="Total number of attempts")
+    holes_completed: Optional[int] = Field(
+        None, description="Holes completed (for session leaderboard)"
+    )
     session_id: Optional[str] = Field(
         None, description="Session ID (for session leaderboard)"
     )
@@ -102,6 +105,53 @@ class LeaderboardResponse(BaseModel):
                 "current_page": 1,
                 "has_more": True,
                 "user_rank": None,
+            }
+        }
+
+
+class SessionLeaderboardResponse(BaseModel):
+    """Session leaderboard response with completed and in-progress sections."""
+
+    leaderboard_type: str = Field(
+        default="session", description="Type of leaderboard"
+    )
+    completed: List[LeaderboardEntry] = Field(
+        ..., description="Players who completed all holes"
+    )
+    in_progress: List[LeaderboardEntry] = Field(
+        ..., description="Players still in progress"
+    )
+    session_id: str = Field(..., description="Session ID")
+    course_total_holes: int = Field(..., description="Total holes in course")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "leaderboard_type": "session",
+                "completed": [
+                    {
+                        "rank": 1,
+                        "user_id": 42,
+                        "username": "Blue-Pebblebeach-7",
+                        "total_tokens": 1250,
+                        "completed_challenges": 5,
+                        "total_attempts": 12,
+                        "holes_completed": 5,
+                    }
+                ],
+                "in_progress": [
+                    {
+                        "rank": 1,
+                        "user_id": 43,
+                        "username": "Red-Augusta-9",
+                        "total_tokens": 850,
+                        "completed_challenges": 3,
+                        "total_attempts": 8,
+                        "holes_completed": 3,
+                    }
+                ],
+                "session_id": "session-abc123",
+                "course_total_holes": 5,
             }
         }
 
@@ -267,34 +317,33 @@ async def get_per_hole_leaderboard(
     )
 
 
-@router.get("/session/{session_id}", response_model=LeaderboardResponse)
+@router.get("/session/{session_id}", response_model=SessionLeaderboardResponse)
 async def get_session_leaderboard(
     session_id: str,
-    limit: int = Query(100, ge=1, le=1000, description="Maximum entries to return"),
-    offset: int = Query(0, ge=0, description="Number of entries to skip"),
+    limit: int = Query(100, ge=1, le=1000, description="Maximum entries to return per section"),
     db: AsyncSession = Depends(get_db),
-) -> LeaderboardResponse:
+) -> SessionLeaderboardResponse:
     """
-    Get leaderboard for a specific session.
+    Get leaderboard for a specific session with two sections.
 
-    Rankings show participants in this session only.
-    Useful for current competition view.
+    Returns completed players (finished all holes) and in-progress players
+    (still playing) in separate sections. Completed players are ranked by
+    total tokens (lower is better). In-progress players are ranked by
+    holes completed (more is better), then tokens.
 
     Args:
         session_id: Session identifier
-        limit: Maximum entries to return (1-1000, default 100)
-        offset: Number of entries to skip for pagination (default 0)
+        limit: Maximum entries to return per section (1-1000, default 100)
         db: Database session
 
     Returns:
-        LeaderboardResponse with session rankings
+        SessionLeaderboardResponse with completed and in-progress sections
     """
     logger.debug(
-        f"Getting session leaderboard for {session_id}: "
-        f"limit={limit}, offset={offset}"
+        f"Getting session leaderboard for {session_id}: limit={limit}"
     )
 
-    # Verify session exists
+    # Verify session exists and get course info
     result = await db.execute(select(Session).where(Session.id == session_id))
     session = result.scalar_one_or_none()
 
@@ -313,53 +362,51 @@ async def get_session_leaderboard(
         )
 
     scoring_service = ScoringService(db)
-    leaderboard = await scoring_service.get_session_leaderboard(
+    leaderboard_data = await scoring_service.get_session_leaderboard(
         session_id=session_id,
-        limit=limit + offset,
+        limit=limit,
     )
 
-    # Apply offset and limit
-    total_entries = len(leaderboard)
-    leaderboard = leaderboard[offset : offset + limit]
-
-    # Get usernames for leaderboard entries
-    user_ids = [entry["user_id"] for entry in leaderboard]
-    if user_ids:
-        result = await db.execute(select(User).where(User.id.in_(user_ids)))
-        users = {user.id: user.username for user in result.scalars().all()}
-    else:
-        users = {}
-
-    # Build response entries
-    entries = [
+    # Build completed entries (ranked 1, 2, 3...)
+    completed_entries = [
         LeaderboardEntry(
-            rank=offset + idx + 1,
+            rank=idx + 1,
             user_id=entry["user_id"],
-            username=users.get(entry["user_id"], f"User-{entry['user_id']}"),
+            username=entry["username"],
             total_tokens=entry["total_tokens"],
-            completed_challenges=entry.get("completed_challenges", 0),
-            total_attempts=entry.get("total_attempts", 0),
+            completed_challenges=entry["holes_completed"],
+            total_attempts=entry["total_attempts"],
+            holes_completed=entry["holes_completed"],
+            session_id=session_id,
+            completed_at=entry.get("course_completed_at"),
+        )
+        for idx, entry in enumerate(leaderboard_data["completed"])
+    ]
+
+    # Build in-progress entries (ranked by progress, not absolute position)
+    in_progress_entries = [
+        LeaderboardEntry(
+            rank=idx + 1,
+            user_id=entry["user_id"],
+            username=entry["username"],
+            total_tokens=entry["total_tokens"],
+            completed_challenges=entry["holes_completed"],
+            total_attempts=entry["total_attempts"],
+            holes_completed=entry["holes_completed"],
             session_id=session_id,
         )
-        for idx, entry in enumerate(leaderboard)
+        for idx, entry in enumerate(leaderboard_data["in_progress"])
     ]
 
     logger.debug(
-        f"Returning {len(entries)} session leaderboard entries for {session_id}"
+        f"Returning session leaderboard for {session_id}: "
+        f"{len(completed_entries)} completed, {len(in_progress_entries)} in progress"
     )
 
-    # Calculate pagination metadata
-    current_page = (offset // limit) + 1 if limit > 0 else 1
-    has_more = (offset + len(entries)) < total_entries
-
-    return LeaderboardResponse(
+    return SessionLeaderboardResponse(
         leaderboard_type="session",
-        entries=entries,
-        total_entries=total_entries,
-        limit=limit,
-        offset=offset,
-        current_page=current_page,
-        has_more=has_more,
-        user_rank=None,  # Would need user_id parameter to determine
+        completed=completed_entries,
+        in_progress=in_progress_entries,
         session_id=session_id,
+        course_total_holes=session.course_total_holes,
     )
