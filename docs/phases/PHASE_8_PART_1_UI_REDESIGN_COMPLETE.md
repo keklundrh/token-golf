@@ -69,8 +69,8 @@ Part 1 of Phase 8 focused on completely redesigning the Token Golf UI from "basi
 2. **`app/templates/game.html`** - Game Page
    - Navigation hidden during gameplay (focus mode)
    - 65/35 split layout (challenge / stats)
-   - **Removed confusing pills UI** - clean context file display
-   - **Consolidated 4 stats panels → 1 unified sidebar**
+   - **Removed confusing pills UI** - clean read-only context file display (was editable with X buttons, now read-only list)
+   - **Consolidated 4 stats cards → 1 unified sidebar** (User Stats, Leaderboard, Progress, Distribution cards merged into one view)
    - Top 5 leaderboard with position highlighted
    - VS Par comparison everywhere
    - Color-coded performance indicators

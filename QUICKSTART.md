@@ -188,19 +188,12 @@ token-golf/
 └── .env                    # Environment config (gitignored)
 ```
 
-## ⚠️ Known Issues (Current Build - 2026-09-21)
+## ✅ Recent Updates (2026-09-22)
 
-### Issue #1: API Breaking Change ⚠️
-**Status:** Critical - Frontend not updated yet  
-**Impact:** "Generate My Username" button will fail
-
-**Quick Fix:**
-1. Open `app/templates/index.html`
-2. Find line ~97: `hx-vals='{"generate_new_user": true}'`
-3. Change to: `hx-vals='{"action": "generate", "course_id": "beginner-course"}'`
-4. Save and refresh browser
-
-**See:** `ISSUES.md` for full details and tracking
+All critical issues from the 2026-09-21 build have been resolved:
+- ✅ Issue #1: API Breaking Change (htmx JSON encoding) - FIXED
+- ✅ Issue #3: Browser Testing Complete (22/22 passing) - DONE
+- ✅ Phase 8 Part 1: Complete UI redesign (modern game UI) - DONE
 
 ### What Works Right Now:
 - ✅ Backend API (all endpoints functional)
@@ -208,7 +201,10 @@ token-golf/
 - ✅ 5 sample challenges (hole-001 to hole-005)
 - ✅ 4 courses (Beginner's Green, Challenge Valley, etc.)
 - ✅ Error handling and session management
-- ⚠️ Frontend (after fixing Issue #1)
+- ✅ Modern game UI (redesigned in Phase 8)
+- ✅ 213 pytest tests + 22 browser tests (all passing)
+
+See `ISSUES.md` for current issue tracking.
 
 ## What You'll See
 

@@ -38,15 +38,15 @@ Three leaderboard views:
 
 ```
 ┌─────────────────────┬──────────────────────┐
-│ Problem Statement   │                      │
-│                     │                      │
-│                     │   Metrics & Results  │
-├─────────────────────┤                      │
-│                     │   - Leaderboards     │
-│ Chat Interface      │   - User Stats       │
-│ - Prompt input      │   - Comparisons      │
-│ - Context pills     │   - Distribution     │
-│ - System settings   │                      │
+│ Challenge Display   │                      │
+│ - Problem statement │                      │
+│ - Success criteria  │   Unified Stats      │
+│ - Context files     │   - Token count      │
+├─────────────────────┤   - Leaderboard      │
+│                     │   - Your rank        │
+│ Prompt Interface    │   - VS Par           │
+│ - Input area        │                      │
+│ - Token estimate    │                      │
 └─────────────────────┴──────────────────────┘
 ```
 
@@ -158,8 +158,8 @@ This project uses **gitflow**:
 - ✅ Phase 4: Frontend Templates (Tailwind CSS, htmx, Alpine.js)
 - ✅ Phase 5: Frontend Interactivity + Enhancements
 - ✅ Phase 6: Supporting Features
-- ✅ Phase 7: Testing & Polish (213 tests, 74% coverage)
-- ✅ Phase 8 Part 1: UI Redesign (modern game UI, 113/113 tests passing)
+- ✅ Phase 7: Testing & Polish (213 pytest tests, 22 browser tests, 74% coverage)
+- ✅ Phase 8 Part 1: UI Redesign (modern game UI, 113 UI validation tests passing)
 
 **Next**: Phase 8 Part 2 - Challenge Creation (15-20 new challenges)
 

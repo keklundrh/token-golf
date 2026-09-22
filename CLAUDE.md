@@ -40,12 +40,13 @@ Conference attendees at major tech conferences who need to learn how different d
 - **Username**: Players can generate new credentials (auto-generated username + password) or sign in with existing username + password
 
 ### User Interaction Elements
-Players can modify these during gameplay (pill UI with X buttons):
-- Pre-loaded context files (can be included/excluded/edited)
-- System prompts (can be modified or removed)
+Players can view these during gameplay:
+- Pre-loaded context files (read-only display)
+- System prompts (read-only display)
 - **Note**: Skills/agents and model parameters are NOT in MVP (future features)
+- **Phase 8 Update (2026-09-22)**: Pills UI (editable with X buttons) was replaced with clean read-only display for better UX
 
-**Edit Persistence**: Changes to context files and system prompts persist across attempts within the same hole. If a user removes a context file on attempt 1, it remains removed on attempt 2 of the same hole. User modifications are stored per user per session per attempt.
+**Historical Note**: Earlier versions had editable pills UI where users could remove context files and modify system prompts. This was removed in Phase 8 Part 1 UI redesign as it created confusion and clutter.
 
 ### Validation
 Each challenge must have clear, verifiable correct answers (MVP only includes first two):
