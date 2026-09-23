@@ -1,6 +1,6 @@
 # Token Golf - Project Status
 
-**Last Updated**: 2026-09-22
+**Last Updated**: 2026-09-23
 
 ## Current Phase
 
@@ -187,32 +187,6 @@ Token Golf is a competitive game teaching AI token efficiency through golf-style
 **Progress**: 100% complete - Professional golf-style leaderboard ranking
 
 ✅ **Completed:**
-- [x] Success message variations (Hole in One, Nice Shot, Well Done, Success)
-- [x] Par comparison display (Eagle, Birdie, Par, Bogey, Double Bogey, etc.)
-- [x] Player stats made cumulative across holes (no longer reset)
-- [x] Cumulative par calculation fixed (-65 instead of -25)
-- [x] Rank calculation implemented (X/Y format among same-progress players)
-- [x] Top 5 leaderboard populated with real database data
-- [x] Challenge stats populated (best score, average, total attempts)
-- [x] Incorrect "vs Par" moved from Challenge Stats to Player Stats
-- [x] Home button added to navigation bar
-- [x] New Course button added to completion modal
-- [x] Single course mode (hardcoded to "full-tour" with 5 holes)
-
-**Summary:**
-- 9 critical bugs fixed
-- Golf terminology throughout (Eagle, Birdie, Par, Bogey)
-- Rank shown as "X/Y" among players with same progress
-- Cumulative "vs Par (All Holes)" tracking in Player Stats
-- Home button always accessible
-- Simplified to single course (full-tour - 5 holes)
-
-**See**: `docs/phases/PHASE_8_PART_1.5_BUG_FIXES_AND_ENHANCEMENTS.md` for complete details
-
-### Phase 8 Part 1.6: Leaderboard Completion-Based Ranking ✅ COMPLETE (2026-09-22)
-**Progress**: 100% complete - Professional golf-style leaderboard ranking
-
-✅ **Completed:**
 - [x] Database migration for completion tracking (3 new columns + index)
 - [x] Backfill script for existing data (38 sessions, 38 participants)
 - [x] Global leaderboard: only shows completed courses (fairness)
@@ -258,9 +232,13 @@ In Progress Section (Not Ranked):
 
 **See**: `docs/ADRs/010-leaderboard-completion-ranking.md` for complete technical documentation
 
+## Current Configuration
+
+**See [docs/CURRENT_GAME_CONFIG.md](docs/CURRENT_GAME_CONFIG.md) for active game configuration (course, holes, par, etc.).**
+
 ## What's Next
 
-### Phase 8: Production Deployment (estimated 6-8 hours)
+### Phase 9: Production Deployment (estimated 6-8 hours)
 - [ ] Production Dockerfile (multi-stage, security)
 - [ ] PostgreSQL migration testing
 - [ ] OpenShift manifests
@@ -327,7 +305,17 @@ In Progress Section (Not Ranked):
 7. **Weather delay errors** - User-friendly LLM error handling
 8. **Consistent API errors** - error/message/details/suggestions format
 
-## Recent Updates (2026-09-22)
+## Recent Updates
+
+### Documentation Pruning (2026-09-23)
+- **Deleted 21 files**: Removed redundant summaries, meta-docs, and duplicates
+- **Streamlined 4 files**: CLAUDE.md (-44%), README.md (-25%), PROJECT_STATUS.md, CONTRIBUTING.md
+- **Renamed**: QUICKSTART.md → SETUP.md
+- **Established strict policy**: CLAUDE.md now links to AT MOST ONE file per topic
+- **Result**: 75 files → 56 files (-25%), single source of truth for all information
+- **See**: `docs/sessions/DOCUMENTATION_PRUNING_2026-09-23.md` for details
+
+### Browser Testing Session (2026-09-22)
 
 ### ✅ Browser Testing Session Complete
 - **7 Critical Bugs Fixed** in ~2 hour session
@@ -376,13 +364,8 @@ In Progress Section (Not Ranked):
 
 ---
 
-**Phase 7 Status**: ✅ **COMPLETE** (100% complete)  
-**Phase 8 Status**: 🚧 **IN PROGRESS** (Part 1: UI Redesign ✅, Part 1.5: Bug Fixes ✅, Part 2: Challenge Creation remains)  
+**Phase 7 Status**: ✅ **COMPLETE**  
+**Phase 8 Status**: 🚧 **IN PROGRESS** (Part 1: UI Redesign ✅, Part 1.5: Bug Fixes ✅, Part 1.6: Leaderboard ✅, Part 2: Challenge Creation remains)  
 **MVP Status**: ~95% complete (UI modernized + polished, need challenges + production deployment)  
 **Current Work**: Phase 8 Part 2 - Challenge creation (15-20 new challenges)  
 **Next Milestone**: Complete challenge library, then production deployment
-
-**Current Configuration**:
-- **Single Course Mode**: All sessions use "full-tour" course (5 holes: hole-001 through hole-005)
-- **Course Selection**: Disabled for MVP, will re-enable when more challenges exist
-- **Total Par**: 750 tokens (hole-001: 50, hole-002: 100, hole-003: 150, hole-004: 200, hole-005: 250)

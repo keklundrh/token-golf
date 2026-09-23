@@ -274,164 +274,15 @@ Auto-generated usernames ensure professional, family-friendly identifiers:
 
 ## Challenge Format
 
-Challenges are defined in YAML files located in `/challenges/hole-XXX/challenge.yaml`.
-
-### Basic Structure
-```yaml
-id: hole-001
-name: "Challenge Display Name"
-difficulty: easy  # easy, medium, hard, expert
-description: |
-  Multi-line description of the task.
-  What the player needs to accomplish.
-  
-task_type: coding  # coding, extraction, question_answering, generation
-
-validation:
-  type: test_cases  # MVP: test_cases, exact_match only
-  criteria:
-    - input: [1, 2, 3]
-      expected_output: 6
-    - input: [10, 20]
-      expected_output: 30
-
-context_files:
-  - name: "example_data.csv"
-    path: "./challenges/hole-001/assets/example_data.csv"
-    description: "Sample data for testing"
-    removable: true
-    editable: false
-    
-system_prompt:
-  default: "You are a helpful coding assistant."
-  removable: false
-  editable: true
-
-parameters:
-  max_iterations: 10          # Optional limit
-  hints_available: 2          # Number of hints (future)
-  time_limit_seconds: null    # Optional time limit
-
-metadata:
-  author: "Token Golf Team"
-  created_date: "2026-09-09"
-  tags: ["python", "basics", "functions"]
-  estimated_tokens_expert: 150
-  estimated_tokens_beginner: 800
-```
-
-See `docs/CHALLENGE_FORMAT.md` for complete specification.
+**See [docs/CHALLENGE_FORMAT.md](docs/CHALLENGE_FORMAT.md) for complete challenge YAML specification.**
 
 ## Development Workflow
 
-### Git Flow
-- **main**: Production-ready releases only
-- **dev**: Integration branch for all features
-- **feature/\***: Feature branches off dev
-- **hotfix/\***: Emergency fixes off main
+**See [CONTRIBUTING.md](CONTRIBUTING.md) for git flow, branching rules, and testing strategy.**
 
-### Branching Rules
-1. All new work starts from `dev`
-2. Create feature branch: `git checkout -b feature/name dev`
-3. Commit regularly with clear messages
-4. Merge back to `dev` via PR
-5. Tag releases on `main`
+## Database Schema
 
-### Documentation Requirements
-1. **ADRs**: All architectural decisions
-2. **API Changes**: Update docs/API.md
-3. **Challenge Changes**: Update schema and examples
-4. **Code Comments**: Minimal - code should be self-documenting
-5. **Commit Messages**: Clear, descriptive, reference issues
-
-### Testing Strategy
-1. Unit tests for all services
-2. Integration tests for API endpoints
-3. Challenge validation tests (ensure challenges are solvable)
-4. Load testing for conference scenarios (future)
-
-## Database Schema (Initial)
-
-### Sessions Table
-```sql
-CREATE TABLE sessions (
-    id TEXT PRIMARY KEY,              -- UUID or similar
-    course_id TEXT NOT NULL,          -- Which set of holes (currently: "full-tour" - 5 holes)
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    timeout_hours INTEGER DEFAULT 3,  -- Configurable, default 3 hours
-    status TEXT DEFAULT 'active',     -- 'active', 'completed', 'dnf'
-    expires_at TIMESTAMP              -- created_at + timeout_hours
-);
-```
-
-### Users Table
-```sql
-CREATE TABLE users (
-    id INTEGER PRIMARY KEY,
-    username TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_active BOOLEAN DEFAULT TRUE
-);
-```
-
-### Session Participants Table
-```sql
-CREATE TABLE session_participants (
-    id INTEGER PRIMARY KEY,
-    session_id TEXT REFERENCES sessions(id),
-    user_id INTEGER REFERENCES users(id),
-    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(session_id, user_id)
-);
-```
-
-### Challenges Table
-```sql
-CREATE TABLE challenges (
-    id TEXT PRIMARY KEY,  -- hole-001, etc.
-    name TEXT NOT NULL,
-    difficulty TEXT,
-    task_type TEXT,
-    config_yaml TEXT,  -- Full YAML content
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Attempts Table
-```sql
-CREATE TABLE attempts (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    session_id TEXT REFERENCES sessions(id),
-    challenge_id TEXT REFERENCES challenges(id),
-    attempt_number INTEGER,
-    prompt TEXT,
-    system_prompt TEXT,               -- User's system prompt for this attempt
-    context_files JSON,                -- Which context files were active
-    response TEXT,
-    input_tokens INTEGER,
-    output_tokens INTEGER,
-    total_tokens INTEGER,
-    is_correct BOOLEAN,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-**Note on storage granularity**: System prompts, context files, and other user modifications are stored per user per session per attempt in the attempts table.
-
-### Scores Table
-```sql
-CREATE TABLE scores (
-    id INTEGER PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    session_id TEXT REFERENCES sessions(id),
-    challenge_id TEXT REFERENCES challenges(id),
-    total_attempts INTEGER,
-    total_tokens INTEGER,              -- Running total for this hole
-    completed_at TIMESTAMP,
-    UNIQUE(user_id, session_id, challenge_id)
-);
-```
+**See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for complete database schema and system architecture.**
 
 ## LLM Integration
 
@@ -469,94 +320,13 @@ class LLMClient:
 
 This allows swapping Claude API → OpenShift AI with minimal code changes.
 
-## Future Considerations
+## Setup & Development Commands
 
-### Scalability
-- WebSocket support for real-time updates
-- Redis for session management
-- Horizontal scaling with load balancer
-- Database connection pooling
-
-### Features
-- Hints system (costs tokens)
-- Team competitions
-- Challenge difficulty adaptation
-- Replay/review mode
-- Export competition results
-
-### Analytics
-- Token usage patterns
-- Common mistakes per challenge
-- Difficulty calibration data
-- User learning curves
-
-## Common Development Commands
-
-```bash
-# Setup
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Run development server
-uvicorn app.main:app --reload --port 8000
-
-# Run tests
-pytest tests/
-
-# Format code
-black app/ tests/
-isort app/ tests/
-
-# Lint
-flake8 app/ tests/
-mypy app/
-
-# Database migrations (future)
-alembic upgrade head
-
-# Create new challenge
-python scripts/new_challenge.py --id hole-042 --name "Challenge Name"
-
-# Validate all challenges
-python scripts/validate_challenges.py
-```
+**See [SETUP.md](SETUP.md) for complete setup instructions and development commands.**
 
 ## MVP Scope
 
-### Features INCLUDED in MVP
-- Test cases validation (for coding challenges)
-- Exact match validation (for text responses)
-- Auto-generated usernames + passwords
-- Sign-in with username + password
-- Password authentication (SHA256 hashing)
-- Haiku model only (hardcoded)
-- Three leaderboard views (Global, Per-Hole, Session)
-- Session timeout (3 hours, configurable)
-- Context file management (add/remove/edit via pills UI)
-- System prompt editing
-- Token counting and scoring
-- SQLite database
-- Claude API backend
-
-### Features EXCLUDED from MVP
-- Skills/agents (predefined skill files)
-- Schema validation file (challenges/schema.yaml - not needed)
-- Model selection by users (Haiku only)
-- Time limits per hole
-- Hints system
-- Semantic similarity validation
-- Custom validation scripts
-- Model parameters modification UI
-- Offline mode
-- Pill drag-to-reorder functionality
-- Real-time WebSocket updates
-- Advanced password hashing (bcrypt/argon2 - using SHA256 for MVP)
-
-### Config File Requirements
-- Session timeout duration (default 3 hours)
-- Backend LLM provider configuration
-- Database connection settings
+**See [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md) for complete MVP feature scope (included/excluded features).**
 
 ## Key Design Decisions
 
@@ -587,52 +357,63 @@ python scripts/validate_challenges.py
 - **Validation Reliability**: Answer validation must be deterministic and fair
 - **Conference Ready**: UI/UX must work well for live demos with large audiences
 
-## Clarified Design Questions (Resolved)
 
-1. **How does this scale to 100 concurrent users?** - Design with future scalability in mind, start simple with SQLite
-2. **Is the token counting accurate and auditable?** - Yes, all tokens stored per attempt in database (both practice and submitted)
-3. **Can this be easily modified via YAML/config?** - Yes, challenges in YAML, session timeout in config file
-4. **Does this work offline?** - No, not for MVP (requires LLM API connection)
-5. **Is the validation fair and deterministic?** - Yes, test cases and exact match only for MVP
-6. **How do we handle ties in scoring?** - Tied players compete in additional challenge (see ADR 003)
-7. **What happens if the LLM API is down?** - "Weather delay" - affected user clears tokens for that hole
-8. **Can challenge authors test their challenges easily?** - Yes, validation scripts planned
-9. **Edit persistence within a hole?** - Yes, edits persist across attempts within same hole
-10. **Session timeout?** - 3 hours from creation (configurable), then marked DNF
-11. **Multiple concurrent sessions?** - Yes, users can join multiple sessions
-12. **Authentication?** - Username + password (generate new or sign in)
-13. **Model selection?** - Haiku only for MVP, hardcoded
-14. **Leaderboard views?** - Three: Global (all sessions), Per-Hole (all sessions), Session (current only)
+## Documentation Policy for AI Assistants
 
-## Documentation Organization
+### CRITICAL RULES - READ FIRST
 
-**Root Directory** (keep clean - only stable reference files):
-- `CLAUDE.md` - AI assistant context (this file)
-- `PROJECT_STATUS.md` - Current implementation status
-- `README.md` - Project overview and quickstart
-- `CONTRIBUTING.md` - Developer guide
-- `QUICKSTART.md` - Getting started guide
-- `RUNNING.md` - How to run the application
-- `ISSUES.md` - Known issues and workarounds
+**NEVER CREATE NEW DOCUMENTATION FILES.** Always append to or edit existing files.
 
-**Organized Documentation Directories**:
-- `docs/ADRs/` - Architecture Decision Records (numbered, e.g., `001-description.md`)
-- `docs/phases/` - Phase completion documents (historical records)
-- `docs/sessions/` - Session-specific implementation notes (dated YYYY-MM-DD)
-  - Bug fixes, feature implementation details, working documents
-  - Format: `DESCRIPTION_YYYY-MM-DD.md`
-  - See `docs/sessions/README.md` for index
-- `docs/ARCHITECTURE.md` - System architecture overview
-- `docs/CHALLENGE_FORMAT.md` - Challenge YAML specification
-- `docs/API.md` - API documentation
-- `tests/README.md` - Testing guide
+**File Reference Limits:**
+- CLAUDE.md can link to **AT MOST ONE FILE** per topic
+- If information exists in a file, reference it - don't duplicate
+- When in doubt, append to existing file rather than create new
 
-**Session Documentation Policy for AI Assistants**:
-- ⛔ **DO NOT** create documentation files in root directory
-- ✅ **DO** create session notes in `docs/sessions/`
-- ✅ **DO** use dated format: `FEATURE_NAME_YYYY-MM-DD.md`
-- ✅ **DO** update `PROJECT_STATUS.md` for status changes
-- ✅ **DO** create ADRs in `docs/ADRs/` for architectural decisions
-- ✅ **DO** keep root clean and organized
+### Documentation Structure
 
-Example session doc: `docs/sessions/LEADERBOARD_SIMPLIFICATION_2026-09-23.md`
+**Root files** (reference only):
+- `README.md` - Project overview
+- `CLAUDE.md` - This file (AI context)
+- `PROJECT_STATUS.md` - Current status
+- `SETUP.md` - Setup/commands
+- `CONTRIBUTING.md` - Dev workflow
+- `ISSUES.md` - Known issues
+
+**Topic-specific docs** (detailed content):
+- `docs/ARCHITECTURE.md` - System architecture, database schema
+- `docs/CHALLENGE_FORMAT.md` - Challenge YAML spec
+- `docs/MVP_SCOPE.md` - Feature scope
+- `docs/CURRENT_GAME_CONFIG.md` - Active game config
+- `docs/ADRs/` - Architecture decisions
+- `docs/phases/` - Phase completions (historical, do not edit)
+- `docs/sessions/` - Session notes (dated YYYY-MM-DD format)
+
+### Where to Document What
+
+| Content Type | File to Edit |
+|--------------|--------------|
+| Implementation status | PROJECT_STATUS.md |
+| Setup instructions | SETUP.md |
+| Architecture changes | docs/ARCHITECTURE.md |
+| Challenge format | docs/CHALLENGE_FORMAT.md |
+| MVP scope changes | docs/MVP_SCOPE.md |
+| Game configuration | docs/CURRENT_GAME_CONFIG.md |
+| Architectural decisions | docs/ADRs/NNN-title.md (new file OK) |
+| Session work notes | docs/sessions/DESCRIPTION_YYYY-MM-DD.md |
+| Bug tracking | ISSUES.md |
+
+### Session Documentation Rules
+
+- **Format**: `docs/sessions/DESCRIPTION_YYYY-MM-DD.md`
+- **When**: For detailed implementation notes, bug fixes, investigations
+- **DO NOT**: Create "summary" or "final" documents - update PROJECT_STATUS.md instead
+- **DO NOT**: Create duplicate summaries of same work
+
+### Before Creating Any File
+
+1. Check if topic covered in existing file
+2. If yes: Edit existing file
+3. If no: Check if it belongs in existing category (append)
+4. Only if truly unique: Create new file (rare)
+
+**Example**: Don't create "LEADERBOARD_SUMMARY.md" - update PROJECT_STATUS.md and reference docs/sessions/ for details.

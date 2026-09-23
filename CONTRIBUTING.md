@@ -246,74 +246,7 @@ Before submitting a challenge PR:
 
 ## Development Setup
 
-### Prerequisites
-
-- Python 3.11+
-- pip and venv
-- Git
-- Claude API key (for development)
-
-### Initial Setup
-
-```bash
-# Clone repository
-git clone <repo-url>
-cd token-golf
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-pip install -r requirements-dev.txt  # Development dependencies
-
-# Setup pre-commit hooks
-pre-commit install
-
-# Copy environment template
-cp .env.example .env
-# Edit .env and add your Claude API key
-
-# Run database migrations (when available)
-# alembic upgrade head
-
-# Run development server
-uvicorn app.main:app --reload
-
-# Visit http://localhost:8000
-```
-
-### Development Tools
-
-We use these tools (enforced via pre-commit hooks):
-
-- **Black**: Code formatting
-- **isort**: Import sorting
-- **flake8**: Linting
-- **mypy**: Type checking
-- **pytest**: Testing
-
-Run all checks:
-```bash
-# Auto-format
-black app/ tests/
-isort app/ tests/
-
-# Lint
-flake8 app/ tests/
-
-# Type check
-mypy app/
-
-# Test
-pytest
-```
-
-Or use pre-commit:
-```bash
-pre-commit run --all-files
-```
+**See [SETUP.md](SETUP.md) for complete setup instructions** (prerequisites, initial setup, running the app).
 
 ## Documentation
 

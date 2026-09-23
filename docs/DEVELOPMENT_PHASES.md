@@ -397,9 +397,9 @@
 
 - [x] Update README with setup instructions
 - [x] Document API endpoints (auto-generated + examples)
-- [x] Create local development guide (QUICKSTART.md, RUNNING.md)
+- [x] Create local development guide (SETUP.md)
 - [x] Document environment variables (.env.example)
-- [x] Create troubleshooting guide (in QUICKSTART.md)
+- [x] Create troubleshooting guide (in SETUP.md)
 - [x] Add architecture diagrams (ARCHITECTURE.md)
 
 **Deliverable**: ✅ New developers can get started easily

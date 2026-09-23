@@ -64,81 +64,20 @@ Three leaderboard views:
 
 ## 🚀 Quick Start
 
-### Containerized Development (Recommended)
-```bash
-# Setup environment
-cp .env.example .env
-# Add your Claude API key to .env
-
-# Start with Podman
-podman-compose up
-
-# Visit
-# http://localhost:8000
-```
-
-### Local Python (Alternative)
-
-**Requirements**: Python 3.12 (3.13+ not yet supported due to dependency compatibility)
+**See [SETUP.md](SETUP.md) for complete setup instructions** (containerized or local Python).
 
 ```bash
-# Setup virtual environment
-python3.12 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Configure
-cp .env.example .env
-# Add your Claude API key to .env
-
-# Run database migrations
-alembic upgrade head
-
-# Run
-uvicorn app.main:app --reload
-
-# Visit
-# http://localhost:8000
+# Quick version:
+cp .env.example .env    # Add your Claude API key
+podman-compose up       # Or use ./run.sh for local Python
+# Visit http://localhost:8000
 ```
 
-**Note**: Containerized development includes all dependencies (Tailwind CSS, database, etc.) pre-configured.
+## 📁 Project Structure & Documentation
 
-## 📁 Project Structure
-
-```
-token-golf/
-├── app/                    # FastAPI application
-│   ├── main.py            # Entry point
-│   ├── api/               # API routes
-│   ├── models/            # Database models
-│   ├── services/          # Business logic
-│   └── templates/         # HTML templates
-├── challenges/            # Challenge definitions
-│   ├── hole-001/
-│   │   ├── challenge.yaml
-│   │   └── assets/
-│   └── README.md
-├── docs/                  # Documentation
-│   ├── ADRs/             # Architecture Decision Records
-│   └── CHALLENGE_FORMAT.md
-├── static/               # CSS, JS, images
-├── tests/                # Test suite
-└── README.md
-```
-
-## 📝 Creating Challenges
-
-Challenges are defined in YAML files. See [Challenge Format Documentation](docs/CHALLENGE_FORMAT.md) for details.
-
-```yaml
-id: hole-001
-name: "Simple Function Generation"
-difficulty: easy
-task_type: coding
-validation:
-  type: test_cases
-# ... see full spec in docs/
-```
+- **Architecture**: See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- **Creating Challenges**: See [docs/CHALLENGE_FORMAT.md](docs/CHALLENGE_FORMAT.md)
+- **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 🎯 Development Workflow
 
@@ -150,32 +89,9 @@ This project uses **gitflow**:
 
 ## 🏗️ Project Status
 
-**Current Phase**: Phase 8 - UI Redesign & Challenge Creation (Part 1 & 1.5: ✅ COMPLETE)
+**Phase 8 in progress** (UI Redesign ✅, Bug Fixes ✅, Challenge Creation next).
 
-**Completed**:
-- ✅ Phase 0: Container Foundation (Podman)
-- ✅ Phase 1: Foundation Components (FastAPI, Database, Alembic)
-- ✅ Phase 2: Core Services (Challenge Loader, LLM Client, Validator, Scoring)
-- ✅ Phase 3: API Endpoints (Challenge, Game, Leaderboard APIs)
-- ✅ Phase 4: Frontend Templates (Tailwind CSS, htmx, Alpine.js)
-- ✅ Phase 5: Frontend Interactivity + Enhancements
-- ✅ Phase 6: Supporting Features
-- ✅ Phase 7: Testing & Polish (213 pytest tests, 22 browser tests, 74% coverage)
-- ✅ Phase 8 Part 1: UI Redesign (modern game UI, 113 UI validation tests passing)
-- ✅ Phase 8 Part 1.5: Bug Fixes & Game Enhancements (9 bugs fixed, golf terminology, rank calculation)
-
-**Current Configuration**:
-- Single course mode: "Complete Championship" (5 holes)
-- Course selection disabled until more challenges exist
-
-**Next**: Phase 8 Part 2 - Challenge Creation (15-20 new challenges)
-
-**For detailed roadmap and phase documentation**, see:
-- [DEVELOPMENT_PHASES.md](docs/DEVELOPMENT_PHASES.md) - Complete 8-phase plan
-- [PROJECT_STATUS.md](PROJECT_STATUS.md) - Current status and progress
-- [docs/phases/](docs/phases/) - Individual phase completion records
-
-**MVP Scope**: See [docs/MVP_SCOPE.md](docs/MVP_SCOPE.md) for included/excluded features.
+**See [PROJECT_STATUS.md](PROJECT_STATUS.md) for detailed current status, completed phases, and roadmap.**
 
 ## 🤝 Contributing
 
