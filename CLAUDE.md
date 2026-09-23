@@ -15,13 +15,21 @@ Conference attendees at major tech conferences who need to learn how different d
 
 ## Core Game Mechanics
 
-### Scoring System
-- **All tokens count**: input + output + system prompts (treated as input tokens) + failed attempts
-- Players iterate on their prompts until they achieve the correct answer
-- Each iteration adds to their total token count
-- Players can retry after success with no limit (counts as additional strokes)
-- Winner has the lowest total token count across completed holes
+### Scoring System (ADR 011: Practice Swings)
+- **Practice Swings**: Players can take unlimited practice swings to test their prompts
+  - Practice swings show LLM response, validation, and token count
+  - Practice swings do NOT count toward leaderboard score
+  - Saved to database for analytics but marked as `attempt_type='practice'`
+- **Submitted Attempts**: Players submit their best attempts to record score
+  - Only successful attempts can be submitted
+  - Submitted attempts marked as `attempt_type='submitted'`
+  - Only submitted attempts count toward leaderboard
+- **Scoring Calculation**: Best (lowest tokens) submitted attempt per hole wins
+- **Retry After Success**: Players can submit multiple times to improve their score
+- **Winner**: Lowest total tokens across all submitted attempts on completed holes
 - **Tie-breaking**: If multiple players tie for first place, they compete in an additional challenge until a single winner emerges (repeat as needed) - placeholder for tie-breaking challenge to be created later
+
+**Historical Note**: Pre-ADR 011 (before 2026-09-23), every attempt counted ("all tokens count" golf-style scoring). This was changed to practice swings to encourage experimentation and better teach token optimization.
 
 ### Challenge Structure
 - **Holes**: Individual challenges with specific tasks
@@ -149,6 +157,7 @@ token-golf/
 ├── docs/                    # Project documentation
 │   ├── ADRs/                # Architecture Decision Records
 │   ├── phases/              # Phase completion docs
+│   ├── sessions/            # Session-specific implementation notes (dated)
 │   ├── ARCHITECTURE.md
 │   ├── CHALLENGE_FORMAT.md
 │   └── API.md               # API documentation
@@ -581,7 +590,7 @@ python scripts/validate_challenges.py
 ## Clarified Design Questions (Resolved)
 
 1. **How does this scale to 100 concurrent users?** - Design with future scalability in mind, start simple with SQLite
-2. **Is the token counting accurate and auditable?** - Yes, all tokens stored per attempt in database
+2. **Is the token counting accurate and auditable?** - Yes, all tokens stored per attempt in database (both practice and submitted)
 3. **Can this be easily modified via YAML/config?** - Yes, challenges in YAML, session timeout in config file
 4. **Does this work offline?** - No, not for MVP (requires LLM API connection)
 5. **Is the validation fair and deterministic?** - Yes, test cases and exact match only for MVP
@@ -594,3 +603,36 @@ python scripts/validate_challenges.py
 12. **Authentication?** - Username + password (generate new or sign in)
 13. **Model selection?** - Haiku only for MVP, hardcoded
 14. **Leaderboard views?** - Three: Global (all sessions), Per-Hole (all sessions), Session (current only)
+
+## Documentation Organization
+
+**Root Directory** (keep clean - only stable reference files):
+- `CLAUDE.md` - AI assistant context (this file)
+- `PROJECT_STATUS.md` - Current implementation status
+- `README.md` - Project overview and quickstart
+- `CONTRIBUTING.md` - Developer guide
+- `QUICKSTART.md` - Getting started guide
+- `RUNNING.md` - How to run the application
+- `ISSUES.md` - Known issues and workarounds
+
+**Organized Documentation Directories**:
+- `docs/ADRs/` - Architecture Decision Records (numbered, e.g., `001-description.md`)
+- `docs/phases/` - Phase completion documents (historical records)
+- `docs/sessions/` - Session-specific implementation notes (dated YYYY-MM-DD)
+  - Bug fixes, feature implementation details, working documents
+  - Format: `DESCRIPTION_YYYY-MM-DD.md`
+  - See `docs/sessions/README.md` for index
+- `docs/ARCHITECTURE.md` - System architecture overview
+- `docs/CHALLENGE_FORMAT.md` - Challenge YAML specification
+- `docs/API.md` - API documentation
+- `tests/README.md` - Testing guide
+
+**Session Documentation Policy for AI Assistants**:
+- ⛔ **DO NOT** create documentation files in root directory
+- ✅ **DO** create session notes in `docs/sessions/`
+- ✅ **DO** use dated format: `FEATURE_NAME_YYYY-MM-DD.md`
+- ✅ **DO** update `PROJECT_STATUS.md` for status changes
+- ✅ **DO** create ADRs in `docs/ADRs/` for architectural decisions
+- ✅ **DO** keep root clean and organized
+
+Example session doc: `docs/sessions/LEADERBOARD_SIMPLIFICATION_2026-09-23.md`

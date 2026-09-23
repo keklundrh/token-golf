@@ -97,13 +97,14 @@ async def test_complete_game_flow(
     assert "description" in challenge_data
     assert "validation_type" in challenge_data
 
-    # Step 3: Submit an incorrect attempt (prompt too vague)
-    incorrect_attempt = client.post(
+    # Step 3: Practice swing with vague prompt (ADR 011)
+    practice_attempt = client.post(
         "/api/game/submit",
         json={
             "session_id": session_id,
             "challenge_id": first_challenge_id,
             "user_prompt": "Do it",  # Intentionally vague
+            "action": "practice",  # Practice swing
             "system_prompt": None,
             "context_files": []
         }
@@ -111,53 +112,83 @@ async def test_complete_game_flow(
 
     # Note: This may succeed or fail depending on LLM API availability
     # In a real test, we'd mock the LLM client
-    if incorrect_attempt.status_code == 503:
+    if practice_attempt.status_code == 503:
         # LLM service unavailable (weather delay)
         pytest.skip("LLM service unavailable - cannot test complete flow")
 
-    assert incorrect_attempt.status_code == 200
-    incorrect_data = incorrect_attempt.json()
+    assert practice_attempt.status_code == 200
+    practice_data = practice_attempt.json()
 
-    assert "attempt_id" in incorrect_data
-    assert "is_correct" in incorrect_data
-    assert "total_tokens" in incorrect_data
-    assert "cumulative_tokens" in incorrect_data
-    assert "attempt_number" in incorrect_data
+    assert "attempt_id" in practice_data
+    assert "attempt_type" in practice_data
+    assert practice_data["attempt_type"] == "practice"
+    assert "is_correct" in practice_data
+    assert "total_tokens" in practice_data
+    assert "cumulative_tokens" in practice_data
+    assert "practice_count" in practice_data
+    assert "submitted_count" in practice_data
+    assert "attempt_number" in practice_data
 
     # First attempt should be attempt #1
-    assert incorrect_data["attempt_number"] == 1
+    assert practice_data["attempt_number"] == 1
+    assert practice_data["practice_count"] == 1
+    assert practice_data["submitted_count"] == 0
 
-    # Step 4: Submit a correct attempt (proper prompt)
+    # Step 4: Practice swing with correct prompt (ADR 011)
     # Note: This assumes hole-001 is a coding challenge
-    correct_attempt = client.post(
+    correct_practice = client.post(
         "/api/game/submit",
         json={
             "session_id": session_id,
             "challenge_id": first_challenge_id,
             "user_prompt": "Write a Python function that solves the given task. Include all necessary code.",
+            "action": "practice",  # Practice swing
             "system_prompt": "You are a helpful coding assistant that writes clean, efficient code.",
             "context_files": []
         }
     )
 
-    if correct_attempt.status_code == 503:
+    if correct_practice.status_code == 503:
         pytest.skip("LLM service unavailable - cannot test complete flow")
 
-    assert correct_attempt.status_code == 200
-    correct_data = correct_attempt.json()
+    assert correct_practice.status_code == 200
+    correct_practice_data = correct_practice.json()
 
-    # Verify attempt was recorded
-    assert correct_data["attempt_number"] >= 2
-    assert "llm_response" in correct_data
-    assert "validation_message" in correct_data
+    # Verify practice attempt was recorded
+    assert correct_practice_data["attempt_number"] >= 2
+    assert correct_practice_data["attempt_type"] == "practice"
+    assert "llm_response" in correct_practice_data
+    assert "validation_message" in correct_practice_data
 
-    # If correct, should suggest next challenge
-    if correct_data["is_correct"]:
-        assert correct_data["next_action"] == "next_challenge"
+    # If correct, should suggest can_submit
+    if correct_practice_data["is_correct"]:
+        assert correct_practice_data["next_action"] == "can_submit"
+
+        # Step 5: Submit and record score (ADR 011)
+        submit_attempt = client.post(
+            "/api/game/submit",
+            json={
+                "session_id": session_id,
+                "challenge_id": first_challenge_id,
+                "user_prompt": "Write a Python function that solves the given task. Include all necessary code.",
+                "action": "submit",  # Submit and record
+                "system_prompt": "You are a helpful coding assistant that writes clean, efficient code.",
+                "context_files": []
+            }
+        )
+
+        assert submit_attempt.status_code == 200
+        submit_data = submit_attempt.json()
+
+        assert submit_data["attempt_type"] == "submitted"
+        assert submit_data["is_correct"] == True
+        assert submit_data["next_action"] == "next_challenge"
+        assert submit_data["submitted_count"] == 1
     else:
-        assert correct_data["next_action"] == "retry"
+        # If practice wasn't correct, skip the submit step
+        pytest.skip("Practice swing not correct - cannot test submit step")
 
-    # Step 5: Verify score was recorded in database
+    # Step 6: Verify score was recorded in database (ADR 011: only submitted attempts)
     result = await db_session.execute(
         select(Score).where(
             Score.user_id == user_id,
@@ -167,10 +198,11 @@ async def test_complete_game_flow(
     )
     score = result.scalar_one_or_none()
     assert score is not None
-    assert score.total_attempts >= 2
+    # Score should have 1 submitted attempt (practice attempts don't count)
+    assert score.total_attempts >= 1
     assert score.total_tokens > 0
 
-    # Step 6: Get game status
+    # Step 7: Get game status
     status_response = client.get(f"/api/game/status/{session_id}")
     assert status_response.status_code == 200
     status_data = status_response.json()
@@ -182,7 +214,7 @@ async def test_complete_game_flow(
     assert len(status_data["challenges"]) > 0
     assert status_data["total_tokens"] > 0
 
-    # Step 7: Check session leaderboard (ADR 010: completed + in_progress sections)
+    # Step 8: Check session leaderboard (ADR 010: completed + in_progress sections)
     leaderboard_response = client.get(f"/api/leaderboard/session/{session_id}")
     assert leaderboard_response.status_code == 200
     leaderboard_data = leaderboard_response.json()

@@ -319,6 +319,7 @@ class TestSubmitAttempt:
             "challenge_id": sample_challenge.id,
             "user_prompt": "Write a function to add two numbers",
             "system_prompt": "You are a helpful coding assistant.",
+            "action": "submit",
         }
 
         response = client.post("/api/game/submit", json=request_data)
@@ -337,6 +338,9 @@ class TestSubmitAttempt:
         assert "attempt_number" in data
         assert "llm_response" in data
         assert "next_action" in data
+        assert "attempt_type" in data
+        assert "practice_count" in data
+        assert "submitted_count" in data
 
         # Verify data
         assert data["is_correct"] is True
@@ -344,12 +348,15 @@ class TestSubmitAttempt:
         assert data["output_tokens"] == 20
         assert data["total_tokens"] == 170
         assert data["attempt_number"] == 1
+        assert data["attempt_type"] == "submitted"
+        assert data["practice_count"] == 0
+        assert data["submitted_count"] == 1
         assert data["next_action"] == "next_challenge"
         assert "suggestions" not in data or data["suggestions"] is None
 
     @patch("app.services.llm_client.LLMClient.complete_with_context")
     @patch("app.services.validator.ValidatorService.validate")
-    def test_submit_attempt_incorrect(
+    def test_submit_attempt_incorrect_practice(
         self,
         mock_validate,
         mock_llm,
@@ -358,7 +365,7 @@ class TestSubmitAttempt:
         sample_session: Session,
         sample_challenge: Challenge,
     ):
-        """Test submitting an incorrect attempt."""
+        """Test submitting an incorrect practice attempt."""
         # Mock LLM response
         mock_llm.return_value = LLMResponse(
             response_text="return a + b",
@@ -379,6 +386,7 @@ class TestSubmitAttempt:
             "session_id": sample_session.id,
             "challenge_id": sample_challenge.id,
             "user_prompt": "Add two numbers",
+            "action": "practice",
         }
 
         response = client.post("/api/game/submit", json=request_data)
@@ -387,10 +395,156 @@ class TestSubmitAttempt:
         data = response.json()
 
         assert data["is_correct"] is False
+        assert data["attempt_type"] == "practice"
         assert data["next_action"] == "retry"
         assert "suggestions" in data
         assert isinstance(data["suggestions"], list)
         assert len(data["suggestions"]) > 0
+        assert data["practice_count"] == 1
+        assert data["submitted_count"] == 0
+
+    @patch("app.services.llm_client.LLMClient.complete_with_context")
+    @patch("app.services.validator.ValidatorService.validate")
+    def test_submit_attempt_incorrect_cannot_submit(
+        self,
+        mock_validate,
+        mock_llm,
+        client: TestClient,
+        db_session: AsyncSession,
+        sample_session: Session,
+        sample_challenge: Challenge,
+    ):
+        """Test that submitting an incorrect attempt with action='submit' returns 422 error."""
+        # Mock LLM response
+        mock_llm.return_value = LLMResponse(
+            response_text="return a + b",
+            input_tokens=100,
+            output_tokens=10,
+            total_tokens=110,
+            model="claude-3-5-sonnet-20241022",
+        )
+
+        # Mock validation result
+        from app.services import ValidationResult
+        mock_validate.return_value = ValidationResult(
+            is_correct=False,
+            feedback="Test case failed: Expected function definition",
+        )
+
+        request_data = {
+            "session_id": sample_session.id,
+            "challenge_id": sample_challenge.id,
+            "user_prompt": "Add two numbers",
+            "action": "submit",
+        }
+
+        response = client.post("/api/game/submit", json=request_data)
+
+        assert response.status_code == 422
+        data = response.json()
+
+        assert "detail" in data
+        detail = data["detail"]
+        assert detail["error"] == "cannot_submit_incorrect"
+        assert "message" in detail
+        assert "suggestions" in detail
+
+    @patch("app.services.llm_client.LLMClient.complete_with_context")
+    @patch("app.services.validator.ValidatorService.validate")
+    def test_practice_to_submit_flow(
+        self,
+        mock_validate,
+        mock_llm,
+        client: TestClient,
+        db_session: AsyncSession,
+        sample_session: Session,
+        sample_challenge: Challenge,
+    ):
+        """Test practice → submit flow: practice incorrect, then submit correct."""
+        # First: Practice with incorrect answer
+        mock_llm.return_value = LLMResponse(
+            response_text="wrong answer",
+            input_tokens=80,
+            output_tokens=5,
+            total_tokens=85,
+            model="claude-3-5-sonnet-20241022",
+        )
+        from app.services import ValidationResult
+        mock_validate.return_value = ValidationResult(
+            is_correct=False,
+            feedback="Incorrect",
+        )
+
+        practice_data = {
+            "session_id": sample_session.id,
+            "challenge_id": sample_challenge.id,
+            "user_prompt": "Practice attempt",
+            "action": "practice",
+        }
+
+        practice_response = client.post("/api/game/submit", json=practice_data)
+        practice_result = practice_response.json()
+
+        assert practice_response.status_code == 200
+        assert practice_result["is_correct"] is False
+        assert practice_result["attempt_type"] == "practice"
+        assert practice_result["practice_count"] == 1
+        assert practice_result["submitted_count"] == 0
+        assert practice_result["total_tokens"] == 85
+
+        # Second: Submit with correct answer
+        mock_llm.return_value = LLMResponse(
+            response_text="correct answer",
+            input_tokens=100,
+            output_tokens=10,
+            total_tokens=110,
+            model="claude-3-5-sonnet-20241022",
+        )
+        mock_validate.return_value = ValidationResult(
+            is_correct=True,
+            feedback="Correct!",
+        )
+
+        submit_data = {
+            "session_id": sample_session.id,
+            "challenge_id": sample_challenge.id,
+            "user_prompt": "Submit attempt",
+            "action": "submit",
+        }
+
+        submit_response = client.post("/api/game/submit", json=submit_data)
+        submit_result = submit_response.json()
+
+        assert submit_response.status_code == 200
+        assert submit_result["is_correct"] is True
+        assert submit_result["attempt_type"] == "submitted"
+        assert submit_result["practice_count"] == 1
+        assert submit_result["submitted_count"] == 1
+        assert submit_result["total_tokens"] == 110
+        # Cumulative tokens should only count submitted attempts
+        assert submit_result["cumulative_tokens"] == 110
+
+    def test_submit_attempt_invalid_action(
+        self,
+        client: TestClient,
+        db_session: AsyncSession,
+        sample_session: Session,
+        sample_challenge: Challenge,
+    ):
+        """Test submitting with invalid action parameter."""
+        request_data = {
+            "session_id": sample_session.id,
+            "challenge_id": sample_challenge.id,
+            "user_prompt": "Test prompt",
+            "action": "invalid_action",
+        }
+
+        response = client.post("/api/game/submit", json=request_data)
+
+        assert response.status_code == 422
+        data = response.json()
+
+        assert "detail" in data
 
     def test_submit_attempt_empty_prompt(
         self,
@@ -404,6 +558,7 @@ class TestSubmitAttempt:
             "session_id": sample_session.id,
             "challenge_id": sample_challenge.id,
             "user_prompt": "",
+            "action": "practice",
         }
 
         response = client.post("/api/game/submit", json=request_data)
@@ -427,6 +582,7 @@ class TestSubmitAttempt:
             "session_id": sample_session.id,
             "challenge_id": sample_challenge.id,
             "user_prompt": "   \n\t  ",
+            "action": "practice",
         }
 
         response = client.post("/api/game/submit", json=request_data)
@@ -449,6 +605,7 @@ class TestSubmitAttempt:
             "session_id": "non-existent-session",
             "challenge_id": sample_challenge.id,
             "user_prompt": "Test prompt",
+            "action": "practice",
         }
 
         response = client.post("/api/game/submit", json=request_data)
@@ -472,6 +629,7 @@ class TestSubmitAttempt:
             "session_id": expired_session.id,
             "challenge_id": sample_challenge.id,
             "user_prompt": "Test prompt",
+            "action": "practice",
         }
 
         response = client.post("/api/game/submit", json=request_data)
@@ -495,6 +653,7 @@ class TestSubmitAttempt:
             "session_id": sample_session.id,
             "challenge_id": "non-existent-challenge",
             "user_prompt": "Test prompt",
+            "action": "practice",
         }
 
         response = client.post("/api/game/submit", json=request_data)
@@ -519,13 +678,13 @@ class TestSubmitAttempt:
         sample_session: Session,
         sample_challenge: Challenge,
     ):
-        """Test that tokens accumulate across multiple attempts."""
-        # First attempt (incorrect)
+        """Test that cumulative_tokens only counts submitted attempts, not practice attempts."""
+        # First: Practice attempt (incorrect) - should NOT count toward cumulative
         mock_llm.return_value = LLMResponse(
-            response_text="wrong answer",
-            input_tokens=100,
-            output_tokens=10,
-            total_tokens=110,
+            response_text="practice wrong answer",
+            input_tokens=80,
+            output_tokens=8,
+            total_tokens=88,
             model="claude-3-5-sonnet-20241022",
         )
         from app.services import ValidationResult
@@ -534,20 +693,48 @@ class TestSubmitAttempt:
             feedback="Incorrect",
         )
 
-        request_data = {
+        practice_data = {
             "session_id": sample_session.id,
             "challenge_id": sample_challenge.id,
-            "user_prompt": "First attempt",
+            "user_prompt": "Practice attempt",
+            "action": "practice",
         }
 
-        response1 = client.post("/api/game/submit", json=request_data)
-        data1 = response1.json()
+        practice_response = client.post("/api/game/submit", json=practice_data)
+        practice_result = practice_response.json()
 
-        assert data1["attempt_number"] == 1
-        assert data1["total_tokens"] == 110
-        assert data1["cumulative_tokens"] == 110
+        assert practice_result["attempt_number"] == 1
+        assert practice_result["total_tokens"] == 88
+        assert practice_result["attempt_type"] == "practice"
+        assert practice_result["practice_count"] == 1
+        assert practice_result["submitted_count"] == 0
+        # No cumulative_tokens for practice attempts (or it should be 0)
 
-        # Second attempt (correct)
+        # Second: First submitted attempt (incorrect) - should count toward cumulative
+        mock_llm.return_value = LLMResponse(
+            response_text="first submit wrong answer",
+            input_tokens=100,
+            output_tokens=10,
+            total_tokens=110,
+            model="claude-3-5-sonnet-20241022",
+        )
+        mock_validate.return_value = ValidationResult(
+            is_correct=False,
+            feedback="Incorrect",
+        )
+
+        # This should fail with 422 - can't submit incorrect
+        submit_incorrect_data = {
+            "session_id": sample_session.id,
+            "challenge_id": sample_challenge.id,
+            "user_prompt": "Submit incorrect attempt",
+            "action": "submit",
+        }
+
+        response_fail = client.post("/api/game/submit", json=submit_incorrect_data)
+        assert response_fail.status_code == 422
+
+        # Third: Correct submitted attempt - should count toward cumulative
         mock_llm.return_value = LLMResponse(
             response_text="correct answer",
             input_tokens=120,
@@ -560,13 +747,46 @@ class TestSubmitAttempt:
             feedback="Correct!",
         )
 
-        request_data["user_prompt"] = "Second attempt"
-        response2 = client.post("/api/game/submit", json=request_data)
+        submit_data = {
+            "session_id": sample_session.id,
+            "challenge_id": sample_challenge.id,
+            "user_prompt": "Correct submit",
+            "action": "submit",
+        }
+
+        response2 = client.post("/api/game/submit", json=submit_data)
         data2 = response2.json()
 
-        assert data2["attempt_number"] == 2
+        assert data2["attempt_type"] == "submitted"
         assert data2["total_tokens"] == 135
-        assert data2["cumulative_tokens"] == 245  # 110 + 135
+        # Cumulative should only count this submitted attempt, not the practice
+        assert data2["cumulative_tokens"] == 135
+        assert data2["practice_count"] == 1
+        assert data2["submitted_count"] == 1
+
+        # Fourth: Another correct submitted attempt - should update to best (lowest) score
+        mock_llm.return_value = LLMResponse(
+            response_text="another correct answer",
+            input_tokens=90,
+            output_tokens=12,
+            total_tokens=102,
+            model="claude-3-5-sonnet-20241022",
+        )
+        mock_validate.return_value = ValidationResult(
+            is_correct=True,
+            feedback="Correct!",
+        )
+
+        submit_data["user_prompt"] = "Another correct submit"
+        response3 = client.post("/api/game/submit", json=submit_data)
+        data3 = response3.json()
+
+        assert data3["attempt_type"] == "submitted"
+        assert data3["total_tokens"] == 102
+        # Cumulative shows best (lowest) submitted attempt: 102 is better than 135
+        assert data3["cumulative_tokens"] == 102
+        assert data3["practice_count"] == 1
+        assert data3["submitted_count"] == 2
 
     @patch("app.services.llm_client.LLMClient.complete_with_context")
     def test_submit_attempt_llm_service_unavailable(
@@ -578,13 +798,14 @@ class TestSubmitAttempt:
         sample_challenge: Challenge,
     ):
         """Test handling of LLM service errors (weather delay)."""
-        # Mock LLM failure
-        mock_llm.side_effect = Exception("API unavailable")
+        # Mock LLM failure with RuntimeError (one of the caught exception types)
+        mock_llm.side_effect = RuntimeError("API unavailable")
 
         request_data = {
             "session_id": sample_session.id,
             "challenge_id": sample_challenge.id,
             "user_prompt": "Test prompt",
+            "action": "practice",
         }
 
         response = client.post("/api/game/submit", json=request_data)
@@ -630,6 +851,7 @@ class TestSubmitAttempt:
             "context_files": [
                 {"name": "file1.txt", "content": "Context data"}
             ],
+            "action": "submit",
         }
 
         response = client.post("/api/game/submit", json=request_data)
@@ -637,6 +859,7 @@ class TestSubmitAttempt:
         assert response.status_code == 200
         data = response.json()
         assert data["is_correct"] is True
+        assert data["attempt_type"] == "submitted"
 
 
 # ============================================================================
@@ -723,6 +946,7 @@ class TestGetGameStatus:
             "session_id": sample_session.id,
             "challenge_id": sample_challenge.id,
             "user_prompt": "Solve it",
+            "action": "submit",
         }
         client.post("/api/game/submit", json=submit_data)
 

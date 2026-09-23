@@ -279,6 +279,18 @@ class TestGlobalLeaderboard:
         sample_challenge: Challenge,
     ):
         """Test that rankings are correctly assigned."""
+        # ADR 010: Create participants and mark course as completed
+        for user in multiple_users[:2]:
+            participant = SessionParticipant(
+                session_id=sample_session.id,
+                user_id=user.id,
+                joined_at=datetime.utcnow(),
+                holes_completed=sample_session.course_total_holes,
+                course_completed_at=datetime.utcnow(),
+            )
+            db_session.add(participant)
+        await db_session.commit()
+
         # Create scores with known token counts
         await create_test_score(
             db_session,
@@ -703,8 +715,10 @@ class TestSessionLeaderboard:
             session_id=sample_session.id,
             user_id=multiple_users[0].id,
             joined_at=datetime.utcnow(),
+            holes_completed=2,  # User completes 2 challenges
         )
         db_session.add(participant)
+        await db_session.commit()
 
         # User completes multiple challenges
         total_tokens_user1 = 0
@@ -755,6 +769,17 @@ class TestLeaderboardEntryStructure:
         sample_challenge: Challenge,
     ):
         """Test that all leaderboard entries have required fields."""
+        # ADR 010: Create participant with course_completed_at to appear in global leaderboard
+        participant = SessionParticipant(
+            session_id=sample_session.id,
+            user_id=multiple_users[0].id,
+            joined_at=datetime.utcnow(),
+            holes_completed=sample_session.course_total_holes,
+            course_completed_at=datetime.utcnow(),
+        )
+        db_session.add(participant)
+        await db_session.commit()
+
         await create_test_score(
             db_session,
             multiple_users[0].id,
@@ -792,6 +817,17 @@ class TestLeaderboardEntryStructure:
         sample_challenge: Challenge,
     ):
         """Test that usernames are properly returned."""
+        # ADR 010: Create participant with course_completed_at to appear in global leaderboard
+        participant = SessionParticipant(
+            session_id=sample_session.id,
+            user_id=sample_user.id,
+            joined_at=datetime.utcnow(),
+            holes_completed=sample_session.course_total_holes,
+            course_completed_at=datetime.utcnow(),
+        )
+        db_session.add(participant)
+        await db_session.commit()
+
         await create_test_score(
             db_session,
             sample_user.id,
@@ -834,6 +870,18 @@ class TestLeaderboardEdgeCases:
         sample_challenge: Challenge,
     ):
         """Test ranking when users have same token count."""
+        # ADR 010: Create participants with course_completed_at to appear in global leaderboard
+        for user in multiple_users[:2]:
+            participant = SessionParticipant(
+                session_id=sample_session.id,
+                user_id=user.id,
+                joined_at=datetime.utcnow(),
+                holes_completed=sample_session.course_total_holes,
+                course_completed_at=datetime.utcnow(),
+            )
+            db_session.add(participant)
+        await db_session.commit()
+
         # Create two users with same score
         await create_test_score(
             db_session,

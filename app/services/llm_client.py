@@ -25,7 +25,7 @@ class LLMResponse(BaseModel):
     """
     Structured response from LLM with token usage data.
 
-    All tokens count toward scoring: input + output.
+    Token counting for practice swings and submitted attempts (ADR 011).
     System prompts are included in input token count.
     """
 

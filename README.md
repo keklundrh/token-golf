@@ -10,9 +10,11 @@ Token Golf is designed for conference demonstrations and educational workshops w
 
 - **Golf-Style Scoring**: Fewer tokens = better score
 - **Progressive Difficulty**: 5 "holes" (challenges) with increasing complexity
-- **All Tokens Count**: Input, output, system prompts, failed attempts - everything counts
-- **Iterate to Success**: Players can retry until they get the correct answer (all attempts count)
-- **Single Course Mode**: Currently all sessions play "Complete Championship" (5 holes)
+- **Practice Swings**: Unlimited practice attempts to test your prompts (don't count toward score)
+- **Submit & Record**: When happy with a solution, submit it to record your score
+- **Best Score Wins**: Only your best submitted attempt per hole counts toward the leaderboard
+- **Retry to Improve**: Can submit multiple times to optimize your score
+- **Single Course Mode**: Currently all sessions play "Full Tour" (5 holes)
 
 ### Task Types
 - Coding challenges

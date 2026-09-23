@@ -41,7 +41,7 @@ Token Golf is a competitive game teaching AI token efficiency through golf-style
 - Challenge Loader (410 lines) - YAML parsing, validation, caching, **courses**
 - LLM Client (357 lines) - Claude API, token counting, mock client
 - Validator (439 lines) - Test cases, exact match, code execution
-- Scoring (504 lines) - Attempts, cumulative scores, three leaderboards
+- Scoring (504 lines) - Attempts (practice vs submitted), best-score-per-hole, three leaderboards
 - **Session Manager** - Timeout enforcement, DNF marking
 
 ### Phase 3: API Endpoints ✅ (2026-09-21)
@@ -319,10 +319,10 @@ In Progress Section (Not Ranked):
 ## Key Design Decisions
 
 1. **Server-side rendering** - Simplicity over SPA complexity
-2. **Golf-style scoring** - Lower tokens = better
+2. **Practice swings scoring (ADR 011)** - Unlimited practice, submit your best (changed from "all tokens count" 2026-09-23)
 3. **Three leaderboards** - Global, per-hole, session
 4. **Username + password auth** - Generate new or sign in (SHA256 → bcrypt)
-5. **All tokens count** - Input + output + system prompts
+5. **Practice swings** - Unlimited practice, submit best (see ADR 011)
 6. **Session timeout** - 3 hours, auto-DNF
 7. **Weather delay errors** - User-friendly LLM error handling
 8. **Consistent API errors** - error/message/details/suggestions format

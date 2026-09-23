@@ -25,7 +25,14 @@ class Attempt(Base):
     Attempt model - each prompt submission for a challenge.
 
     Storage granularity: per user, per session, per attempt.
-    All tokens count: input + output + system prompts (treated as input).
+
+    Attempt Types:
+    - 'practice': Practice swing - saved for history but doesn't count toward score
+    - 'submitted': Recorded attempt - counts toward leaderboard score
+
+    Scoring: Only 'submitted' attempts count. Best (lowest tokens) submitted
+    attempt per hole is used for leaderboard ranking.
+
     User modifications (context files, system prompts) are stored per attempt.
     """
 
@@ -65,6 +72,14 @@ class Attempt(Base):
         Integer,
         nullable=False,
         comment="Attempt number for this user on this challenge (1, 2, 3, ...)",
+    )
+
+    attempt_type: Mapped[str] = mapped_column(
+        String(20),
+        default="practice",
+        nullable=False,
+        index=True,
+        comment="Type of attempt: 'practice' (swing) or 'submitted' (recorded score)",
     )
 
     # User input

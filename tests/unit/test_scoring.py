@@ -119,6 +119,7 @@ class TestRecordAttempt:
             input_tokens=10,
             output_tokens=15,
             is_correct=True,
+            attempt_type='submitted',
         )
 
         assert attempt.attempt_number == 1
@@ -134,7 +135,7 @@ class TestRecordAttempt:
 
     @pytest.mark.asyncio
     async def test_record_multiple_attempts(self, db_session):
-        """Test recording multiple attempts increments attempt number."""
+        """Test recording multiple submitted attempts - MIN tokens wins (ADR 011)."""
         user = User(
             username="test-user",
             password_hash="simple-hash",
@@ -159,7 +160,7 @@ class TestRecordAttempt:
 
         scoring = ScoringService(db_session)
 
-        # First attempt (failed)
+        # First submitted attempt (failed) - 8 tokens
         attempt1 = await scoring.record_attempt(
             user_id=user.id,
             session_id="session-001",
@@ -169,9 +170,10 @@ class TestRecordAttempt:
             input_tokens=5,
             output_tokens=3,
             is_correct=False,
+            attempt_type='submitted',
         )
 
-        # Second attempt (failed)
+        # Second submitted attempt (failed) - 10 tokens
         attempt2 = await scoring.record_attempt(
             user_id=user.id,
             session_id="session-001",
@@ -181,9 +183,10 @@ class TestRecordAttempt:
             input_tokens=6,
             output_tokens=4,
             is_correct=False,
+            attempt_type='submitted',
         )
 
-        # Third attempt (success)
+        # Third submitted attempt (success) - 12 tokens
         attempt3 = await scoring.record_attempt(
             user_id=user.id,
             session_id="session-001",
@@ -193,16 +196,17 @@ class TestRecordAttempt:
             input_tokens=7,
             output_tokens=5,
             is_correct=True,
+            attempt_type='submitted',
         )
 
         assert attempt1.attempt_number == 1
         assert attempt2.attempt_number == 2
         assert attempt3.attempt_number == 3
 
-        # Check cumulative score
+        # Check score - ADR 011: MIN tokens (8), not SUM
         score = await scoring.get_score(user.id, "session-001", "hole-001")
-        assert score.total_tokens == 8 + 10 + 12  # All attempts count
-        assert score.total_attempts == 3
+        assert score.total_tokens == 8  # MIN of submitted attempts
+        assert score.total_attempts == 3  # Count of submitted attempts
         assert score.completed_at is not None
 
     @pytest.mark.asyncio
@@ -267,6 +271,7 @@ class TestRecordAttempt:
             input_tokens=20,
             output_tokens=10,
             is_correct=True,
+            attempt_type='submitted',
             system_prompt="You are a coding assistant",
         )
 
@@ -310,6 +315,7 @@ class TestRecordAttempt:
             input_tokens=10,
             output_tokens=5,
             is_correct=True,
+            attempt_type='submitted',
             context_files=context,
         )
 
@@ -324,7 +330,7 @@ class TestGetScore:
         """Test getting an existing score."""
         scoring = ScoringService(db_session)
 
-        # Record an attempt to create a score
+        # Record a submitted attempt to create a score
         await scoring.record_attempt(
             user_id=test_user.id,
             session_id=test_session.id,
@@ -334,6 +340,7 @@ class TestGetScore:
             input_tokens=10,
             output_tokens=5,
             is_correct=True,
+            attempt_type='submitted',
         )
 
         score = await scoring.get_score(
@@ -367,7 +374,7 @@ class TestGetUserScores:
         """Test getting all user scores in a session."""
         scoring = ScoringService(db_session)
 
-        # Record attempts for multiple challenges
+        # Record submitted attempts for multiple challenges
         for i in range(1, 4):
             await scoring.record_attempt(
                 user_id=test_user.id,
@@ -378,6 +385,7 @@ class TestGetUserScores:
                 input_tokens=10,
                 output_tokens=5,
                 is_correct=True,
+                attempt_type='submitted',
             )
 
         scores = await scoring.get_user_scores(test_user.id, test_session.id)
@@ -394,7 +402,7 @@ class TestGetChallengeScores:
         """Test getting all scores for a challenge."""
         scoring = ScoringService(db_session)
 
-        # Record attempts from multiple users
+        # Record submitted attempts from multiple users
         for i, user in enumerate(test_users):
             await scoring.record_attempt(
                 user_id=user.id,
@@ -405,6 +413,7 @@ class TestGetChallengeScores:
                 input_tokens=10 * (i + 1),
                 output_tokens=5 * (i + 1),
                 is_correct=True,
+                attempt_type='submitted',
             )
 
         scores = await scoring.get_challenge_scores("hole-001")
@@ -418,7 +427,7 @@ class TestGetChallengeScores:
         """Test getting only completed challenge scores."""
         scoring = ScoringService(db_session)
 
-        # Record some completed and some incomplete
+        # Record some completed and some incomplete submitted attempts
         for i, user in enumerate(test_users):
             await scoring.record_attempt(
                 user_id=user.id,
@@ -429,6 +438,7 @@ class TestGetChallengeScores:
                 input_tokens=10,
                 output_tokens=5,
                 is_correct=(i == 0),  # Only first user succeeds
+                attempt_type='submitted',
             )
 
         scores = await scoring.get_challenge_scores("hole-001", completed_only=True)
@@ -458,7 +468,7 @@ class TestSessionLeaderboard:
 
         scoring = ScoringService(db_session)
 
-        # Record attempts from multiple users on multiple challenges
+        # Record submitted attempts from multiple users on multiple challenges
         for user in test_users:
             for i in range(1, 3):  # 2 challenges each
                 await scoring.record_attempt(
@@ -470,6 +480,7 @@ class TestSessionLeaderboard:
                     input_tokens=10 * user.id,
                     output_tokens=5 * user.id,
                     is_correct=True,
+                    attempt_type='submitted',
                 )
 
         leaderboard_data = await scoring.get_session_leaderboard(test_session.id, limit=10)
@@ -509,6 +520,7 @@ class TestSessionLeaderboard:
                 input_tokens=10,
                 output_tokens=5,
                 is_correct=True,
+                attempt_type='submitted',
             )
 
         leaderboard_data = await scoring.get_session_leaderboard(test_session.id, limit=2)
@@ -565,6 +577,7 @@ class TestGlobalLeaderboard:
                     input_tokens=10 * user.id,
                     output_tokens=5 * user.id,
                     is_correct=True,
+                    attempt_type='submitted',
                 )
 
         await db_session.commit()
@@ -600,7 +613,7 @@ class TestPerHoleLeaderboard:
 
         scoring = ScoringService(db_session)
 
-        # Record attempts from multiple users
+        # Record submitted attempts from multiple users
         for i, user in enumerate(test_users):
             await scoring.record_attempt(
                 user_id=user.id,
@@ -611,6 +624,7 @@ class TestPerHoleLeaderboard:
                 input_tokens=10 * (i + 1),
                 output_tokens=5 * (i + 1),
                 is_correct=True,
+                attempt_type='submitted',
             )
 
         leaderboard = await scoring.get_per_hole_leaderboard("hole-001", limit=10)
@@ -639,7 +653,7 @@ class TestPerHoleLeaderboard:
 
         scoring = ScoringService(db_session)
 
-        # Record some completed and some incomplete
+        # Record some completed and some incomplete submitted attempts
         for i, user in enumerate(test_users):
             await scoring.record_attempt(
                 user_id=user.id,
@@ -650,6 +664,7 @@ class TestPerHoleLeaderboard:
                 input_tokens=10,
                 output_tokens=5,
                 is_correct=(i < 2),  # Only first 2 users succeed
+                attempt_type='submitted',
             )
 
         leaderboard = await scoring.get_per_hole_leaderboard("hole-001", limit=10)
@@ -788,7 +803,7 @@ class TestClearChallengeScore:
         """Test clearing an existing score."""
         scoring = ScoringService(db_session)
 
-        # Create a score
+        # Create a score with submitted attempt
         await scoring.record_attempt(
             user_id=test_user.id,
             session_id=test_session.id,
@@ -798,6 +813,7 @@ class TestClearChallengeScore:
             input_tokens=100,
             output_tokens=50,
             is_correct=True,
+            attempt_type='submitted',
         )
 
         # Verify score exists
@@ -842,14 +858,14 @@ class TestClearChallengeScore:
 
 
 class TestScoreCumulativeTracking:
-    """Test cumulative score tracking across attempts."""
+    """Test score tracking with MIN logic (ADR 011)."""
 
     @pytest.mark.asyncio
-    async def test_failed_attempts_add_to_score(self, db_session, test_user, test_session):
-        """Test that failed attempts add to cumulative score."""
+    async def test_failed_submitted_attempts_tracked(self, db_session, test_user, test_session):
+        """Test that failed submitted attempts are tracked."""
         scoring = ScoringService(db_session)
 
-        # First attempt - failed
+        # First submitted attempt - failed
         await scoring.record_attempt(
             user_id=test_user.id,
             session_id=test_session.id,
@@ -859,6 +875,7 @@ class TestScoreCumulativeTracking:
             input_tokens=10,
             output_tokens=5,
             is_correct=False,
+            attempt_type='submitted',
         )
 
         score1 = await scoring.get_score(test_user.id, test_session.id, "hole-001")
@@ -868,10 +885,10 @@ class TestScoreCumulativeTracking:
 
     @pytest.mark.asyncio
     async def test_retries_after_success_count(self, db_session, test_user, test_session):
-        """Test that first correct attempt marks completion."""
+        """Test that first correct submitted attempt marks completion."""
         scoring = ScoringService(db_session)
 
-        # First attempt - success
+        # First submitted attempt - success
         await scoring.record_attempt(
             user_id=test_user.id,
             session_id=test_session.id,
@@ -881,9 +898,277 @@ class TestScoreCumulativeTracking:
             input_tokens=10,
             output_tokens=5,
             is_correct=True,
+            attempt_type='submitted',
         )
 
         score1 = await scoring.get_score(test_user.id, test_session.id, "hole-001")
         assert score1.completed_at is not None
         assert score1.total_tokens == 15
         assert score1.total_attempts == 1
+
+
+class TestPracticeSwings:
+    """Test practice swings behavior (ADR 011)."""
+
+    @pytest.mark.asyncio
+    async def test_practice_attempts_dont_update_score(self, db_session, test_user, test_session):
+        """Test that practice attempts are saved but don't create/update Score records."""
+        scoring = ScoringService(db_session)
+
+        # Practice attempt
+        practice = await scoring.record_attempt(
+            user_id=test_user.id,
+            session_id=test_session.id,
+            challenge_id="hole-001",
+            prompt="Practice",
+            response="Practice response",
+            input_tokens=10,
+            output_tokens=5,
+            is_correct=True,
+            attempt_type='practice',
+        )
+
+        assert practice.attempt_type == 'practice'
+        assert practice.total_tokens == 15
+
+        # Score should not exist
+        score = await scoring.get_score(test_user.id, test_session.id, "hole-001")
+        assert score is None
+
+    @pytest.mark.asyncio
+    async def test_practice_then_submitted(self, db_session, test_user, test_session):
+        """Test practice swings followed by submitted attempt."""
+        scoring = ScoringService(db_session)
+
+        # Practice swing 1
+        await scoring.record_attempt(
+            user_id=test_user.id,
+            session_id=test_session.id,
+            challenge_id="hole-001",
+            prompt="Practice 1",
+            response="Response",
+            input_tokens=20,
+            output_tokens=10,
+            is_correct=False,
+            attempt_type='practice',
+        )
+
+        # Practice swing 2
+        await scoring.record_attempt(
+            user_id=test_user.id,
+            session_id=test_session.id,
+            challenge_id="hole-001",
+            prompt="Practice 2",
+            response="Response",
+            input_tokens=15,
+            output_tokens=8,
+            is_correct=True,
+            attempt_type='practice',
+        )
+
+        # No score yet
+        score = await scoring.get_score(test_user.id, test_session.id, "hole-001")
+        assert score is None
+
+        # Now submit
+        await scoring.record_attempt(
+            user_id=test_user.id,
+            session_id=test_session.id,
+            challenge_id="hole-001",
+            prompt="Submitted",
+            response="Response",
+            input_tokens=12,
+            output_tokens=6,
+            is_correct=True,
+            attempt_type='submitted',
+        )
+
+        # Score should exist and show only submitted attempt
+        score = await scoring.get_score(test_user.id, test_session.id, "hole-001")
+        assert score is not None
+        assert score.total_tokens == 18  # Only submitted attempt
+        assert score.total_attempts == 1  # Only submitted attempt
+        assert score.completed_at is not None
+
+    @pytest.mark.asyncio
+    async def test_multiple_submissions_min_wins(self, db_session, test_user, test_session):
+        """Test that best (minimum) submitted attempt wins."""
+        scoring = ScoringService(db_session)
+
+        # First submission - 30 tokens
+        await scoring.record_attempt(
+            user_id=test_user.id,
+            session_id=test_session.id,
+            challenge_id="hole-001",
+            prompt="Try 1",
+            response="Response",
+            input_tokens=20,
+            output_tokens=10,
+            is_correct=True,
+            attempt_type='submitted',
+        )
+
+        score1 = await scoring.get_score(test_user.id, test_session.id, "hole-001")
+        assert score1.total_tokens == 30
+        assert score1.total_attempts == 1
+
+        # Better submission - 18 tokens (should replace)
+        await scoring.record_attempt(
+            user_id=test_user.id,
+            session_id=test_session.id,
+            challenge_id="hole-001",
+            prompt="Try 2",
+            response="Better response",
+            input_tokens=12,
+            output_tokens=6,
+            is_correct=True,
+            attempt_type='submitted',
+        )
+
+        score2 = await scoring.get_score(test_user.id, test_session.id, "hole-001")
+        assert score2.total_tokens == 18  # MIN of 30 and 18
+        assert score2.total_attempts == 2
+
+        # Worse submission - 40 tokens (should NOT replace)
+        await scoring.record_attempt(
+            user_id=test_user.id,
+            session_id=test_session.id,
+            challenge_id="hole-001",
+            prompt="Try 3",
+            response="Worse response",
+            input_tokens=25,
+            output_tokens=15,
+            is_correct=True,
+            attempt_type='submitted',
+        )
+
+        score3 = await scoring.get_score(test_user.id, test_session.id, "hole-001")
+        assert score3.total_tokens == 18  # Still MIN (18)
+        assert score3.total_attempts == 3
+
+    @pytest.mark.asyncio
+    async def test_practice_not_in_leaderboard(self, db_session, test_users, test_session):
+        """Test that practice swings don't appear in leaderboards."""
+        from app.models.session import SessionParticipant
+
+        # Add users as participants
+        for user in test_users:
+            participant = SessionParticipant(
+                session_id=test_session.id,
+                user_id=user.id,
+                joined_at=datetime.utcnow(),
+            )
+            db_session.add(participant)
+        await db_session.commit()
+
+        scoring = ScoringService(db_session)
+
+        # User 1: Only practice swings
+        await scoring.record_attempt(
+            user_id=test_users[0].id,
+            session_id=test_session.id,
+            challenge_id="hole-001",
+            prompt="Practice",
+            response="Response",
+            input_tokens=10,
+            output_tokens=5,
+            is_correct=True,
+            attempt_type='practice',
+        )
+
+        # User 2: Submitted attempt
+        await scoring.record_attempt(
+            user_id=test_users[1].id,
+            session_id=test_session.id,
+            challenge_id="hole-001",
+            prompt="Submitted",
+            response="Response",
+            input_tokens=12,
+            output_tokens=6,
+            is_correct=True,
+            attempt_type='submitted',
+        )
+
+        # User 3: Submitted attempt
+        await scoring.record_attempt(
+            user_id=test_users[2].id,
+            session_id=test_session.id,
+            challenge_id="hole-001",
+            prompt="Submitted",
+            response="Response",
+            input_tokens=14,
+            output_tokens=7,
+            is_correct=True,
+            attempt_type='submitted',
+        )
+
+        # Per-hole leaderboard should only show users 2 and 3
+        per_hole = await scoring.get_per_hole_leaderboard("hole-001", limit=10)
+        assert len(per_hole) == 2
+        user_ids_in_leaderboard = {entry["user_id"] for entry in per_hole}
+        assert test_users[0].id not in user_ids_in_leaderboard
+        assert test_users[1].id in user_ids_in_leaderboard
+        assert test_users[2].id in user_ids_in_leaderboard
+
+
+class TestCountAttempts:
+    """Test the count_attempts method with filters."""
+
+    @pytest.mark.asyncio
+    async def test_count_all_attempts(self, db_session, test_user, test_session):
+        """Test counting all attempts (practice + submitted)."""
+        scoring = ScoringService(db_session)
+
+        # 2 practice attempts
+        for i in range(2):
+            await scoring.record_attempt(
+                user_id=test_user.id,
+                session_id=test_session.id,
+                challenge_id="hole-001",
+                prompt=f"Practice {i}",
+                response="Response",
+                input_tokens=10,
+                output_tokens=5,
+                is_correct=False,
+                attempt_type='practice',
+            )
+
+        # 3 submitted attempts
+        for i in range(3):
+            await scoring.record_attempt(
+                user_id=test_user.id,
+                session_id=test_session.id,
+                challenge_id="hole-001",
+                prompt=f"Submitted {i}",
+                response="Response",
+                input_tokens=10,
+                output_tokens=5,
+                is_correct=(i == 2),  # Last one succeeds
+                attempt_type='submitted',
+            )
+
+        # Count all
+        total = await scoring.count_attempts(test_user.id, "hole-001")
+        assert total == 5
+
+        # Count practice only
+        practice = await scoring.count_attempts(test_user.id, "hole-001", attempt_type='practice')
+        assert practice == 2
+
+        # Count submitted only
+        submitted = await scoring.count_attempts(test_user.id, "hole-001", attempt_type='submitted')
+        assert submitted == 3
+
+    @pytest.mark.asyncio
+    async def test_count_attempts_zero(self, db_session, test_user):
+        """Test counting when no attempts exist."""
+        scoring = ScoringService(db_session)
+
+        count = await scoring.count_attempts(test_user.id, "hole-999")
+        assert count == 0
+
+        count_practice = await scoring.count_attempts(test_user.id, "hole-999", attempt_type='practice')
+        assert count_practice == 0
+
+        count_submitted = await scoring.count_attempts(test_user.id, "hole-999", attempt_type='submitted')
+        assert count_submitted == 0

@@ -58,12 +58,16 @@ async def test_session_timeout_dnf_marking(
             "challenge_id": first_challenge_id,
             "user_prompt": "Solve this challenge.",
             "system_prompt": None,
-            "context_files": []
+            "context_files": [],
+            "action": "submit"
         }
     )
 
     if attempt_response.status_code == 503:
         pytest.skip("LLM service unavailable")
+
+    if attempt_response.status_code == 422:
+        pytest.skip("LLM did not solve challenge correctly - cannot test with action=submit")
 
     assert attempt_response.status_code == 200
 
@@ -188,7 +192,8 @@ async def test_session_timeout_prevents_new_attempts(
             "challenge_id": challenge_ids[0],
             "user_prompt": "This should fail",
             "system_prompt": None,
-            "context_files": []
+            "context_files": [],
+            "action": "submit"
         }
     )
 
@@ -301,12 +306,16 @@ async def test_session_timeout_with_completed_challenges(
             "challenge_id": challenge_ids[0],
             "user_prompt": "Solve this.",
             "system_prompt": None,
-            "context_files": []
+            "context_files": [],
+            "action": "submit"
         }
     )
 
     if attempt_response.status_code == 503:
         pytest.skip("LLM service unavailable")
+
+    if attempt_response.status_code == 422:
+        pytest.skip("LLM did not solve challenge correctly - cannot test with action=submit")
 
     assert attempt_response.status_code == 200
     attempt_data = attempt_response.json()

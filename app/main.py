@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
-from fastapi import Depends, FastAPI, Request
+from fastapi import Depends, FastAPI, Query, Request
 from fastapi.exceptions import HTTPException
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -708,7 +708,8 @@ async def leaderboard_page(request: Request):
 @app.get("/htmx/leaderboard/global", response_class=HTMLResponse)
 async def htmx_global_leaderboard(
     request: Request,
-    limit: int = 20,
+    limit: int = 50,
+    user_id: int = Query(None),
     db: AsyncSession = Depends(get_db),
 ):
     """HTML partial for global leaderboard (htmx)"""
@@ -716,17 +717,26 @@ async def htmx_global_leaderboard(
         from app.services import ScoringService
 
         scoring_service = ScoringService(db)
-        leaderboard = await scoring_service.get_global_leaderboard(limit=limit)
+        leaderboard_data = await scoring_service.get_global_leaderboard(limit=limit)
+
+        logger.info(
+            f"Global leaderboard loaded: {len(leaderboard_data['completed'])} completed, "
+            f"{len(leaderboard_data['in_progress'])} in progress, user_id={user_id}"
+        )
 
         return templates.TemplateResponse(
             "partials/leaderboard_global.html",
             {
                 "request": request,
-                "entries": leaderboard,
+                "completed": leaderboard_data["completed"],
+                "in_progress": leaderboard_data["in_progress"],
+                "current_user_id": user_id,
             },
         )
     except Exception as e:
         logger.error(f"Error rendering global leaderboard: {e}")
+        import traceback
+        traceback.print_exc()
         return "<div class='text-center py-8 text-red-600'>Error loading leaderboard</div>"
 
 

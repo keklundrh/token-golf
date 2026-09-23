@@ -2,7 +2,7 @@
 Token Golf - Score Model
 
 Aggregated scores per user, per session, per challenge.
-Tracks total attempts and cumulative tokens across all attempts.
+Tracks submitted attempts and best (minimum) token count (ADR 011).
 """
 
 from datetime import datetime
@@ -23,8 +23,10 @@ class Score(Base):
     """
     Score model - aggregated scoring per user/session/challenge.
 
-    Represents a user's total score for one challenge within one session.
-    Updated after each attempt to track cumulative tokens and attempt count.
+    Represents a user's score for one challenge within one session.
+    Updated after each submitted attempt (ADR 011):
+    - total_attempts: count of submitted attempts
+    - total_tokens: best (minimum) tokens from all submitted attempts
     """
 
     __tablename__ = "scores"
@@ -58,25 +60,25 @@ class Score(Base):
         comment="Challenge this score is for",
     )
 
-    # Score tracking
+    # Score tracking (ADR 011: only submitted attempts)
     total_attempts: Mapped[int] = mapped_column(
         Integer,
         default=0,
         nullable=False,
-        comment="Total number of attempts made",
+        comment="Count of submitted attempts (practice attempts not included)",
     )
 
     total_tokens: Mapped[int] = mapped_column(
         Integer,
         default=0,
         nullable=False,
-        comment="Running total of all tokens used across all attempts",
+        comment="Best (minimum) tokens from all submitted attempts (ADR 011)",
     )
 
     # Completion tracking
     completed_at: Mapped[datetime | None] = mapped_column(
         nullable=True,
-        comment="When user successfully completed this challenge (first correct attempt)",
+        comment="When user first submitted a correct attempt for this challenge",
     )
 
     # Relationships

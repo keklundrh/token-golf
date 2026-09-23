@@ -128,6 +128,10 @@ class SubmitAttemptRequest(BaseModel):
     session_id: str = Field(..., description="Session identifier")
     challenge_id: str = Field(..., description="Challenge identifier")
     user_prompt: str = Field(..., description="User's prompt")
+    action: str = Field(
+        "practice",
+        description="Action type: 'practice' (practice swing, not recorded) or 'submit' (record score)"
+    )
     system_prompt: Optional[str] = Field(None, description="Custom system prompt")
     context_files: Optional[List[dict]] = Field(
         None, description="Context files to include"
@@ -139,6 +143,7 @@ class SubmitAttemptRequest(BaseModel):
                 "session_id": "session-abc123",
                 "challenge_id": "hole-001",
                 "user_prompt": "Write a function to add two numbers",
+                "action": "practice",
                 "system_prompt": "You are a helpful coding assistant.",
                 "context_files": [],
             }
@@ -149,15 +154,18 @@ class SubmitAttemptResponse(BaseModel):
     """Response after submitting an attempt."""
 
     attempt_id: int = Field(..., description="Attempt identifier")
+    attempt_type: str = Field(..., description="Type: 'practice' or 'submitted'")
     is_correct: bool = Field(..., description="Whether the answer was correct")
     validation_message: str = Field(..., description="Validation feedback")
     input_tokens: int = Field(..., description="Input tokens used")
     output_tokens: int = Field(..., description="Output tokens used")
     total_tokens: int = Field(..., description="Total tokens for this attempt")
     cumulative_tokens: int = Field(
-        ..., description="Cumulative tokens for this challenge"
+        ..., description="Cumulative tokens from submitted attempts only"
     )
     attempt_number: int = Field(..., description="Attempt number for this challenge")
+    practice_count: int = Field(..., description="Number of practice swings taken")
+    submitted_count: int = Field(..., description="Number of submitted attempts")
     llm_response: str = Field(..., description="LLM's response")
     next_action: str = Field(
         ..., description="Hint for frontend on what to do next"
@@ -277,9 +285,14 @@ def hash_password(password: str) -> str:
         Bcrypt hashed password string
     """
     # Bcrypt has a max password length of 72 bytes
-    # Truncate if necessary to prevent errors
-    if len(password.encode('utf-8')) > 72:
-        password = password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
+    # Truncate password bytes to 72, handling UTF-8 properly
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        # Truncate to 72 bytes
+        password_bytes = password_bytes[:72]
+        # Decode back, ignoring any incomplete multi-byte sequences at the end
+        password = password_bytes.decode('utf-8', errors='ignore')
+
     return bcrypt.hash(password)
 
 
@@ -546,6 +559,21 @@ async def submit_attempt(
             },
         )
 
+    # Validate action parameter (ADR 011: Practice Swings)
+    if request.action not in ("practice", "submit"):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "invalid_action",
+                "message": f"Invalid action: {request.action}. Must be 'practice' or 'submit'.",
+                "details": {"field": "action", "value": request.action},
+                "suggestions": [
+                    "Use 'practice' for practice swings (don't count toward score)",
+                    "Use 'submit' to record your score (only successful attempts can be submitted)",
+                ],
+            },
+        )
+
     # Verify session exists and is active (checks timeout automatically)
     session_manager = SessionManager(db)
     try:
@@ -694,8 +722,29 @@ async def submit_attempt(
         challenge=challenge,
     )
 
+    # Step 2.5: Block submission of failed attempts (ADR 011)
+    if request.action == "submit" and not validation_result.is_correct:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "cannot_submit_incorrect",
+                "message": "Cannot submit incorrect attempt. Only successful attempts can be recorded.",
+                "details": {
+                    "validation_message": validation_result.feedback or "Validation failed"
+                },
+                "suggestions": [
+                    "Use 'practice' action to test your solution",
+                    "Fix the validation errors and try again",
+                    "Only submit when your solution passes all checks",
+                ],
+            },
+        )
+
     # Step 3: Record attempt and score
     scoring_service = ScoringService(db)
+
+    # Determine attempt_type based on action
+    attempt_type = "submitted" if request.action == "submit" else "practice"
 
     attempt = await scoring_service.record_attempt(
         user_id=user_id,
@@ -708,11 +757,12 @@ async def submit_attempt(
         input_tokens=llm_response.input_tokens,
         output_tokens=llm_response.output_tokens,
         is_correct=validation_result.is_correct,
+        attempt_type=attempt_type,
     )
 
     await db.commit()
 
-    # Get cumulative score
+    # Get cumulative score (only from submitted attempts, per ADR 011)
     result = await db.execute(
         select(Score).where(
             Score.user_id == user_id,
@@ -722,27 +772,52 @@ async def submit_attempt(
     )
     score = result.scalar_one_or_none()
 
-    cumulative_tokens = score.total_tokens if score else attempt.total_tokens
+    # Cumulative tokens = best submitted attempt (stored in Score table)
+    # If no submitted attempts yet, show 0
+    cumulative_tokens = score.total_tokens if score else 0
 
-    logger.debug(
-        f"Attempt {attempt.id} recorded: is_correct={validation_result.is_correct}, "
-        f"tokens={attempt.total_tokens}, cumulative={cumulative_tokens}"
+    # Calculate practice and submitted attempt counts
+    practice_count = await scoring_service.count_attempts(
+        user_id=user_id,
+        challenge_id=request.challenge_id,
+        attempt_type="practice",
+    )
+    submitted_count = await scoring_service.count_attempts(
+        user_id=user_id,
+        challenge_id=request.challenge_id,
+        attempt_type="submitted",
     )
 
-    # Determine next action and suggestions
-    if validation_result.is_correct:
-        next_action = "next_challenge"
+    logger.debug(
+        f"{attempt_type.capitalize()} attempt {attempt.id} recorded: "
+        f"is_correct={validation_result.is_correct}, "
+        f"tokens={attempt.total_tokens}, cumulative={cumulative_tokens}, "
+        f"practice={practice_count}, submitted={submitted_count}"
+    )
+
+    # Determine next action and suggestions (ADR 011 logic)
+    if attempt_type == "practice" and validation_result.is_correct:
+        next_action = "can_submit"
         suggestions = None
-    else:
+    elif attempt_type == "practice" and not validation_result.is_correct:
         next_action = "retry"
         suggestions = [
             "Review the validation feedback",
             "Try a more specific or different prompt",
             "Check the challenge requirements",
         ]
+    elif attempt_type == "submitted":
+        # Submitted attempts are always correct (blocked earlier if not)
+        next_action = "next_challenge"
+        suggestions = None
+    else:
+        # Fallback (shouldn't reach here)
+        next_action = "retry"
+        suggestions = None
 
     return SubmitAttemptResponse(
         attempt_id=attempt.id,
+        attempt_type=attempt_type,
         is_correct=validation_result.is_correct,
         validation_message=validation_result.feedback or "",
         input_tokens=llm_response.input_tokens,
@@ -750,6 +825,8 @@ async def submit_attempt(
         total_tokens=attempt.total_tokens,
         cumulative_tokens=cumulative_tokens,
         attempt_number=attempt.attempt_number,
+        practice_count=practice_count,
+        submitted_count=submitted_count,
         llm_response=llm_response.response_text,
         next_action=next_action,
         suggestions=suggestions,
