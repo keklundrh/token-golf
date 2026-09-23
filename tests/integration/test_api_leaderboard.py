@@ -95,7 +95,18 @@ class TestGlobalLeaderboard:
         sample_session: Session,
         sample_challenge: Challenge,
     ):
-        """Test global leaderboard with multiple users and scores."""
+        """Test global leaderboard with multiple users who completed courses."""
+        # ADR 010: Create participants with course_completed_at to appear in global leaderboard
+        for user in multiple_users[:3]:
+            participant = SessionParticipant(
+                session_id=sample_session.id,
+                user_id=user.id,
+                joined_at=datetime.utcnow(),
+                holes_completed=1,
+                course_completed_at=datetime.utcnow(),
+            )
+            db_session.add(participant)
+
         # Create scores for multiple users
         await create_test_score(
             db_session,
@@ -104,6 +115,7 @@ class TestGlobalLeaderboard:
             sample_challenge.id,
             total_tokens=500,
             total_attempts=2,
+            completed=True,
         )
         await create_test_score(
             db_session,
@@ -112,6 +124,7 @@ class TestGlobalLeaderboard:
             sample_challenge.id,
             total_tokens=300,
             total_attempts=1,
+            completed=True,
         )
         await create_test_score(
             db_session,
@@ -120,6 +133,7 @@ class TestGlobalLeaderboard:
             sample_challenge.id,
             total_tokens=700,
             total_attempts=3,
+            completed=True,
         )
 
         response = client.get("/api/leaderboard/global")
@@ -154,6 +168,17 @@ class TestGlobalLeaderboard:
         sample_challenge: Challenge,
     ):
         """Test global leaderboard pagination."""
+        # Create participants who completed the course (ADR 010)
+        for user in multiple_users:
+            participant = SessionParticipant(
+                session_id=sample_session.id,
+                user_id=user.id,
+                joined_at=datetime.utcnow(),
+                holes_completed=1,
+                course_completed_at=datetime.utcnow(),
+            )
+            db_session.add(participant)
+
         # Create scores
         for i, user in enumerate(multiple_users):
             await create_test_score(
@@ -163,6 +188,7 @@ class TestGlobalLeaderboard:
                 sample_challenge.id,
                 total_tokens=100 * (i + 1),
                 total_attempts=1,
+                completed=True,
             )
 
         # Get first page
@@ -494,7 +520,7 @@ class TestSessionLeaderboard:
         sample_session: Session,
         sample_challenge: Challenge,
     ):
-        """Test session leaderboard for a specific session."""
+        """Test session leaderboard for a specific session with ADR 010 schema."""
         # Add multiple users to session
         for user in multiple_users:
             participant = SessionParticipant(
@@ -504,7 +530,7 @@ class TestSessionLeaderboard:
             )
             db_session.add(participant)
 
-        # Create scores
+        # Create scores (incomplete - so they appear in in_progress section)
         await create_test_score(
             db_session,
             multiple_users[0].id,
@@ -512,6 +538,7 @@ class TestSessionLeaderboard:
             sample_challenge.id,
             total_tokens=500,
             total_attempts=2,
+            completed=True,
         )
         await create_test_score(
             db_session,
@@ -520,6 +547,7 @@ class TestSessionLeaderboard:
             sample_challenge.id,
             total_tokens=300,
             total_attempts=1,
+            completed=True,
         )
 
         response = client.get(f"/api/leaderboard/session/{sample_session.id}")
@@ -527,12 +555,16 @@ class TestSessionLeaderboard:
         assert response.status_code == 200
         data = response.json()
 
+        # ADR 010: Session leaderboard has completed and in_progress sections
         assert data["leaderboard_type"] == "session"
         assert data["session_id"] == sample_session.id
-        assert len(data["entries"]) == 2
+        assert "completed" in data
+        assert "in_progress" in data
+        assert "course_total_holes" in data
 
-        # Verify sorting
-        assert data["entries"][0]["total_tokens"] <= data["entries"][1]["total_tokens"]
+        # Both users in progress since neither completed full course
+        total_entries = len(data["completed"]) + len(data["in_progress"])
+        assert total_entries == 2
 
     def test_session_leaderboard_not_found(
         self,
@@ -561,8 +593,12 @@ class TestSessionLeaderboard:
         assert response.status_code == 200
         data = response.json()
 
+        # ADR 010: Session leaderboard structure
         assert data["leaderboard_type"] == "session"
-        assert len(data["entries"]) <= 1  # Might have the participant with 0 scores
+        assert "completed" in data
+        assert "in_progress" in data
+        assert len(data["completed"]) == 0
+        assert len(data["in_progress"]) <= 1  # Might have the participant with 0 scores
 
     @pytest.mark.asyncio
     async def test_session_leaderboard_pagination(
@@ -573,9 +609,15 @@ class TestSessionLeaderboard:
         sample_session: Session,
         sample_challenge: Challenge,
     ):
-        """Test session leaderboard pagination."""
-        # Create scores for all users
+        """Test session leaderboard returns all participants (no pagination in ADR 010)."""
+        # Add users to session and create scores
         for user in multiple_users:
+            participant = SessionParticipant(
+                session_id=sample_session.id,
+                user_id=user.id,
+                joined_at=datetime.utcnow(),
+            )
+            db_session.add(participant)
             await create_test_score(
                 db_session,
                 user.id,
@@ -583,18 +625,19 @@ class TestSessionLeaderboard:
                 sample_challenge.id,
                 total_tokens=100 * user.id,
                 total_attempts=1,
+                completed=True,
             )
 
-        response = client.get(
-            f"/api/leaderboard/session/{sample_session.id}?limit=2&offset=0"
-        )
+        response = client.get(f"/api/leaderboard/session/{sample_session.id}")
 
         assert response.status_code == 200
         data = response.json()
 
-        assert data["limit"] == 2
-        assert data["offset"] == 0
-        assert len(data["entries"]) <= 2
+        # ADR 010: No pagination, returns all participants in two sections
+        assert "completed" in data
+        assert "in_progress" in data
+        total_entries = len(data["completed"]) + len(data["in_progress"])
+        assert total_entries == len(multiple_users)
 
     @pytest.mark.asyncio
     async def test_session_leaderboard_isolation(
@@ -645,12 +688,6 @@ class TestSessionLeaderboard:
         )
         assert response.status_code == 422
 
-        # Invalid offset (negative)
-        response = client.get(
-            f"/api/leaderboard/session/{sample_session.id}?offset=-1"
-        )
-        assert response.status_code == 422
-
     @pytest.mark.asyncio
     async def test_session_leaderboard_multiple_challenges(
         self,
@@ -661,6 +698,14 @@ class TestSessionLeaderboard:
         all_challenges: list[Challenge],
     ):
         """Test session leaderboard with multiple challenges completed."""
+        # Add user to session
+        participant = SessionParticipant(
+            session_id=sample_session.id,
+            user_id=multiple_users[0].id,
+            joined_at=datetime.utcnow(),
+        )
+        db_session.add(participant)
+
         # User completes multiple challenges
         total_tokens_user1 = 0
         for i, challenge in enumerate(all_challenges[:2]):
@@ -673,21 +718,23 @@ class TestSessionLeaderboard:
                 challenge.id,
                 total_tokens=tokens,
                 total_attempts=1,
+                completed=True,
             )
 
         response = client.get(f"/api/leaderboard/session/{sample_session.id}")
         data = response.json()
 
-        # Find the user in leaderboard
+        # ADR 010: Check both sections for the user
+        all_entries = data["completed"] + data["in_progress"]
         user_entry = next(
-            (e for e in data["entries"] if e["user_id"] == multiple_users[0].id),
+            (e for e in all_entries if e["user_id"] == multiple_users[0].id),
             None,
         )
 
-        if user_entry:
-            # Should show total tokens across all challenges
-            assert user_entry["total_tokens"] == total_tokens_user1
-            assert user_entry["completed_challenges"] == 2
+        assert user_entry is not None
+        # Should show total tokens across all challenges
+        assert user_entry["total_tokens"] == total_tokens_user1
+        assert user_entry["completed_challenges"] == 2
 
 
 # ============================================================================

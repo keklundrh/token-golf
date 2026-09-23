@@ -182,18 +182,21 @@ async def test_complete_game_flow(
     assert len(status_data["challenges"]) > 0
     assert status_data["total_tokens"] > 0
 
-    # Step 7: Check session leaderboard
+    # Step 7: Check session leaderboard (ADR 010: completed + in_progress sections)
     leaderboard_response = client.get(f"/api/leaderboard/session/{session_id}")
     assert leaderboard_response.status_code == 200
     leaderboard_data = leaderboard_response.json()
 
     assert leaderboard_data["leaderboard_type"] == "session"
     assert leaderboard_data["session_id"] == session_id
-    assert len(leaderboard_data["entries"]) > 0
+
+    # ADR 010: Check both sections
+    all_entries = leaderboard_data["completed"] + leaderboard_data["in_progress"]
+    assert len(all_entries) > 0
 
     # Verify our user is in the leaderboard
     user_in_leaderboard = any(
-        entry["user_id"] == user_id for entry in leaderboard_data["entries"]
+        entry["user_id"] == user_id for entry in all_entries
     )
     assert user_in_leaderboard
 

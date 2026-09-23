@@ -119,10 +119,11 @@ class SessionLeaderboardResponse(BaseModel):
         ..., description="Players who completed all holes"
     )
     in_progress: List[LeaderboardEntry] = Field(
-        ..., description="Players still in progress"
+        ..., description="Players still in progress or DNF"
     )
     session_id: str = Field(..., description="Session ID")
     course_total_holes: int = Field(..., description="Total holes in course")
+    session_status: str = Field(..., description="Session status: active, completed, or dnf")
 
     class Config:
         json_schema_extra = {
@@ -409,4 +410,5 @@ async def get_session_leaderboard(
         in_progress=in_progress_entries,
         session_id=session_id,
         course_total_holes=session.course_total_holes,
+        session_status=leaderboard_data.get("session_status", "active"),
     )

@@ -399,20 +399,21 @@ class ScoringService:
 
         Completed: Users who finished all holes in the course
         In Progress: Users still playing (not completed all holes)
+        DNF: Session timed out and user didn't complete (shown as in_progress with DNF status)
 
         Args:
             session_id: Session ID
             limit: Max number of entries to return per section
 
         Returns:
-            Dict with "completed" and "in_progress" keys, each containing
-            a list of player dicts (user_id, username, total_tokens,
-            holes_completed, total_attempts)
+            Dict with "completed", "in_progress", and "session_status" keys
         """
-        # Get course_total_holes for this session
-        session_stmt = select(Session.course_total_holes).where(Session.id == session_id)
+        # Get course_total_holes and session status
+        session_stmt = select(Session.course_total_holes, Session.status).where(Session.id == session_id)
         result = await self.db.execute(session_stmt)
-        course_total_holes = result.scalar_one()
+        row = result.one()
+        course_total_holes = row[0]
+        session_status = row[1]
 
         # COMPLETED SECTION: Users who finished all holes
         # Sort by total_tokens ascending (lower is better, golf scoring)
@@ -505,6 +506,7 @@ class ScoringService:
                 }
                 for row in in_progress_rows
             ],
+            "session_status": session_status,
         }
 
     async def get_global_leaderboard(
@@ -543,10 +545,10 @@ class ScoringService:
             )
             .join(Session, Session.id == Score.session_id)
             .where(
-                # Only completed courses
+                # Only completed courses - participant completion matters, not session status
+                # A user who finished before timeout should appear on global leaderboard
+                # even if the session later timed out to DNF (per ADR 010)
                 SessionParticipant.course_completed_at.is_not(None),
-                # Exclude DNF sessions
-                Session.status != "dnf",
             )
             .group_by(
                 Score.user_id,

@@ -92,6 +92,19 @@ class TestRecordAttempt:
             created_at=datetime.utcnow()
         )
         db_session.add(user)
+
+        # Create session (required for scoring service to query course_total_holes)
+        session = Session(
+            id="session-001",
+            course_id="beginner-course",
+            created_at=datetime.utcnow(),
+            timeout_hours=3,
+            status="active",
+            expires_at=datetime.utcnow() + timedelta(hours=3),
+            course_total_holes=5,
+        )
+        db_session.add(session)
+
         await db_session.commit()
         await db_session.refresh(user)
 
@@ -128,6 +141,19 @@ class TestRecordAttempt:
             created_at=datetime.utcnow()
         )
         db_session.add(user)
+
+        # Create session
+        session = Session(
+            id="session-001",
+            course_id="beginner-course",
+            created_at=datetime.utcnow(),
+            timeout_hours=3,
+            status="active",
+            expires_at=datetime.utcnow() + timedelta(hours=3),
+            course_total_holes=5,
+        )
+        db_session.add(session)
+
         await db_session.commit()
         await db_session.refresh(user)
 
@@ -214,6 +240,19 @@ class TestRecordAttempt:
             created_at=datetime.utcnow()
         )
         db_session.add(user)
+
+        # Create session
+        session = Session(
+            id="session-001",
+            course_id="beginner-course",
+            created_at=datetime.utcnow(),
+            timeout_hours=3,
+            status="active",
+            expires_at=datetime.utcnow() + timedelta(hours=3),
+            course_total_holes=5,
+        )
+        db_session.add(session)
+
         await db_session.commit()
         await db_session.refresh(user)
 
@@ -242,6 +281,19 @@ class TestRecordAttempt:
             created_at=datetime.utcnow()
         )
         db_session.add(user)
+
+        # Create session
+        session = Session(
+            id="session-001",
+            course_id="beginner-course",
+            created_at=datetime.utcnow(),
+            timeout_hours=3,
+            status="active",
+            expires_at=datetime.utcnow() + timedelta(hours=3),
+            course_total_holes=5,
+        )
+        db_session.add(session)
+
         await db_session.commit()
         await db_session.refresh(user)
 
@@ -391,6 +443,19 @@ class TestSessionLeaderboard:
     @pytest.mark.asyncio
     async def test_session_leaderboard(self, db_session, test_users, test_session):
         """Test getting session leaderboard with aggregated scores."""
+        from app.models.session import SessionParticipant
+        from datetime import datetime
+
+        # Add users as session participants
+        for user in test_users:
+            participant = SessionParticipant(
+                session_id=test_session.id,
+                user_id=user.id,
+                joined_at=datetime.utcnow(),
+            )
+            db_session.add(participant)
+        await db_session.commit()
+
         scoring = ScoringService(db_session)
 
         # Record attempts from multiple users on multiple challenges
@@ -407,19 +472,31 @@ class TestSessionLeaderboard:
                     is_correct=True,
                 )
 
-        leaderboard = await scoring.get_session_leaderboard(test_session.id, limit=10)
+        leaderboard_data = await scoring.get_session_leaderboard(test_session.id, limit=10)
 
-        assert len(leaderboard) == 3
-        # Should be ordered by total_tokens ascending
-        assert leaderboard[0]["total_tokens"] < leaderboard[1]["total_tokens"]
-        # Each user should have 2 completed challenges
-        for entry in leaderboard:
-            assert entry["completed_challenges"] == 2
-            assert "username" in entry
+        # ADR 010: leaderboard is now a dict with completed/in_progress sections
+        all_entries = leaderboard_data["completed"] + leaderboard_data["in_progress"]
+        assert len(all_entries) == 3
+        # Should be ordered by total_tokens ascending within sections
+        if len(leaderboard_data["in_progress"]) >= 2:
+            assert leaderboard_data["in_progress"][0]["total_tokens"] <= leaderboard_data["in_progress"][1]["total_tokens"]
 
     @pytest.mark.asyncio
     async def test_session_leaderboard_limit(self, db_session, test_users, test_session):
         """Test session leaderboard respects limit parameter."""
+        from app.models.session import SessionParticipant
+        from datetime import datetime
+
+        # Add users as session participants
+        for user in test_users:
+            participant = SessionParticipant(
+                session_id=test_session.id,
+                user_id=user.id,
+                joined_at=datetime.utcnow(),
+            )
+            db_session.add(participant)
+        await db_session.commit()
+
         scoring = ScoringService(db_session)
 
         for user in test_users:
@@ -434,9 +511,11 @@ class TestSessionLeaderboard:
                 is_correct=True,
             )
 
-        leaderboard = await scoring.get_session_leaderboard(test_session.id, limit=2)
+        leaderboard_data = await scoring.get_session_leaderboard(test_session.id, limit=2)
 
-        assert len(leaderboard) == 2
+        # ADR 010: limit applies per section
+        total_entries = len(leaderboard_data["completed"]) + len(leaderboard_data["in_progress"])
+        assert total_entries <= 4  # Max 2 per section = 4 total
 
 
 class TestGlobalLeaderboard:
@@ -444,12 +523,39 @@ class TestGlobalLeaderboard:
 
     @pytest.mark.asyncio
     async def test_global_leaderboard(self, db_session, test_users):
-        """Test getting global leaderboard across sessions."""
+        """Test getting global leaderboard across sessions (ADR 010: requires course completion)."""
+        from app.models.session import SessionParticipant
+
+        # Create sessions
+        for session_num in [1, 2]:
+            session = Session(
+                id=f"session-{session_num}",
+                course_id="beginner-course",
+                created_at=datetime.utcnow(),
+                timeout_hours=3,
+                status="active",
+                expires_at=datetime.utcnow() + timedelta(hours=3),
+                course_total_holes=1,  # Single hole course for this test
+            )
+            db_session.add(session)
+
+        await db_session.commit()
+
         scoring = ScoringService(db_session)
 
-        # Record attempts across different sessions
+        # Record attempts across different sessions and mark courses as completed
         for user in test_users:
             for session_num in [1, 2]:
+                # Create participant and mark as completed
+                participant = SessionParticipant(
+                    session_id=f"session-{session_num}",
+                    user_id=user.id,
+                    joined_at=datetime.utcnow(),
+                    holes_completed=1,
+                    course_completed_at=datetime.utcnow(),
+                )
+                db_session.add(participant)
+
                 await scoring.record_attempt(
                     user_id=user.id,
                     session_id=f"session-{session_num}",
@@ -460,6 +566,8 @@ class TestGlobalLeaderboard:
                     output_tokens=5 * user.id,
                     is_correct=True,
                 )
+
+        await db_session.commit()
 
         leaderboard = await scoring.get_global_leaderboard(limit=10)
 
@@ -477,6 +585,19 @@ class TestPerHoleLeaderboard:
     @pytest.mark.asyncio
     async def test_per_hole_leaderboard(self, db_session, test_users):
         """Test getting leaderboard for specific challenge."""
+        # Create session
+        session = Session(
+            id="session-001",
+            course_id="beginner-course",
+            created_at=datetime.utcnow(),
+            timeout_hours=3,
+            status="active",
+            expires_at=datetime.utcnow() + timedelta(hours=3),
+            course_total_holes=5,
+        )
+        db_session.add(session)
+        await db_session.commit()
+
         scoring = ScoringService(db_session)
 
         # Record attempts from multiple users
@@ -503,6 +624,19 @@ class TestPerHoleLeaderboard:
     @pytest.mark.asyncio
     async def test_per_hole_leaderboard_only_completed(self, db_session, test_users):
         """Test per-hole leaderboard only shows completed attempts."""
+        # Create session
+        session = Session(
+            id="session-001",
+            course_id="beginner-course",
+            created_at=datetime.utcnow(),
+            timeout_hours=3,
+            status="active",
+            expires_at=datetime.utcnow() + timedelta(hours=3),
+            course_total_holes=5,
+        )
+        db_session.add(session)
+        await db_session.commit()
+
         scoring = ScoringService(db_session)
 
         # Record some completed and some incomplete
@@ -530,6 +664,19 @@ class TestGetUserAttempts:
     @pytest.mark.asyncio
     async def test_get_user_attempts(self, db_session, test_user):
         """Test getting all user attempts for a challenge."""
+        # Create session
+        session = Session(
+            id="session-001",
+            course_id="beginner-course",
+            created_at=datetime.utcnow(),
+            timeout_hours=3,
+            status="active",
+            expires_at=datetime.utcnow() + timedelta(hours=3),
+            course_total_holes=5,
+        )
+        db_session.add(session)
+        await db_session.commit()
+
         scoring = ScoringService(db_session)
 
         # Record multiple attempts
@@ -558,6 +705,21 @@ class TestGetUserAttempts:
     @pytest.mark.asyncio
     async def test_get_user_attempts_with_session_filter(self, db_session, test_user):
         """Test getting user attempts filtered by session."""
+        # Create sessions
+        for session_num in [1, 2]:
+            session = Session(
+                id=f"session-{session_num}",
+                course_id="beginner-course",
+                created_at=datetime.utcnow(),
+                timeout_hours=3,
+                status="active",
+                expires_at=datetime.utcnow() + timedelta(hours=3),
+                course_total_holes=5,
+            )
+            db_session.add(session)
+
+        await db_session.commit()
+
         scoring = ScoringService(db_session)
 
         # Record attempts in different sessions

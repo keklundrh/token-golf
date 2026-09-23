@@ -7,7 +7,7 @@ Orchestrates the game flow:
 - Get game state
 """
 
-import hashlib
+from passlib.hash import bcrypt
 import logging
 import secrets
 import string
@@ -268,19 +268,33 @@ def generate_password(length: int = 12) -> str:
 
 def hash_password(password: str) -> str:
     """
-    Hash a password using SHA256 with salt.
+    Hash a password using bcrypt.
 
-    Note: For MVP/demo purposes. Production should use bcrypt/argon2.
+    Args:
+        password: Plain text password (truncated to 72 bytes if longer)
+
+    Returns:
+        Bcrypt hashed password string
     """
-    # Use a fixed salt for simplicity in MVP
-    # TODO: Use proper password hashing (bcrypt/argon2) for production
-    salt = "token-golf-mvp-salt"
-    return hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
+    # Bcrypt has a max password length of 72 bytes
+    # Truncate if necessary to prevent errors
+    if len(password.encode('utf-8')) > 72:
+        password = password.encode('utf-8')[:72].decode('utf-8', errors='ignore')
+    return bcrypt.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash."""
-    return hash_password(plain_password) == hashed_password
+    """
+    Verify a password against its bcrypt hash.
+
+    Args:
+        plain_password: Plain text password to verify
+        hashed_password: Bcrypt hash to verify against
+
+    Returns:
+        True if password matches, False otherwise
+    """
+    return bcrypt.verify(plain_password, hashed_password)
 
 
 # ============================================================================
@@ -472,6 +486,7 @@ async def start_game(
         expires_at=datetime.utcnow()
         + timedelta(hours=settings.session_timeout_hours),
         status="active",
+        course_total_holes=len(challenge_ids),  # Critical fix: set total holes for completion tracking
     )
     db.add(session)
 
@@ -625,7 +640,11 @@ async def submit_attempt(
             context_files=ctx_contents,
             system_prompt=request.system_prompt,
         )
-    except Exception as e:
+    except (ConnectionError, TimeoutError, RuntimeError) as e:
+        # Only catch LLM-related errors for weather delay
+        # ConnectionError: Network issues
+        # TimeoutError: LLM timeout
+        # RuntimeError: LLM service errors
         logger.error(f"LLM API error (weather delay): {e}")
 
         # Weather delay: clear this hole's tokens unless already completed

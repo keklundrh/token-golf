@@ -245,6 +245,14 @@
 }
 
 /**
+ * Alpine.js - x-cloak directive
+ * Hide elements until Alpine.js has initialized
+ */
+[x-cloak] {
+  display: none !important;
+}
+
+/**
  * Accessibility - Reduced Motion Support
  */
 @media (prefers-reduced-motion: reduce) {

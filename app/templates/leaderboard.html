@@ -7,7 +7,7 @@
      x-data="{
          view: 'global',
          selectedHole: null,
-         sessionId: localStorage.getItem('token_golf_session_id') || null,
+         sessionId: sessionStorage.getItem('token_golf_session_id') || null,  // Fix: use sessionStorage consistently
          currentUserId: null,
          challenges: [],
          loading: false,
@@ -41,7 +41,7 @@
                  })
                  .catch(() => {
                      // Session doesn't exist or expired
-                     localStorage.removeItem('token_golf_session_id');
+                     sessionStorage.removeItem('token_golf_session_id');  // Fix: use sessionStorage consistently
                      sessionId = null;
                  });
          }

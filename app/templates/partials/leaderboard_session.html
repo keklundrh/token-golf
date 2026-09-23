@@ -99,9 +99,15 @@
                             <div class="font-semibold text-gray-900">{{ entry.username }}</div>
                         </td>
                         <td class="px-4 py-4">
+                            {% if session_status == 'dnf' %}
+                            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-red-600 text-white">
+                                DNF
+                            </span>
+                            {% else %}
                             <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-blue-600 text-white">
                                 IP
                             </span>
+                            {% endif %}
                         </td>
                         <td class="px-4 py-4 text-center">
                             <div class="flex items-center justify-center space-x-1">
@@ -142,14 +148,18 @@
 <!-- Status Legend -->
 <div class="mt-6 bg-gray-100 rounded-lg p-4">
     <h4 class="text-sm font-semibold text-gray-700 mb-3">Status Key</h4>
-    <div class="grid grid-cols-2 gap-3 text-sm">
+    <div class="grid grid-cols-3 gap-3 text-sm">
         <div class="flex items-center">
             <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-green-600 text-white mr-2">F</span>
-            <span class="text-gray-600">Finished (all holes)</span>
+            <span class="text-gray-600">Finished</span>
         </div>
         <div class="flex items-center">
             <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-blue-600 text-white mr-2">IP</span>
             <span class="text-gray-600">In Progress</span>
+        </div>
+        <div class="flex items-center">
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-red-600 text-white mr-2">DNF</span>
+            <span class="text-gray-600">Did Not Finish</span>
         </div>
     </div>
 </div>

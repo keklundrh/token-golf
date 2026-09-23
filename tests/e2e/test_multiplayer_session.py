@@ -166,26 +166,29 @@ async def test_multiplayer_session(
         assert score is not None
         assert score.total_tokens > 0
 
-    # === Check session-specific leaderboards ===
+    # === Check session-specific leaderboards (ADR 010: completed + in_progress) ===
     # Each session should only show its own participants
 
     user1_leaderboard = client.get(f"/api/leaderboard/session/{user1_session}")
     assert user1_leaderboard.status_code == 200
     user1_lb_data = user1_leaderboard.json()
-    assert len(user1_lb_data["entries"]) == 1  # Only user 1
-    assert user1_lb_data["entries"][0]["user_id"] == user1_id
+    user1_all = user1_lb_data["completed"] + user1_lb_data["in_progress"]
+    assert len(user1_all) == 1  # Only user 1
+    assert user1_all[0]["user_id"] == user1_id
 
     user2_leaderboard = client.get(f"/api/leaderboard/session/{user2_session}")
     assert user2_leaderboard.status_code == 200
     user2_lb_data = user2_leaderboard.json()
-    assert len(user2_lb_data["entries"]) == 1  # Only user 2
-    assert user2_lb_data["entries"][0]["user_id"] == user2_id
+    user2_all = user2_lb_data["completed"] + user2_lb_data["in_progress"]
+    assert len(user2_all) == 1  # Only user 2
+    assert user2_all[0]["user_id"] == user2_id
 
     user3_leaderboard = client.get(f"/api/leaderboard/session/{user3_session}")
     assert user3_leaderboard.status_code == 200
     user3_lb_data = user3_leaderboard.json()
-    assert len(user3_lb_data["entries"]) == 1  # Only user 3
-    assert user3_lb_data["entries"][0]["user_id"] == user3_id
+    user3_all = user3_lb_data["completed"] + user3_lb_data["in_progress"]
+    assert len(user3_all) == 1  # Only user 3
+    assert user3_all[0]["user_id"] == user3_id
 
     # === Check global leaderboard ===
     # Should show all users (if they completed challenges)

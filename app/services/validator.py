@@ -369,30 +369,88 @@ class ValidatorService:
         timeout_ms: int = 1000,
     ) -> Any:
         """
-        Execute Python code with test inputs.
+        Execute Python code with test inputs in a restricted environment.
 
-        NOTE: This is a simplified execution for MVP.
-        Production should use proper sandboxing (docker, etc.)
+        SECURITY WARNING: This implementation has limited sandboxing.
+        For production deployment, use containerized execution (Docker/podman)
+        or a proper sandboxing solution like RestrictedPython.
+
+        Current protections:
+        - Restricted __builtins__ (no file I/O, os, subprocess)
+        - Timeout enforcement (Unix-only via signal)
+        - No network access in restricted globals
 
         Args:
             code: Python code to execute
             test_input: Dictionary of input parameters
-            timeout_ms: Timeout in milliseconds (currently not enforced)
+            timeout_ms: Timeout in milliseconds
 
         Returns:
             Output from code execution
 
         Raises:
-            Exception: If code execution fails
+            TimeoutError: If execution exceeds timeout
+            ValueError: If code execution fails
         """
-        # Create execution namespace
-        namespace = {}
+        import signal
+
+        def timeout_handler(signum, frame):
+            raise TimeoutError(f"Code execution exceeded {timeout_ms}ms timeout")
+
+        # Restricted builtins - remove dangerous functions
+        safe_builtins = {
+            '__build_class__': __builtins__['__build_class__'],
+            '__name__': '__main__',
+            'abs': abs,
+            'all': all,
+            'any': any,
+            'bool': bool,
+            'dict': dict,
+            'enumerate': enumerate,
+            'filter': filter,
+            'float': float,
+            'int': int,
+            'isinstance': isinstance,
+            'len': len,
+            'list': list,
+            'map': map,
+            'max': max,
+            'min': min,
+            'print': print,
+            'range': range,
+            'reversed': reversed,
+            'set': set,
+            'sorted': sorted,
+            'str': str,
+            'sum': sum,
+            'tuple': tuple,
+            'type': type,
+            'zip': zip,
+        }
+
+        # Create restricted execution namespace
+        namespace = {'__builtins__': safe_builtins}
+
+        # Set timeout (Unix-only)
+        try:
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(max(1, timeout_ms // 1000))  # Convert to seconds, minimum 1
+        except AttributeError:
+            # Windows doesn't have signal.SIGALRM - skip timeout
+            logger.warning("Timeout not available on this platform (Windows)")
 
         # Execute code to define functions/variables
         try:
             exec(code, namespace)
+        except TimeoutError:
+            raise
         except Exception as e:
             raise ValueError(f"Code execution failed: {e}")
+        finally:
+            try:
+                signal.alarm(0)  # Cancel alarm
+            except AttributeError:
+                pass  # Windows
 
         # Find the main function to call
         # Look for common patterns: main(), solve(), answer(), or first function
