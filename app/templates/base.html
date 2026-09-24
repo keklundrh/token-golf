@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Token Golf - Master AI efficiency through competitive prompt optimization. Just like golf, lower token scores win.">
+    <meta name="keywords" content="AI, prompt engineering, token optimization, competitive learning, Claude, LLM efficiency">
+    <meta name="author" content="Token Golf">
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:title" content="{% block og_title %}Token Golf - Master AI Efficiency{% endblock %}">
+    <meta property="og:description" content="Master AI efficiency through competitive play. Lower scores win!">
+    <meta property="og:type" content="website">
+
+    <title>{% block title %}Token Golf{% endblock %}</title>
+
+    <!-- Tailwind CSS -->
+    <link rel="stylesheet" href="/static/css/output.css">
+
+    <!-- htmx -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/json-enc.js"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-golf-fairway min-h-screen flex flex-col">
+    <!-- Navigation Header -->
+    <header class="bg-white shadow-md border-b-2 border-golf-green">
+        <nav class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <!-- Logo/Brand -->
+                <a href="/" class="flex items-center space-x-3 hover:opacity-80 transition-opacity">
+                    <div class="text-3xl">&#9971;</div>
+                    <div>
+                        <h1 class="text-2xl font-bold tracking-tight text-golf-navy">Token Golf</h1>
+                        <p class="text-xs text-golf-green">Master AI Efficiency</p>
+                    </div>
+                </a>
+
+                <!-- Navigation Links -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="/" class="text-golf-navy hover:text-golf-green transition-colors duration-200 font-medium">Home</a>
+                    <a href="/challenges" class="text-golf-navy hover:text-golf-green transition-colors duration-200 font-medium">Challenges</a>
+                    <a href="/leaderboard" class="text-golf-navy hover:text-golf-green transition-colors duration-200 font-medium">Leaderboard</a>
+                    <a href="/how-to-play" class="text-golf-navy hover:text-golf-green transition-colors duration-200 font-medium">How to Play</a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden" x-data="{ open: false }">
+                    <button @click="open = !open" class="text-golf-navy hover:text-golf-green focus:outline-none">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path x-show="!open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                            <path x-show="open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+
+                    <!-- Mobile Menu -->
+                    <div x-show="open"
+                         x-transition:enter="transition ease-out duration-200"
+                         x-transition:enter-start="opacity-0 transform scale-95"
+                         x-transition:enter-end="opacity-100 transform scale-100"
+                         x-transition:leave="transition ease-in duration-150"
+                         x-transition:leave-start="opacity-100 transform scale-100"
+                         x-transition:leave-end="opacity-0 transform scale-95"
+                         class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50 border border-golf-gray-light">
+                        <a href="/" class="block px-4 py-2 text-golf-navy hover:bg-golf-fairway hover:text-golf-green transition-colors">Home</a>
+                        <a href="/challenges" class="block px-4 py-2 text-golf-navy hover:bg-golf-fairway hover:text-golf-green transition-colors">Challenges</a>
+                        <a href="/leaderboard" class="block px-4 py-2 text-golf-navy hover:bg-golf-fairway hover:text-golf-green transition-colors">Leaderboard</a>
+                        <a href="/how-to-play" class="block px-4 py-2 text-golf-navy hover:bg-golf-fairway hover:text-golf-green transition-colors">How to Play</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t-2 border-golf-green mt-auto">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+                <div class="text-center md:text-left">
+                    <p class="font-semibold text-golf-navy">Token Golf</p>
+                    <p class="text-sm text-golf-gray">Teaching AI efficiency through competitive play</p>
+                </div>
+                <div class="flex items-center space-x-4 text-sm text-golf-gray">
+                    <span>Powered by Claude</span>
+                    <span>|</span>
+                    <span>&copy; 2026</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

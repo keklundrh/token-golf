@@ -1,285 +1,105 @@
-# ADR 001: Technology Stack Selection
+# ADR 001: Technology Stack
 
 ## Status
 
-Accepted
+Accepted (consolidated 2026-09-24; absorbs former ADR 002: Tailwind CSS, ADR 004: Alembic, ADR 006: Podman. Containerization updated from Docker to Podman per former ADR 006)
 
 ## Context
 
-Token Golf requires a web application that can:
-- Run locally on developer laptops for testing
-- Deploy to OpenShift for production (conference demos)
-- Handle 100+ concurrent users during conferences
-- Provide real-time-ish updates for leaderboards
-- Be maintained by a team comfortable with Python
-- Minimize JavaScript complexity
-- Support rapid development and iteration
-
-### Key Requirements
-
-**Functional:**
-- Interactive web UI with chat-style interface
-- Real-time leaderboard updates
-- Token counting and scoring
-- LLM integration (Claude API → OpenShift AI)
-- Challenge management system
-- User session management
-
-**Non-Functional:**
-- Simple local development setup
-- Container-deployable (Docker/OpenShift)
-- Scalable to conference workloads
-- Maintainable by Python developers
-- Minimal frontend complexity
-- Fast iteration cycles
-
-**Constraints:**
-- Team expertise: Python (strong), JavaScript (limited)
-- Deployment target: OpenShift
-- No Node.js backend preferred
-- Must be open source
-- Modern, well-maintained technologies
+Token Golf must run on developer laptops, deploy to OpenShift for conference production, handle 100+ concurrent users, and be maintained by a Python-strong / JavaScript-limited team. Constraints: open-source dependencies, no Node.js backend preferred, OpenShift deployment target, rapid iteration ahead of conference demos.
 
 ## Decision
 
-We will use the following technology stack:
-
 ### Backend
-- **Framework**: FastAPI (Python 3.11+)
+- **Framework**: FastAPI (Python 3.11+) — native async for concurrent LLM requests, automatic OpenAPI docs, Pydantic typing, dependency injection
 - **Database**: SQLite (dev) → PostgreSQL (prod)
 - **ORM**: SQLAlchemy 2.0
-- **Migrations**: Alembic
-- **Async Runtime**: uvicorn with asyncio
+- **Migrations**: Alembic from day one (former ADR 004)
+- **Runtime**: uvicorn with asyncio
 
 ### Frontend
-- **Rendering**: Server-side with Jinja2 templates
-- **Interactivity**: htmx for AJAX
-- **Minimal JS**: Alpine.js (15kb) for component state
-- **Styling**: Modern CSS (framework TBD - likely Tailwind or Pico.css)
+- **Rendering**: server-side Jinja2 templates
+- **Interactivity**: htmx for AJAX; Alpine.js (15kb) for local component state
+- **Styling**: Tailwind CSS (former ADR 002) — JIT mode, custom golf-themed palette, purged production builds
 
 ### LLM Integration
-- **Development**: Anthropic Claude API (direct HTTP client)
-- **Production**: OpenShift AI (via abstraction layer)
+- **Development**: Anthropic Claude API behind an `LLMClient` abstraction from day one
+- **Production**: OpenShift AI Models as a Service via the same abstraction
 
-### Deployment
-- **Containerization**: Docker
-- **Orchestration**: OpenShift/Kubernetes
-- **Process Manager**: uvicorn workers
+### Containerization (former ADR 006)
+- **Podman + podman-compose** for all local container operations; OpenShift's native runtime (CRI-O) in production
+- Rootless by default; OCI-compliant Dockerfiles (Docker-compatible via `alias docker=podman`)
+- Will not: require Docker, maintain separate Docker/Podman configs, use non-OCI features, run containers as root
 
-### Development Tools
-- **Code Quality**: Black, isort, flake8, mypy
-- **Testing**: pytest, pytest-asyncio, httpx
-- **Pre-commit**: Automated checks
+### Development Tooling
+- Quality: Black, isort, flake8, mypy; pre-commit hooks
+- Testing: pytest, pytest-asyncio, httpx; mock LLM responses in tests
+
+**Scaling path if needed**: Redis (sessions/cache) → PostgreSQL → WebSockets → CDN.
 
 ## Rationale
 
-### FastAPI
-- Native async/await for concurrent LLM requests
-- Excellent performance without Node.js
-- Automatic OpenAPI documentation
-- Strong typing with Pydantic
-- Built-in dependency injection
-- Large, active community
-- WebSocket support for future real-time features
-
-### Server-Side Rendering (htmx + Jinja2)
-- Minimal JavaScript complexity
-- Progressive enhancement approach
-- Server-controlled state (simpler debugging)
-- Plays to Python team strengths
-- Good enough performance for our use case
-- No build step or npm dependencies
-
-### Alpine.js
-- Tiny footprint (15kb)
-- Perfect for pill UI (add/remove elements)
-- Declarative syntax (HTML attributes)
-- No build step required
-- Good documentation
-- Complements htmx well
-
-### SQLite → PostgreSQL
-- Start simple with SQLite (single file, no setup)
-- Well-defined migration path to PostgreSQL
-- SQLAlchemy abstracts differences
-- Both well-supported by FastAPI ecosystem
-
-### Docker/OpenShift
-- Standard containerization
-- OpenShift is deployment target (requirement)
-- Portable between environments
-- Easy scaling with replicas
+- **FastAPI over Django/Flask**: best async fit for LLM-heavy API work; Django heavier than needed, Flask async immature
+- **htmx + Alpine over SPA**: minimal JavaScript, server-controlled state, plays to team strengths; React/Vue SPAs add build pipelines, CORS, and state complexity not justified by our interactivity needs
+- **Tailwind over Pico/Bootstrap/custom/CSS-in-JS**: utility classes enable fast iteration with a consistent design system and tiny purged builds; Pico too restrictive for conference-grade UI, Bootstrap heavier with a recognizable look, CSS-in-JS conflicts with server-side rendering, custom CSS too slow
+- **Alembic from the start**: retrofitting migrations onto an existing database is painful; manual SQL is error-prone; recreate-on-change loses data; team learns the tool while stakes are low
+- **SQLite → PostgreSQL**: start simple; SQLAlchemy abstracts the switch
+- **Podman over Docker**: OpenShift runs Podman/CRI-O so local runtime matches production; rootless is better security; avoids Docker Desktop licensing; no daemon overhead. Kind/Minikube rejected as overkill for single-service development; no-containers rejected for environment parity
+- **Phoenix LiveView rejected**: zero Elixir experience, smaller ecosystem
 
 ## Consequences
 
-### Positive Consequences
+### Positive
+- Python-centric stack with few moving parts
+- No frontend build pipeline beyond Tailwind
+- Local/production container parity ("works on my machine" minimized)
+- Reversible, auditable schema changes
+- Fast iteration cycles
 
-- **Python-Centric**: Leverages team's Python expertise
-- **Simple Stack**: Fewer technologies to learn and maintain
-- **Fast Development**: No frontend build pipeline, rapid iteration
-- **Scalable**: Async FastAPI handles concurrent LLM requests efficiently
-- **Deployable**: Docker + OpenShift is well-trodden path
-- **Testable**: Great testing tools in Python ecosystem
-- **Type Safe**: Pydantic + mypy catch errors early
-- **Observable**: Standard Python logging and monitoring
-
-### Negative Consequences
-
-- **Server Load**: Server-side rendering requires more server resources than SPA
-- **Network Chattiness**: htmx makes frequent requests vs. batched SPA calls
-- **Limited Interactivity**: Can't match rich SPA interactions (not needed for our use case)
-- **State Management**: Server-side session state can complicate scaling (mitigated with Redis later)
-- **Alpine.js Learning**: Small learning curve for team
+### Negative
+- Server-side rendering uses more server resources; htmx is chatty vs batched SPAs
+- podman-compose less mature than docker-compose; most tutorials assume Docker
+- Alembic adds a step per model change; merge conflicts in migrations possible
+- Small learning curves for Tailwind, Alpine, Alembic, Podman
 
 ### Risks
-
-- **Risk**: htmx performance insufficient for 100+ concurrent users
-  - **Mitigation**: Load test early, can add caching/Redis if needed
-  - **Likelihood**: Low - htmx designed for this
-  
-- **Risk**: SQLite doesn't handle concurrent writes at scale
-  - **Mitigation**: Migrate to PostgreSQL when scaling (planned)
-  - **Likelihood**: Medium - expected and planned for
-  
-- **Risk**: Team struggles with Alpine.js
-  - **Mitigation**: Limited scope (just pill UI), good docs
-  - **Likelihood**: Low - simpler than React/Vue
-  
-- **Risk**: OpenShift AI integration differs significantly from Claude API
-  - **Mitigation**: Abstraction layer (LLMClient) from day one
-  - **Likelihood**: Medium - mitigated by design
+- htmx at 100+ concurrent users → load test early, add caching/Redis if needed
+- SQLite concurrent writes at scale → planned PostgreSQL migration
+- OpenShift AI differs from Claude API → abstraction layer from day one
+- podman-compose feature gaps → compose file sticks to well-supported basics; `podman play kube` fallback
 
 ## Alternatives Considered
 
-### Alternative 1: Node.js + Express + React
-
-- **Description**: Full JavaScript stack with React SPA
-- **Pros**: 
-  - Rich client-side interactivity
-  - Huge ecosystem
-  - Team could learn modern JS
-  - Standard SPA patterns
-- **Cons**: 
-  - Team not strong in JavaScript
-  - Two language environments (JS + Python for LLM?)
-  - Build pipeline complexity
-  - More moving parts
-  - Doesn't leverage team strengths
-- **Why not chosen**: Against team expertise, adds complexity
-
-### Alternative 2: Django + HTMX
-
-- **Description**: Django instead of FastAPI
-- **Pros**: 
-  - Batteries-included framework
-  - Excellent admin interface
-  - Large ecosystem
-  - Similar rendering approach
-- **Cons**: 
-  - Heavier framework (we don't need most features)
-  - Less async-friendly than FastAPI
-  - Slower for API-heavy workloads
-  - More opinionated (good and bad)
-- **Why not chosen**: FastAPI better fit for async LLM calls, modern patterns
-
-### Alternative 3: Flask + Vanilla JavaScript
-
-- **Description**: Lighter Python framework, no htmx/Alpine
-- **Pros**: 
-  - Maximum simplicity
-  - Fewer dependencies
-  - Team knows Flask
-- **Cons**: 
-  - No async support (Flask 3.0 has it but immature)
-  - Manual AJAX code gets messy
-  - Reinventing patterns htmx provides
-  - Less structure
-- **Why not chosen**: htmx provides better UX without complexity tax
-
-### Alternative 4: Full SPA (React/Vue) + FastAPI
-
-- **Description**: FastAPI for API only, separate React/Vue frontend
-- **Pros**: 
-  - Modern SPA experience
-  - Clear API/UI separation
-  - Could be more responsive
-- **Cons**: 
-  - Two separate deployment artifacts
-  - Complex frontend build pipeline
-  - State management complexity (Redux/Vuex)
-  - Team learning curve
-  - CORS complications
-  - Overkill for our interactivity needs
-- **Why not chosen**: Complexity not justified by requirements
-
-### Alternative 5: Phoenix LiveView (Elixir)
-
-- **Description**: Elixir framework with server-rendered real-time updates
-- **Pros**: 
-  - Excellent real-time performance
-  - Server-rendered like our approach
-  - Great concurrency model
-- **Cons**: 
-  - Team has zero Elixir experience
-  - Smaller ecosystem
-  - Harder to hire for
-  - Not Python (can't reuse existing code/skills)
-- **Why not chosen**: Too far from team expertise
+| Alternative | Why not chosen |
+|---|---|
+| Node.js + Express + React | Against team expertise, two language environments, build complexity |
+| Django + htmx | Heavier than needed, less async-friendly for API workloads |
+| Flask + vanilla JS | Immature async, manual AJAX code gets messy |
+| FastAPI + separate SPA | Two deployment artifacts, CORS, state complexity, overkill |
+| Phoenix LiveView (Elixir) | Zero team experience |
+| Pico.css | Too little styling control |
+| Bootstrap | Heavier, jQuery-adjacent, recognizable look |
+| CSS-in-JS / CSS Modules | Requires JS runtime, conflicts with SSR |
+| Custom CSS | Too slow, no design system |
+| Manual SQL migration scripts | Error-prone, no rollback story |
+| Add Alembic later | Retrofit pain, team learns under pressure |
+| Docker + Docker Compose | Root daemon, runtime mismatch with OpenShift, licensing |
+| Kind/Minikube locally | Overkill for single-service MVP |
+| No containers in development | Environment drift, dependency inconsistency |
 
 ## Implementation Notes
 
-### Project Structure
-```
-app/
-├── main.py          # FastAPI app entry point
-├── api/             # API route handlers
-├── services/        # Business logic
-├── models/          # SQLAlchemy models
-├── templates/       # Jinja2 templates
-└── config.py        # Configuration
-
-static/
-├── css/
-├── js/              # Minimal Alpine.js components
-└── images/
-
-tests/
-├── unit/
-├── integration/
-└── challenges/
-```
-
-### Development Workflow
-1. Backend: `uvicorn app.main:app --reload`
-2. No build step for frontend (pure htmx/Alpine)
-3. Templates auto-reload in dev mode
-4. Hot reload for Python changes
-
-### Testing Strategy
-- Backend: pytest with httpx TestClient
-- Frontend: Playwright for E2E
-- LLM: Mock responses in tests
-
-## Migration Path
-
-If we need to scale beyond this stack:
-
-1. **Add Redis**: For session/cache management
-2. **Add PostgreSQL**: Replace SQLite in production
-3. **WebSockets**: For true real-time leaderboard
-4. **CDN**: For static assets at scale
-5. **If SPA needed**: Keep FastAPI backend, add React frontend (separate decision)
+- **Tailwind**: `npx tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch` (dev) / `--minify` (prod); `tailwind.config.js` scans `app/templates/**/*.html` and `static/js/**/*.js`; golf palette (e.g. `golf-green: #2D5F3F`)
+- **Alembic**: `alembic revision --autogenerate -m "..."` → review generated file → `alembic upgrade head`; rollback `alembic downgrade -1`; `alembic/env.py` targets `app.models.Base.metadata` with `settings.DATABASE_URL`. Best practices: always review auto-generated migrations, test upgrade AND downgrade, one logical change per migration, never modify committed migrations, backup before production migrations
+- **Podman**: `podman build`, `podman-compose up`; Docker users add `alias docker=podman` and `alias docker-compose=podman-compose`
 
 ## References
 
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [htmx Documentation](https://htmx.org/)
-- [Alpine.js Documentation](https://alpinejs.dev/)
-- [SQLAlchemy 2.0 Documentation](https://docs.sqlalchemy.org/)
-- [OpenShift Python Guide](https://docs.openshift.com/container-platform/latest/openshift_images/using_images/using-s21-images.html)
+- [FastAPI](https://fastapi.tiangolo.com/), [htmx](https://htmx.org/), [Alpine.js](https://alpinejs.dev/)
+- [Tailwind CSS](https://tailwindcss.com/docs), [SQLAlchemy 2.0](https://docs.sqlalchemy.org/), [Alembic](https://alembic.sqlalchemy.org/)
+- [Podman](https://docs.podman.io/), [OpenShift Container Platform](https://docs.openshift.com/container-platform/)
 
 ---
 
-**Date**: 2026-09-09  
-**Author**: Token Golf Team  
-**Reviewers**: N/A (Initial decision)
+**Date**: 2026-09-09 (consolidated 2026-09-24; absorbs former ADR 002, ADR 004, ADR 006 — all 2026-09-09)
+**Author**: Token Golf Team

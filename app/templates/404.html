@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}404 - Ball Lost | Token Golf{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center px-4">
+    <div class="max-w-2xl w-full text-center space-y-8">
+        <!-- Golf Ball Lost Icon -->
+        <div class="text-9xl animate-bounce-gentle" aria-label="Lost ball">
+            &#9971;&#10067;
+        </div>
+
+        <!-- Error Title -->
+        <div class="space-y-3">
+            <h1 class="text-6xl md:text-7xl font-bold text-golf-navy">
+                Ball Lost
+            </h1>
+            <p class="text-3xl md:text-4xl font-semibold text-golf-gold">
+                404 - Out of Bounds
+            </p>
+        </div>
+
+        <!-- Error Description -->
+        <div class="bg-white rounded-2xl shadow-lg p-8 border-2 border-golf-gray-light">
+            <p class="text-xl text-golf-navy-light mb-4">
+                We couldn't find the page you're looking for.
+            </p>
+            <p class="text-lg text-golf-gray">
+                Looks like your shot went into the rough. Let's get you back on the fairway.
+            </p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <a
+                href="/"
+                class="inline-flex items-center gap-2 bg-gradient-to-r from-golf-green to-golf-green-light hover:from-golf-green-dark hover:to-golf-green text-white font-bold py-4 px-8 rounded-xl shadow-lg text-xl transform transition-all duration-200 hover:scale-105">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                Return to Clubhouse
+            </a>
+
+            <button
+                onclick="window.history.back()"
+                class="inline-flex items-center gap-2 bg-golf-sand hover:bg-golf-gray-light text-golf-navy font-semibold py-4 px-8 rounded-xl border-2 border-golf-gray-light shadow-md text-xl transform transition-all duration-200 hover:scale-105">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                </svg>
+                Go Back
+            </button>
+        </div>
+
+        <!-- Helpful Links -->
+        <div class="pt-6 border-t border-golf-gray-light">
+            <p class="text-sm text-golf-gray mb-3">Looking for something specific?</p>
+            <div class="flex flex-wrap gap-3 justify-center">
+                <a href="/" class="text-golf-green hover:text-golf-green-dark font-semibold text-sm underline">
+                    Home
+                </a>
+                <span class="text-golf-gray">|</span>
+                <a href="/leaderboard" class="text-golf-green hover:text-golf-green-dark font-semibold text-sm underline">
+                    Leaderboard
+                </a>
+                <span class="text-golf-gray">|</span>
+                <a href="/docs" class="text-golf-green hover:text-golf-green-dark font-semibold text-sm underline">
+                    API Docs
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}Leaderboard - Token Golf{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto"
+     x-data="{
+         sessionId: sessionStorage.getItem('token_golf_session_id') || null,
+         currentUserId: null,
+         loading: false,
+         limit: 50,
+         stats: {
+             totalPlayers: 0,
+             bestScore: 0,
+             averageScore: 0,
+             yourRank: null
+         }
+     }"
+     x-init="
+         // Get current user info if session exists
+         if (sessionId) {
+             console.log('[Leaderboard] Session ID found:', sessionId);
+             fetch(`/api/game/status/${sessionId}`)
+                 .then(r => r.json())
+                 .then(data => {
+                     currentUserId = data.user_id;
+                     console.log('[Leaderboard] User ID loaded:', currentUserId, 'Username:', data.username);
+                     // Reload leaderboard with user context
+                     const boardElement = document.getElementById('leaderboard-content');
+                     if (boardElement && currentUserId) {
+                         const newUrl = `/htmx/leaderboard/global?limit=50&user_id=${currentUserId}`;
+                         console.log('[Leaderboard] Reloading with URL:', newUrl);
+                         boardElement.setAttribute('hx-get', newUrl);
+                         htmx.process(boardElement);
+                         htmx.trigger(boardElement, 'refreshLeaderboard');
+                     }
+                 })
+                 .catch((err) => {
+                     console.error('[Leaderboard] Failed to load session:', err);
+                     // Session doesn't exist or expired
+                     sessionStorage.removeItem('token_golf_session_id');
+                     sessionId = null;
+                 });
+         } else {
+             console.log('[Leaderboard] No session ID found in sessionStorage');
+         }
+
+         // Keyboard shortcuts
+         window.addEventListener('keydown', (e) => {
+             // Only trigger if not typing in an input
+             if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+
+             // R for Refresh
+             if (e.key === 'r' || e.key === 'R') {
+                 loading = true;
+                 setTimeout(() => loading = false, 500);
+                 document.body.dispatchEvent(new Event('refreshLeaderboard'));
+             }
+         });
+     ">
+
+    <!-- Page Header -->
+    <div class="text-center mb-12">
+        <h1 class="text-5xl font-bold text-gray-900 mb-4">🏆 LEADERBOARD 🏆</h1>
+        <p class="text-xl text-gray-700 mb-2">See how you stack up against other players</p>
+        <p class="text-sm text-green-700 font-medium">Remember: Lower scores are better!</p>
+        <!-- Debug Info -->
+        <div x-show="currentUserId" class="mt-2 text-xs text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-block">
+            Logged in as User ID: <span x-text="currentUserId"></span> - Your row will be highlighted in blue
+        </div>
+        <div x-show="!sessionId" class="mt-2 text-xs text-gray-500 bg-gray-50 px-3 py-1 rounded-full inline-block">
+            Not logged in - Start a game to see yourself on the leaderboard
+        </div>
+        <div class="mt-6 inline-flex items-center gap-2 text-xs text-gray-500 bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span>Keyboard shortcut: <kbd class="px-2 py-1 bg-white rounded border border-gray-300 font-mono">R</kbd> Refresh</span>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Main Leaderboard -->
+        <div class="lg:col-span-3">
+            <!-- Global Leaderboard -->
+            <div>
+                <div class="bg-gradient-to-r from-gray-800 to-gray-700 px-6 py-4 rounded-t-xl">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-2xl font-bold text-white">🌍 Global Rankings</h2>
+                            <p class="text-gray-200 text-sm">All-time best scores across all sessions</p>
+                        </div>
+                        <button
+                            @click="loading = true; setTimeout(() => loading = false, 500); document.body.dispatchEvent(new Event('refreshLeaderboard'));"
+                            class="text-white hover:text-green-300 transition-colors"
+                            :class="loading ? 'animate-spin' : ''"
+                            aria-label="Refresh leaderboard"
+                            title="Refresh">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div
+                    id="leaderboard-content"
+                    hx-get="/htmx/leaderboard/global?limit=50"
+                    hx-trigger="load, refreshLeaderboard from:body, refreshLeaderboard"
+                    hx-swap="innerHTML"
+                    @htmx:after-settle="
+                        const statsDataEl = document.getElementById('leaderboard-stats-data');
+                        if (statsDataEl) {
+                            try {
+                                const statsData = JSON.parse(statsDataEl.textContent);
+                                stats.totalPlayers = statsData.totalPlayers || 0;
+                                stats.bestScore = statsData.bestScore || 0;
+                                stats.averageScore = statsData.averageScore || 0;
+                                console.log('[Stats] Updated:', stats);
+                            } catch (e) {
+                                console.error('[Stats] Error:', e);
+                            }
+                        }
+                    "
+                    class="bg-gray-50 p-6 rounded-b-xl">
+                    <!-- Skeleton Loading state -->
+                    <div class="space-y-4">
+                        <div class="skeleton h-32 rounded-lg"></div>
+                        <div class="skeleton h-24 rounded-lg"></div>
+                        <div class="skeleton h-24 rounded-lg"></div>
+                        <div class="skeleton h-16 rounded-lg"></div>
+                        <div class="skeleton h-16 rounded-lg"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Panel -->
+        <div class="lg:col-span-1">
+            <div class="bg-white rounded-xl shadow-lg p-6 sticky top-4">
+                <h3 class="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                    <span class="text-2xl mr-2">📊</span>
+                    Statistics
+                </h3>
+
+                <div class="space-y-4">
+                    <!-- Total Players -->
+                    <div class="bg-green-50 rounded-lg p-4 border-2 border-green-100">
+                        <div class="text-xs font-semibold text-green-700 uppercase tracking-wide mb-1">Total Players</div>
+                        <div class="text-4xl font-bold text-green-900" x-text="stats.totalPlayers || '-'"></div>
+                    </div>
+
+                    <!-- Best Score -->
+                    <div class="bg-yellow-50 rounded-lg p-4 border-2 border-yellow-100">
+                        <div class="text-xs font-semibold text-yellow-700 uppercase tracking-wide mb-1">Best Score</div>
+                        <div class="text-4xl font-bold text-yellow-900">
+                            <span x-text="stats.bestScore ? stats.bestScore.toLocaleString() : '-'"></span>
+                        </div>
+                        <div class="text-xs text-yellow-700 mt-1" x-show="stats.bestScore">tokens</div>
+                    </div>
+
+                    <!-- Average Score -->
+                    <div class="bg-blue-50 rounded-lg p-4 border-2 border-blue-100">
+                        <div class="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1">Average Score</div>
+                        <div class="text-4xl font-bold text-blue-900">
+                            <span x-text="stats.averageScore ? stats.averageScore.toLocaleString() : '-'"></span>
+                        </div>
+                        <div class="text-xs text-blue-700 mt-1" x-show="stats.averageScore">tokens</div>
+                    </div>
+
+                    <!-- Your Rank -->
+                    <div x-show="currentUserId && stats.yourRank" class="bg-purple-50 rounded-lg p-4 border-2 border-purple-100">
+                        <div class="text-xs font-semibold text-purple-700 uppercase tracking-wide mb-1">Your Rank</div>
+                        <div class="text-4xl font-bold text-purple-900">
+                            #<span x-text="stats.yourRank"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div class="mt-6 pt-6 border-t-2 border-gray-200">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3">Trophy Key</h4>
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center">
+                            <span class="text-2xl mr-2">🥇</span>
+                            <span class="text-gray-600 font-medium">1st Place</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-2xl mr-2">🥈</span>
+                            <span class="text-gray-600 font-medium">2nd Place</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-2xl mr-2">🥉</span>
+                            <span class="text-gray-600 font-medium">3rd Place</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Process leaderboard data and update statistics
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    // Parse the response if it's JSON
+    try {
+        const response = JSON.parse(event.detail.xhr.response);
+
+        if (response && response.entries) {
+            // Calculate statistics
+            const entries = response.entries;
+            const totalPlayers = response.total_entries || entries.length;
+            const totalTokens = entries.reduce((sum, entry) => sum + entry.total_tokens, 0);
+            const averageScore = entries.length > 0 ? Math.round(totalTokens / entries.length) : 0;
+            const bestScore = entries.length > 0 ? entries[0].total_tokens : 0;
+
+            // Find current user's rank
+            const currentUserId = Alpine.store ? null : window.currentUserId;
+            let yourRank = null;
+            if (currentUserId) {
+                const userEntry = entries.find(e => e.user_id === currentUserId);
+                if (userEntry) {
+                    yourRank = userEntry.rank;
+                }
+            }
+
+            // Update Alpine.js data
+            const alpineComponent = event.detail.target.closest('[x-data]');
+            if (alpineComponent && alpineComponent._x_dataStack) {
+                const data = alpineComponent._x_dataStack[0];
+                data.stats = {
+                    totalPlayers,
+                    averageScore,
+                    bestScore,
+                    yourRank
+                };
+                data.currentUserId = currentUserId;
+            }
+
+            // Build leaderboard display HTML
+            const displayHtml = buildLeaderboardDisplay(entries, currentUserId);
+            event.detail.target.innerHTML = displayHtml;
+        }
+    } catch (e) {
+        // If it's not JSON or parsing fails, the response is probably already HTML
+        console.log('Response is not JSON, treating as HTML');
+    }
+});
+
+function buildLeaderboardDisplay(entries, currentUserId) {
+    if (!entries || entries.length === 0) {
+        return `
+            <div class="text-center py-16 animate-fade-in">
+                <div class="text-7xl mb-4">&#9971;</div>
+                <p class="text-2xl font-semibold text-gray-700 mb-2">No entries found</p>
+                <p class="text-base text-gray-500">Be the first to complete a challenge!</p>
+            </div>
+        `;
+    }
+
+    let html = '<div class="animate-fade-in space-y-8">';
+
+    // Podium Display for Top 3
+    const topThree = entries.slice(0, 3);
+    if (topThree.length > 0) {
+        html += '<div class="mb-8">';
+
+        if (topThree.length === 1) {
+            // Only 1st place
+            html += buildPodiumCard(topThree[0], currentUserId, 'gold');
+        } else if (topThree.length === 2) {
+            // 1st and 2nd place
+            html += '<div class="grid grid-cols-2 gap-4 max-w-4xl mx-auto">';
+            html += buildPodiumCard(topThree[0], currentUserId, 'gold');
+            html += buildPodiumCard(topThree[1], currentUserId, 'silver');
+            html += '</div>';
+        } else {
+            // Full podium: 1st, 2nd, 3rd
+            html += '<div class="grid grid-cols-3 gap-4 items-end max-w-5xl mx-auto">';
+            // 2nd place (left, shorter)
+            html += buildPodiumCard(topThree[1], currentUserId, 'silver');
+            // 1st place (center, tallest)
+            html += buildPodiumCard(topThree[0], currentUserId, 'gold');
+            // 3rd place (right, shortest)
+            html += buildPodiumCard(topThree[2], currentUserId, 'bronze');
+            html += '</div>';
+        }
+
+        html += '</div>';
+    }
+
+    // Rankings List for 4th place onwards
+    const remainingEntries = entries.slice(3);
+    if (remainingEntries.length > 0) {
+        html += '<div class="space-y-2">';
+        html += '<h3 class="text-lg font-semibold text-gray-700 mb-3 px-2">Rankings</h3>';
+
+        remainingEntries.forEach(entry => {
+            const isCurrentUser = currentUserId && entry.user_id === currentUserId;
+            html += buildRankingRow(entry, isCurrentUser);
+        });
+
+        html += '</div>';
+    }
+
+    html += '</div>';
+
+    // Add "Load More" button if there are many entries
+    if (entries.length >= 20) {
+        html += `
+            <div class="mt-8 text-center">
+                <button
+                    onclick="alert('Pagination coming soon! For now, top entries are shown.')"
+                    class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-8 rounded-lg shadow-md transition-all duration-200 hover:scale-105">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                    Load More
+                </button>
+            </div>
+        `;
+    }
+
+    return html;
+}
+
+function buildPodiumCard(entry, currentUserId, place) {
+    const isCurrentUser = currentUserId && entry.user_id === currentUserId;
+
+    const placeConfig = {
+        gold: {
+            bg: 'bg-gradient-to-br from-yellow-50 to-amber-100',
+            border: 'border-4 border-yellow-400',
+            medal: '🥇',
+            height: 'min-h-64',
+            textColor: 'text-yellow-800'
+        },
+        silver: {
+            bg: 'bg-gradient-to-br from-gray-50 to-slate-100',
+            border: 'border-4 border-gray-400',
+            medal: '🥈',
+            height: 'min-h-48',
+            textColor: 'text-gray-700'
+        },
+        bronze: {
+            bg: 'bg-gradient-to-br from-orange-50 to-amber-50',
+            border: 'border-4 border-orange-400',
+            medal: '🥉',
+            height: 'min-h-48',
+            textColor: 'text-orange-700'
+        }
+    };
+
+    const config = placeConfig[place];
+    const starBadge = isCurrentUser ? '<span class="text-2xl ml-2">⭐</span>' : '';
+
+    return `
+        <div class="${config.bg} ${config.border} ${config.height} rounded-xl p-6 flex flex-col items-center justify-center text-center shadow-lg transform transition-all duration-200 hover:scale-105">
+            <div class="text-6xl mb-3">${config.medal}</div>
+            <div class="text-3xl font-bold ${config.textColor} mb-2">#${entry.rank}</div>
+            <div class="text-xl font-semibold text-gray-900 mb-3">
+                ${entry.username}${starBadge}
+            </div>
+            <div class="text-3xl font-bold text-green-700 mb-1">
+                ${entry.total_tokens.toLocaleString()}
+            </div>
+            <div class="text-sm text-gray-600 mb-3">tokens</div>
+            <div class="flex gap-4 text-sm text-gray-600">
+                <div>
+                    <span class="font-semibold">${entry.completed_challenges}</span> holes
+                </div>
+                <div>•</div>
+                <div>
+                    <span class="font-semibold">${entry.total_attempts}</span> attempts
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function buildRankingRow(entry, isCurrentUser) {
+    const highlightClass = isCurrentUser
+        ? 'bg-yellow-50 border-l-4 border-yellow-400 shadow-md'
+        : 'bg-white hover:bg-gray-50';
+    const starBadge = isCurrentUser ? '<span class="text-xl ml-2">⭐</span>' : '';
+
+    return `
+        <div class="${highlightClass} rounded-lg p-4 transition-all duration-200">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4 flex-1">
+                    <div class="text-xl font-bold text-gray-600 w-12 text-center">
+                        #${entry.rank}
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-lg font-semibold text-gray-900">
+                            ${entry.username}${starBadge}
+                        </div>
+                        <div class="text-sm text-gray-600">
+                            ${entry.completed_challenges} holes completed • ${entry.total_attempts} attempts
+                        </div>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-2xl font-bold text-green-700">
+                        ${entry.total_tokens.toLocaleString()}
+                    </div>
+                    <div class="text-xs text-gray-500">tokens</div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+</script>
+{% endblock %}

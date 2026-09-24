@@ -1,0 +1,23 @@
+Token Golf Database Migrations
+
+This directory contains Alembic database migrations for Token Golf.
+
+## Usage
+
+Create a new migration:
+    podman-compose exec web alembic revision --autogenerate -m "description"
+
+Apply migrations:
+    podman-compose exec web alembic upgrade head
+
+Rollback one migration:
+    podman-compose exec web alembic downgrade -1
+
+Rollback all migrations:
+    podman-compose exec web alembic downgrade base
+
+View migration history:
+    podman-compose exec web alembic history
+
+View current version:
+    podman-compose exec web alembic current

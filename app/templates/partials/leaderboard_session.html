@@ -1,0 +1,165 @@
+<!-- Session Leaderboard Partial with Two Sections -->
+<div class="space-y-6">
+    <!-- COMPLETED SECTION -->
+    {% if completed %}
+    <div>
+        <div class="bg-green-600 text-white px-4 py-2 rounded-t-lg font-semibold flex items-center">
+            <span class="mr-2">✓</span>
+            <span>COMPLETED ({{ completed|length }})</span>
+        </div>
+        <div class="overflow-x-auto border-2 border-green-600 rounded-b-lg">
+            <table class="w-full">
+                <thead class="bg-green-50">
+                    <tr class="text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        <th class="px-4 py-3 w-16">Rank</th>
+                        <th class="px-4 py-3">Player</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3 text-center">Progress</th>
+                        <th class="px-4 py-3 text-right">Tokens</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    {% for entry in completed %}
+                    <tr class="hover:bg-gray-50 transition-colors {% if loop.index <= 3 %}bg-yellow-50{% endif %}">
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                {% if loop.index == 1 %}
+                                <span class="text-3xl">🥇</span>
+                                {% elif loop.index == 2 %}
+                                <span class="text-3xl">🥈</span>
+                                {% elif loop.index == 3 %}
+                                <span class="text-3xl">🥉</span>
+                                {% else %}
+                                <span class="text-lg font-bold text-gray-700">{{ loop.index }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="font-semibold text-gray-900">{{ entry.username }}</div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-green-600 text-white">
+                                F
+                            </span>
+                        </td>
+                        <td class="px-4 py-4 text-center">
+                            <div class="flex items-center justify-center space-x-1">
+                                <span class="text-green-600 font-bold">●●●●●</span>
+                                <span class="text-xs text-gray-600 ml-2">{{ course_total_holes }}/{{ course_total_holes }}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-right">
+                            <div class="font-mono font-bold text-lg text-green-700">
+                                {{ "{:,}".format(entry.total_tokens) }}
+                            </div>
+                            <div class="text-xs text-gray-500">{{ entry.total_attempts }} attempts</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- DIVIDER LINE -->
+    {% if completed and in_progress %}
+    <div class="border-t-4 border-dashed border-gray-400 my-6 relative">
+        <span class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-gray-50 px-4 text-xs font-semibold text-gray-500 uppercase">
+            In Progress Below
+        </span>
+    </div>
+    {% endif %}
+
+    <!-- IN PROGRESS SECTION -->
+    {% if in_progress %}
+    <div>
+        <div class="bg-blue-600 text-white px-4 py-2 rounded-t-lg font-semibold flex items-center">
+            <span class="mr-2">⏳</span>
+            <span>IN PROGRESS ({{ in_progress|length }})</span>
+        </div>
+        <div class="overflow-x-auto border-2 border-blue-600 rounded-b-lg">
+            <table class="w-full">
+                <thead class="bg-blue-50">
+                    <tr class="text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        <th class="px-4 py-3 w-16">--</th>
+                        <th class="px-4 py-3">Player</th>
+                        <th class="px-4 py-3">Status</th>
+                        <th class="px-4 py-3 text-center">Progress</th>
+                        <th class="px-4 py-3 text-right">Tokens</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                    {% for entry in in_progress %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-4 whitespace-nowrap text-center text-gray-400 font-bold">
+                            --
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="font-semibold text-gray-900">{{ entry.username }}</div>
+                        </td>
+                        <td class="px-4 py-4">
+                            {% if session_status == 'dnf' %}
+                            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-red-600 text-white">
+                                DNF
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-blue-600 text-white">
+                                IP
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-4 text-center">
+                            <div class="flex items-center justify-center space-x-1">
+                                {% set filled = entry.holes_completed %}
+                                {% set empty = course_total_holes - filled %}
+                                <span class="text-green-600">
+                                    {% for i in range(filled) %}●{% endfor %}
+                                </span>
+                                <span class="text-gray-300">
+                                    {% for i in range(empty) %}○{% endfor %}
+                                </span>
+                                <span class="text-xs text-gray-600 ml-2">{{ entry.holes_completed }}/{{ course_total_holes }}</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-right">
+                            <div class="font-mono font-bold text-lg text-gray-700">
+                                {{ "{:,}".format(entry.total_tokens) }}
+                            </div>
+                            <div class="text-xs text-gray-500">{{ entry.total_attempts }} attempts</div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- EMPTY STATE -->
+    {% if not completed and not in_progress %}
+    <div class="text-center py-12">
+        <p class="text-gray-600 text-lg">No players in this session yet</p>
+        <p class="text-gray-500 text-sm mt-2">Start playing to see your ranking!</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Status Legend -->
+<div class="mt-6 bg-gray-100 rounded-lg p-4">
+    <h4 class="text-sm font-semibold text-gray-700 mb-3">Status Key</h4>
+    <div class="grid grid-cols-3 gap-3 text-sm">
+        <div class="flex items-center">
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-green-600 text-white mr-2">F</span>
+            <span class="text-gray-600">Finished</span>
+        </div>
+        <div class="flex items-center">
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-blue-600 text-white mr-2">IP</span>
+            <span class="text-gray-600">In Progress</span>
+        </div>
+        <div class="flex items-center">
+            <span class="inline-flex items-center px-2 py-1 rounded text-xs font-bold bg-red-600 text-white mr-2">DNF</span>
+            <span class="text-gray-600">Did Not Finish</span>
+        </div>
+    </div>
+</div>

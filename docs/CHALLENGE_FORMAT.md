@@ -11,7 +11,7 @@ Challenges are defined in YAML files located in `challenges/hole-XXX/challenge.y
 ```
 challenges/
 ├── README.md                    # Challenge authoring guide
-├── schema.yaml                  # YAML schema for validation
+├── courses.yaml                 # Course definitions (which holes belong to which course)
 ├── hole-001/
 │   ├── challenge.yaml          # Challenge definition
 │   └── assets/
@@ -24,6 +24,8 @@ challenges/
 │       └── ...
 └── ...
 ```
+
+**Note**: `schema.yaml` is not required for MVP. Challenge validation will be implemented programmatically.
 
 ## YAML Format
 
@@ -142,9 +144,11 @@ metadata:
 #### `parameters` (object)
 - Game parameters for this challenge
 - Fields:
-  - `max_iterations` (int, nullable): Maximum attempts allowed (null = unlimited)
-  - `time_limit_seconds` (int, nullable): Time limit (null = no limit)
-  - `hints_available` (int): Number of hints available (future feature)
+  - `max_iterations` (int, nullable): Maximum attempts allowed (null = unlimited) - **NOT in MVP**
+  - `time_limit_seconds` (int, nullable): Time limit (null = no limit) - **NOT in MVP**
+  - `hints_available` (int): Number of hints available - **NOT in MVP**
+
+**Note**: All parameters are future features, not included in MVP.
 
 #### `metadata` (object)
 - Challenge metadata
@@ -158,7 +162,9 @@ metadata:
 
 ## Validation Types
 
-### 1. Test Cases (`test_cases`)
+**MVP includes only `test_cases` and `exact_match`. Other types are future enhancements.**
+
+### 1. Test Cases (`test_cases`) - **MVP**
 
 For coding challenges where output can be verified programmatically.
 
@@ -193,7 +199,7 @@ validation:
   - `expected_output`: Expected result
   - `timeout_ms`: Execution timeout (optional)
 
-### 2. Exact Match (`exact_match`)
+### 2. Exact Match (`exact_match`) - **MVP**
 
 For tasks with a single correct string answer.
 
@@ -211,7 +217,7 @@ validation:
 - `case_sensitive`: Whether to match case (default: false)
 - `trim_whitespace`: Whether to trim whitespace (default: true)
 
-### 3. Semantic Similarity (`semantic_similarity`)
+### 3. Semantic Similarity (`semantic_similarity`) - **NOT in MVP**
 
 For open-ended answers where meaning matters more than exact wording.
 
@@ -235,7 +241,7 @@ validation:
 - Calculate cosine similarity
 - Pass if similarity >= threshold
 
-### 4. Pattern Match (`pattern_match`)
+### 4. Pattern Match (`pattern_match`) - **NOT in MVP**
 
 For extraction tasks with regex validation.
 
@@ -253,7 +259,7 @@ validation:
 - `description`: Human-readable description
 - `flags`: Regex flags (optional)
 
-### 5. Multiple Choice (`multiple_choice`)
+### 5. Multiple Choice (`multiple_choice`) - **NOT in MVP**
 
 For classification tasks with predefined options.
 
@@ -272,7 +278,7 @@ validation:
 - `correct_answer`: The correct option key
 - `options`: Dictionary of option keys to text
 
-### 6. Custom Script (`custom_script`)
+### 6. Custom Script (`custom_script`) - **NOT in MVP**
 
 For complex validation requiring custom logic.
 

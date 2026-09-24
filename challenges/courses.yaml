@@ -1,0 +1,62 @@
+# Token Golf - Course Definitions
+#
+# A course is a collection of holes (challenges) played in sequence.
+# Courses group challenges by difficulty and theme.
+
+courses:
+  - id: beginner-course
+    name: "Beginner's Green"
+    description: "Easy challenges for first-time players. Perfect for learning the basics of token-efficient prompting."
+    difficulty: easy
+    holes:
+      - hole-001
+      - hole-002
+    estimated_duration_minutes: 30
+    metadata:
+      par_total: 300  # Combined estimated tokens for expert players
+      tags: ["beginner", "tutorial", "learning"]
+      recommended_for: "First-time players and those new to LLM optimization"
+
+  - id: intermediate-course
+    name: "Challenge Valley"
+    description: "Mixed difficulty for learning players. Tests fundamental prompting skills with varied tasks."
+    difficulty: medium
+    holes:
+      - hole-002
+      - hole-003
+      - hole-004
+    estimated_duration_minutes: 60
+    metadata:
+      par_total: 450  # Combined estimated tokens for expert players
+      tags: ["intermediate", "mixed", "skill-building"]
+      recommended_for: "Players comfortable with basic prompting"
+
+  - id: advanced-course
+    name: "Expert's Peak"
+    description: "Difficult challenges for experienced players. Requires advanced token optimization techniques."
+    difficulty: hard
+    holes:
+      - hole-003
+      - hole-004
+      - hole-005
+    estimated_duration_minutes: 90
+    metadata:
+      par_total: 600  # Combined estimated tokens for expert players
+      tags: ["advanced", "expert", "competitive"]
+      recommended_for: "Experienced players seeking maximum challenge"
+
+  - id: full-tour
+    name: "Complete Championship"
+    description: "All holes in sequence. The ultimate test of token efficiency across all challenge types."
+    difficulty: expert
+    holes:
+      - hole-001
+      - hole-002
+      - hole-003
+      - hole-004
+      - hole-005
+    estimated_duration_minutes: 150
+    metadata:
+      par_total: 750  # Combined estimated tokens for expert players
+      tags: ["full", "championship", "comprehensive"]
+      recommended_for: "Players ready for the complete Token Golf experience"

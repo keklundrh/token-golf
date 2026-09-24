@@ -50,7 +50,8 @@ Token Golf is a web-based educational game built with a Python backend and minim
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                     SQLite / PostgreSQL                      │
-│  Tables: users, challenges, attempts, scores                │
+│  Tables: sessions, users, session_participants,             │
+│          challenges, attempts, scores                        │
 └─────────────────────────────────────────────────────────────┘
 
                             │
@@ -190,11 +191,11 @@ class ValidatorService:
         """
 ```
 
-**Validation Types:**
-- `test_cases`: Run code against test inputs
-- `exact_match`: String comparison
-- `semantic_similarity`: Embeddings-based matching
-- `custom_script`: Execute Python validator script
+**Validation Types (MVP):**
+- `test_cases`: Run code against test inputs - **MVP**
+- `exact_match`: String comparison - **MVP**
+- `semantic_similarity`: Embeddings-based matching - **NOT in MVP**
+- `custom_script`: Execute Python validator script - **NOT in MVP**
 
 #### Scoring Service
 **Purpose**: Calculate and track token usage
@@ -229,6 +230,7 @@ class ScoringService:
 class NameGeneratorService:
     """
     Generates usernames: {Color}-{Course}-{Club}
+    MVP: New username generated each session (no persistent auth)
     """
     
     def generate_name(self) -> str:
@@ -243,6 +245,11 @@ class NameGeneratorService:
 - Courses: 50+ famous golf courses
 - Clubs: 1-14
 - Blacklist: Filter inappropriate combinations
+
+**MVP Behavior:**
+- Generate new username when user starts a session
+- No password or authentication required
+- Username stored in database but not reusable across sessions
 
 #### Challenge Loader Service
 **Purpose**: Load and parse YAML challenge definitions
@@ -269,18 +276,47 @@ class ChallengeLoaderService:
 
 #### SQLAlchemy Models
 
+**Session Model**
+```python
+class Session(Base):
+    id: str  # UUID
+    course_id: str  # Which set of holes
+    created_at: datetime
+    timeout_hours: int  # Default 3
+    status: str  # 'active', 'completed', 'dnf'
+    expires_at: datetime
+    
+    # Relationships
+    participants: List[SessionParticipant]
+    attempts: List[Attempt]
+    scores: List[Score]
+```
+
 **User Model**
 ```python
 class User(Base):
     id: int
-    username: str
+    username: str  # Auto-generated: Color-Course-Club
     created_at: datetime
-    session_id: str
     is_active: bool
     
     # Relationships
+    session_participations: List[SessionParticipant]
     attempts: List[Attempt]
     scores: List[Score]
+```
+
+**SessionParticipant Model**
+```python
+class SessionParticipant(Base):
+    id: int
+    session_id: str
+    user_id: int
+    joined_at: datetime
+    
+    # Relationships
+    session: Session
+    user: User
 ```
 
 **Challenge Model**
@@ -303,9 +339,12 @@ class Challenge(Base):
 class Attempt(Base):
     id: int
     user_id: int
+    session_id: str
     challenge_id: str
     attempt_number: int
     prompt: str
+    system_prompt: str  # User's custom system prompt
+    context_files: JSON  # Which context files were active
     response: str
     input_tokens: int
     output_tokens: int
@@ -315,22 +354,26 @@ class Attempt(Base):
     
     # Relationships
     user: User
+    session: Session
     challenge: Challenge
 ```
+
+**Note**: User modifications (system prompts, context files) are stored per user per session per attempt in the Attempt model.
 
 **Score Model**
 ```python
 class Score(Base):
     id: int
     user_id: int
+    session_id: str
     challenge_id: str
     total_attempts: int
-    total_tokens: int
+    total_tokens: int  # Running total for this hole
     completed_at: datetime
-    session_id: str
     
     # Relationships
     user: User
+    session: Session
     challenge: Challenge
 ```
 
@@ -592,8 +635,9 @@ LOG_LEVEL=INFO
 SECRET_KEY=...
 
 # Game Configuration
-MAX_ITERATIONS_PER_HOLE=20
-SESSION_TIMEOUT_MINUTES=60
+MAX_ITERATIONS_PER_HOLE=20  # Future feature, not MVP
+SESSION_TIMEOUT_HOURS=3  # Default 3 hours, configurable
+LLM_MODEL=haiku  # MVP: Haiku only, hardcoded
 ```
 
 ### Config Files

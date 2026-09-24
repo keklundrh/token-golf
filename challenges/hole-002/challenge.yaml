@@ -1,0 +1,60 @@
+id: hole-002
+name: "Addition Function"
+difficulty: easy
+description: |
+  Write a Python function called `add` that takes two numbers and returns their sum.
+
+  Your function should:
+  - Accept two parameters: `a` and `b`
+  - Return the sum of `a` and `b`
+  - Handle both integers and floating-point numbers
+
+  Function signature: `def add(a, b):`
+
+task_type: coding
+
+validation:
+  type: test_cases
+  language: python
+  criteria:
+    - name: "Basic addition"
+      input:
+        a: 2
+        b: 3
+      expected_output: 5
+
+    - name: "Negative numbers"
+      input:
+        a: -5
+        b: 10
+      expected_output: 5
+
+    - name: "Floating point"
+      input:
+        a: 2.5
+        b: 3.7
+      expected_output: 6.2
+
+    - name: "Zero addition"
+      input:
+        a: 0
+        b: 42
+      expected_output: 42
+
+system_prompt:
+  default: "You are a helpful Python coding assistant. Write clean, concise code."
+  removable: false
+  editable: true
+
+parameters:
+  max_iterations: null
+  time_limit_seconds: null
+  hints_available: 0
+
+metadata:
+  author: "Token Golf Team"
+  created_date: "2026-09-21"
+  tags: ["python", "basics", "functions", "arithmetic"]
+  estimated_tokens_expert: 100
+  estimated_tokens_beginner: 300
+  estimated_difficulty: 1.5

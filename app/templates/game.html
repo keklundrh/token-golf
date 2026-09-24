@@ -1,0 +1,1228 @@
+{% extends "base.html" %}
+
+{% block title %}{{ challenge.name }} - Token Golf{% endblock %}
+
+{% block extra_head %}
+<!-- Hide navigation during gameplay for focus -->
+<style>
+    header nav {
+        display: none;
+    }
+    .game-container {
+        min-height: 100vh;
+        background: #f0f4ec; /* Light Fairway background */
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="game-container py-6">
+<!-- Two-column game layout with 65/35 split -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-7xl mx-auto px-4">
+
+    <!-- LEFT COLUMN: Challenge + Interaction (65% width, lg:col-span-2) -->
+    <div class="lg:col-span-2 space-y-6">
+
+        <!-- COURSE PROGRESS -->
+        <div class="bg-white rounded-xl shadow-md p-4" x-data="courseNavigation()">
+            <div class="flex items-center justify-between gap-4">
+                <!-- Home Button -->
+                <a
+                    href="/"
+                    class="flex items-center gap-1 px-3 py-2 rounded-lg font-semibold transition-all duration-200 bg-golf-navy hover:bg-golf-navy-light text-white hover:scale-105"
+                    title="Return to Home"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                    <span class="hidden sm:inline">Home</span>
+                </a>
+
+                <!-- Previous Button -->
+                <button
+                    @click="navigateToPrevious()"
+                    :disabled="!canNavigatePrevious()"
+                    class="flex items-center gap-1 px-3 py-2 rounded-lg font-semibold transition-all duration-200"
+                    :class="canNavigatePrevious() ? 'bg-golf-green hover:bg-golf-green-dark text-white hover:scale-105' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+                    type="button"
+                >
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                    </svg>
+                    Prev
+                </button>
+
+                <!-- Progress Bar -->
+                <div class="flex-1">
+                    <div class="text-center mb-1">
+                        <span class="text-sm font-semibold text-golf-navy">
+                            Hole <span x-text="currentHoleNumber"></span> of <span x-text="totalHoles"></span>
+                        </span>
+                        <span class="text-xs text-golf-gray ml-2">
+                            • <span x-text="completionPercentage"></span>% complete
+                        </span>
+                    </div>
+                    <div class="w-full bg-golf-gray-light rounded-full h-3 overflow-hidden">
+                        <div
+                            class="bg-gradient-to-r from-golf-green to-golf-gold h-full rounded-full transition-all duration-500"
+                            :style="`width: ${completionPercentage}%`"
+                        ></div>
+                    </div>
+                </div>
+
+                <!-- Next Button -->
+                <button
+                    @click="navigateToNext()"
+                    :disabled="!canNavigateNext()"
+                    class="flex items-center gap-1 px-3 py-2 rounded-lg font-semibold transition-all duration-200"
+                    :class="canNavigateNext() ? 'bg-golf-green hover:bg-golf-green-dark text-white hover:scale-105' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
+                    type="button"
+                >
+                    Next
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- CHALLENGE CARD -->
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+            <!-- Challenge Header -->
+            <div class="bg-gradient-to-r from-golf-navy to-golf-navy-light text-white p-6">
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <h1 class="text-2xl font-bold mb-3">{{ challenge.name or challenge.id }}</h1>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <!-- Difficulty Badge -->
+                            {% if challenge.difficulty == 'easy' %}
+                                <span class="badge bg-success text-white">Easy</span>
+                            {% elif challenge.difficulty == 'medium' %}
+                                <span class="badge bg-warning text-white">Medium</span>
+                            {% elif challenge.difficulty == 'hard' %}
+                                <span class="badge bg-error text-white">Hard</span>
+                            {% else %}
+                                <span class="badge bg-golf-gold text-white">{{ challenge.difficulty }}</span>
+                            {% endif %}
+                            <span class="badge bg-golf-green text-white">{{ challenge.task_type or 'coding' }}</span>
+                        </div>
+                    </div>
+                    <!-- Par Display -->
+                    <div class="text-right bg-white/10 rounded-lg px-4 py-2 backdrop-blur-sm">
+                        <div class="text-xs text-golf-gray-light mb-1">Par</div>
+                        <div class="text-3xl font-bold text-golf-gold">
+                            {{ challenge_data.metadata.get('estimated_tokens_expert', '150') if challenge_data and challenge_data.metadata else '150' }}
+                        </div>
+                        <div class="text-xs text-golf-gray-light">tokens</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Challenge Content -->
+            <div class="p-6">
+                <!-- Description -->
+                <div class="mb-6">
+                    <h2 class="text-lg font-semibold text-golf-navy mb-3">Challenge</h2>
+                    <div class="text-golf-navy-light leading-relaxed whitespace-pre-wrap">{{ challenge_data.description if challenge_data else 'Loading...' }}</div>
+                </div>
+
+                <!-- Success Criteria -->
+                {% if challenge_data.validation and challenge_data.validation.get('type') == 'test_cases' and challenge_data.validation.get('criteria') %}
+                <div class="mb-6">
+                    <h2 class="text-lg font-semibold text-golf-navy mb-3">Success Criteria</h2>
+                    <ul class="space-y-2">
+                        {% for criterion in challenge_data.validation.criteria[:3] %}
+                            <li class="flex items-start gap-2 text-golf-navy-light">
+                                <svg class="w-5 h-5 text-golf-green flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                                <span>{{ criterion.get('name', 'Test case ' ~ loop.index) }}</span>
+                            </li>
+                        {% endfor %}
+                        {% if challenge_data.validation.criteria|length > 3 %}
+                            <li class="text-golf-gray text-sm ml-7">...and {{ challenge_data.validation.criteria|length - 3 }} more test cases</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                {% elif challenge_data.validation and challenge_data.validation.get('type') == 'exact_match' %}
+                <div class="mb-6">
+                    <h2 class="text-lg font-semibold text-golf-navy mb-3">Success Criteria</h2>
+                    <p class="text-golf-navy-light">Your answer must exactly match the expected output.</p>
+                </div>
+                {% endif %}
+
+                <!-- Context Files (Simple Display) -->
+                {% if challenge.context_files %}
+                <div class="bg-golf-sand/30 rounded-lg p-4 mb-4">
+                    <h3 class="text-sm font-semibold text-golf-navy mb-2 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-golf-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                        Context Files Available
+                    </h3>
+                    <div class="flex flex-wrap gap-2">
+                        {% for file in challenge.context_files %}
+                            <span class="text-sm text-golf-navy-light bg-white px-3 py-1 rounded-full">{{ file.name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- System Prompt Display (Phase 8 - Read-only) -->
+                {% if challenge_data and challenge_data.get('system_prompt') %}
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <h3 class="text-sm font-semibold text-golf-navy mb-2 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                        System Prompt
+                    </h3>
+                    <p class="text-sm text-golf-navy-light bg-white px-3 py-2 rounded border border-blue-200">
+                        {{ challenge_data.system_prompt.get('default', 'You are a helpful coding assistant.') }}
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- YOUR SOLUTION -->
+        <div class="bg-white rounded-2xl shadow-lg p-6" x-data="gameInterface()" @keydown.escape.window="handleEscape">
+            <h2 class="text-2xl font-bold text-golf-navy mb-6">Your Solution</h2>
+
+            <!-- Error Display Area -->
+            <div x-show="errorMessage" x-transition class="mb-6">
+                <!-- Weather Delay (503) -->
+                <div x-show="errorType === 'weather_delay'" class="bg-yellow-50 border-2 border-warning rounded-lg p-6 shadow-md">
+                    <div class="flex items-start gap-4">
+                        <div class="text-5xl flex-shrink-0">&#9729;&#65039;</div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-warning mb-2">Weather Delay</h3>
+                            <p class="text-golf-navy-light mb-2" x-text="errorMessage"></p>
+                            <p class="text-sm text-golf-gray">
+                                The LLM service is temporarily unavailable. Your tokens for this hole have been cleared.
+                            </p>
+                        </div>
+                        <button
+                            @click="clearError()"
+                            class="text-golf-gray hover:text-golf-navy transition-colors"
+                            aria-label="Dismiss error">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Validation Error (400) -->
+                <div x-show="errorType === 'validation'" class="bg-red-50 border-2 border-error rounded-lg p-6 shadow-md">
+                    <div class="flex items-start gap-4">
+                        <div class="text-5xl flex-shrink-0">&#9888;&#65039;</div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-error mb-2">Penalty Stroke</h3>
+                            <p class="text-golf-navy-light" x-text="errorMessage"></p>
+                        </div>
+                        <button
+                            @click="clearError()"
+                            class="text-golf-gray hover:text-golf-navy transition-colors"
+                            aria-label="Dismiss error">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Session Error (404, 401) -->
+                <div x-show="errorType === 'session'" class="bg-blue-50 border-2 border-info rounded-lg p-6 shadow-md">
+                    <div class="flex items-start gap-4">
+                        <div class="text-5xl flex-shrink-0">&#128274;</div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-info mb-2">Session Issue</h3>
+                            <p class="text-golf-navy-light mb-3" x-text="errorMessage"></p>
+                            <a
+                                href="/"
+                                class="inline-flex items-center gap-2 bg-info hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+                                Return to Clubhouse
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                                </svg>
+                            </a>
+                        </div>
+                        <button
+                            @click="clearError()"
+                            class="text-golf-gray hover:text-golf-navy transition-colors"
+                            aria-label="Dismiss error">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Generic Error -->
+                <div x-show="!errorType || errorType === 'general'" class="bg-red-50 border-2 border-error rounded-lg p-6 shadow-md">
+                    <div class="flex items-start gap-4">
+                        <div class="text-5xl flex-shrink-0">&#10060;</div>
+                        <div class="flex-1">
+                            <h3 class="text-xl font-bold text-error mb-2">Error</h3>
+                            <p class="text-golf-navy-light" x-text="errorMessage"></p>
+                        </div>
+                        <button
+                            @click="clearError()"
+                            class="text-golf-gray hover:text-golf-navy transition-colors"
+                            aria-label="Dismiss error">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Prompt Textarea -->
+                <div>
+                    <label for="prompt-input" class="block text-base font-semibold text-golf-navy mb-2">
+                        Your Prompt
+                    </label>
+                    <textarea
+                        id="prompt-input"
+                        name="user_prompt"
+                        rows="8"
+                        class="w-full px-4 py-3 border-2 border-golf-gray-light rounded-xl focus:border-golf-green focus:ring-2 focus:ring-golf-green/20 text-base text-golf-navy transition-all duration-200 resize-y font-mono"
+                        placeholder="Enter your prompt to solve this challenge... (Ctrl+Enter to submit)"
+                        x-model="userPrompt"
+                        @input="handlePromptChange"
+                        @keydown.ctrl.enter="practiceSwing"
+                        @keydown.meta.enter="practiceSwing"
+                        aria-label="Prompt input"
+                        :disabled="submitting"
+                    ></textarea>
+
+                    <!-- Token Estimate Bar -->
+                    <div class="mt-3 flex items-center justify-between">
+                        <span class="text-sm text-golf-gray">
+                            Tip: Be concise to minimize tokens
+                        </span>
+                        <div class="flex items-center gap-4">
+                            <span class="text-sm font-semibold"
+                                :class="getTokenCountColor(estimateTokens(userPrompt))">
+                                Est: ~<span x-text="estimateTokens(userPrompt)"></span> tokens
+                            </span>
+                            <span class="text-sm text-golf-gray">
+                                vs Par: <span class="font-bold text-golf-gold">{{ challenge_data.metadata.get('estimated_tokens_expert', '150') if challenge_data and challenge_data.metadata else '150' }}</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Two-Button Interface (ADR 011: Practice Swings) -->
+                <div class="flex gap-4">
+                    <!-- Practice Swing Button -->
+                    <button
+                        type="button"
+                        @click="practiceSwing"
+                        class="flex-1 bg-golf-gold hover:bg-golf-gold-dark text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+                        :disabled="submitting || !userPrompt.trim() || (!promptChangedSincePractice && hasResponse)"
+                        aria-label="Practice swing"
+                    >
+                        <span x-show="!submitting" class="flex items-center justify-center gap-2 text-base">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            Practice Swing ⛳
+                        </span>
+                        <span x-show="submitting" class="flex items-center justify-center gap-2 text-base">
+                            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Swinging...
+                        </span>
+                    </button>
+
+                    <!-- Submit & Record Score Button -->
+                    <button
+                        type="button"
+                        @click="submitAndRecord"
+                        x-show="canSubmit"
+                        class="flex-1 bg-golf-green hover:bg-golf-green-dark text-white font-bold py-4 px-6 rounded-xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 animate-slide-up"
+                        :disabled="submitting || !lastAttemptCorrect || promptChangedSincePractice"
+                        aria-label="Submit and record score"
+                    >
+                        <span x-show="!submitting" class="flex items-center justify-center gap-2 text-base">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Submit & Record 🏆
+                        </span>
+                        <span x-show="submitting" class="flex items-center justify-center gap-2 text-base">
+                            <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Recording...
+                        </span>
+                    </button>
+                </div>
+
+                <!-- Practice Stats (Optional) -->
+                <div x-show="practiceCount > 0" class="mt-3 text-sm text-golf-gray animate-fade-in">
+                    <div class="flex justify-between items-center px-2">
+                        <span>Practice swings: <span class="font-semibold text-golf-navy" x-text="practiceCount"></span></span>
+                        <span>Submitted: <span class="font-semibold text-golf-green" x-text="submittedCount"></span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Response Display Area -->
+            <div x-show="hasResponse" class="mt-6 space-y-4 animate-slide-up">
+                <!-- Validation Result Banner -->
+                <div
+                    :class="[
+                        validationResult.is_correct ? 'bg-success animate-success' : 'bg-error animate-shake',
+                        'text-white rounded-lg p-4 shadow-md'
+                    ]"
+                    role="alert"
+                    aria-live="polite"
+                >
+                    <div class="flex items-center gap-3">
+                        <!-- Success Icon -->
+                        <svg x-show="validationResult.is_correct" class="w-8 h-8 animate-scale-in" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <!-- Error Icon -->
+                        <svg x-show="!validationResult.is_correct" class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div class="flex-1">
+                            <div class="font-bold text-lg" x-text="getSuccessMessage()"></div>
+                            <div class="text-sm" x-text="validationResult.validation_message"></div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold" x-text="validationResult.total_tokens"></div>
+                            <div class="text-xs opacity-90">tokens</div>
+                            <div class="text-xs font-semibold" x-text="getParComparison()" :class="getParComparisonColor()"></div>
+                        </div>
+                    </div>
+                    <!-- Success confetti effect -->
+                    <div x-show="validationResult.is_correct" class="mt-2 text-center text-3xl">
+                        <span class="inline-block animate-confetti" style="animation-delay: 0s;">🎉</span>
+                        <span class="inline-block animate-confetti" style="animation-delay: 0.2s;">🏆</span>
+                        <span class="inline-block animate-confetti" style="animation-delay: 0.4s;">⭐</span>
+                    </div>
+                </div>
+
+                <!-- LLM Response -->
+                <div class="bg-golf-sand rounded-lg p-4 border border-golf-gray-light">
+                    <div class="flex items-center justify-between mb-2">
+                        <h3 class="text-sm font-semibold text-golf-navy">LLM Response</h3>
+                        <button
+                            @click="copyToClipboard(llmResponse)"
+                            class="flex items-center gap-1 text-xs text-golf-navy hover:text-golf-green transition-colors px-2 py-1 rounded hover:bg-golf-gray-light"
+                            type="button"
+                            aria-label="Copy response to clipboard"
+                        >
+                            <svg x-show="!copied" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                            <svg x-show="copied" class="w-4 h-4 text-golf-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <span x-text="copied ? 'Copied!' : 'Copy'"></span>
+                        </button>
+                    </div>
+                    <pre class="font-mono text-sm text-golf-navy-light whitespace-pre-wrap overflow-x-auto" x-text="llmResponse"></pre>
+                </div>
+
+                <!-- Attempt Stats -->
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="bg-white rounded-lg p-3 border border-golf-gray-light">
+                        <div class="text-xs text-golf-gray mb-1">Input Tokens</div>
+                        <div class="text-lg font-bold text-golf-navy" x-text="validationResult.input_tokens"></div>
+                    </div>
+                    <div class="bg-white rounded-lg p-3 border border-golf-gray-light">
+                        <div class="text-xs text-golf-gray mb-1">Output Tokens</div>
+                        <div class="text-lg font-bold text-golf-navy" x-text="validationResult.output_tokens"></div>
+                    </div>
+                    <div class="bg-white rounded-lg p-3 border border-golf-gray-light">
+                        <div class="text-xs text-golf-gray mb-1">Cumulative</div>
+                        <div class="text-lg font-bold text-golf-gold" x-text="validationResult.cumulative_tokens"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMPLETION MODAL -->
+        <div
+            x-show="showCompletionModal"
+            x-transition
+            @keydown.escape.window="showCompletionModal = false"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            style="display: none;"
+        >
+            <div
+                class="bg-white rounded-2xl shadow-2xl p-8 max-w-xl w-full mx-4 animate-scale-in relative"
+                @click.outside="showCompletionModal = false"
+            >
+                <!-- Close Button -->
+                <button
+                    @click="showCompletionModal = false"
+                    class="absolute top-4 right-4 text-golf-gray hover:text-golf-navy transition-colors"
+                    type="button"
+                    aria-label="Close modal"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+
+                <!-- Celebration Header -->
+                <div class="text-center mb-8">
+                    <div class="text-7xl mb-4 animate-success">🎉</div>
+                    <h2 class="text-4xl font-bold text-golf-green mb-2">Success!</h2>
+                    <p class="text-lg text-golf-navy-light">Score recorded. Great job on this challenge!</p>
+                </div>
+
+                <!-- Performance Card -->
+                <div class="bg-gradient-to-br from-golf-sand to-amber-50 rounded-xl p-6 mb-6 border-2 border-golf-green">
+                    <h3 class="text-xl font-bold text-golf-navy mb-4 text-center">Your Performance</h3>
+
+                    <div class="grid grid-cols-2 gap-4 mb-4">
+                        <div class="bg-white rounded-lg p-4 text-center">
+                            <div class="text-sm text-golf-gray mb-1">Attempts</div>
+                            <div class="text-3xl font-bold text-golf-navy" x-text="completionStats.attempts"></div>
+                        </div>
+                        <div class="bg-white rounded-lg p-4 text-center">
+                            <div class="text-sm text-golf-gray mb-1">Total Tokens</div>
+                            <div class="text-3xl font-bold text-golf-gold" x-text="completionStats.tokens"></div>
+                        </div>
+                    </div>
+
+                    <!-- Rank Display -->
+                    <div class="bg-white rounded-lg p-4 text-center">
+                        <div class="text-sm text-golf-gray mb-1">Your Rank</div>
+                        <div class="text-4xl font-bold text-golf-green" x-text="completionStats.rank || 'Calculating...'"></div>
+                    </div>
+
+                    <!-- VS Par Comparison -->
+                    <div class="mt-4 text-center">
+                        <div class="text-sm text-golf-gray mb-1">vs Par ({{ challenge_data.metadata.get('estimated_tokens_expert', '150') if challenge_data and challenge_data.metadata else '150' }} tokens)</div>
+                        <div class="text-2xl font-bold"
+                            :class="completionStats.tokens <= {{ challenge_data.metadata.get('estimated_tokens_expert', 150) if challenge_data and challenge_data.metadata else 150 }} ? 'text-golf-green' : 'text-warning'">
+                            <span x-show="completionStats.tokens <= {{ challenge_data.metadata.get('estimated_tokens_expert', 150) if challenge_data and challenge_data.metadata else 150 }}">
+                                -<span x-text="{{ challenge_data.metadata.get('estimated_tokens_expert', 150) if challenge_data and challenge_data.metadata else 150 }} - completionStats.tokens"></span> Under Par! 🎉
+                            </span>
+                            <span x-show="completionStats.tokens > {{ challenge_data.metadata.get('estimated_tokens_expert', 150) if challenge_data and challenge_data.metadata else 150 }}">
+                                +<span x-text="completionStats.tokens - {{ challenge_data.metadata.get('estimated_tokens_expert', 150) if challenge_data and challenge_data.metadata else 150 }}"></span> Over Par
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Confetti -->
+                <div class="text-center text-5xl mb-6">
+                    <span class="inline-block animate-confetti" style="animation-delay: 0s;">🎉</span>
+                    <span class="inline-block animate-confetti" style="animation-delay: 0.2s;">🏆</span>
+                    <span class="inline-block animate-confetti" style="animation-delay: 0.4s;">⭐</span>
+                    <span class="inline-block animate-confetti" style="animation-delay: 0.6s;">🎊</span>
+                </div>
+
+                <!-- Auto-navigation Notice -->
+                <div class="text-center mb-6">
+                    <p class="text-sm text-golf-navy-light animate-pulse">
+                        <span x-show="hasNextChallenge()">🏌️ Moving to next hole in 2 seconds...</span>
+                        <span x-show="!hasNextChallenge()">🏆 Redirecting to leaderboard in 2 seconds...</span>
+                    </p>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="flex gap-4">
+                    <button
+                        @click="viewLeaderboard()"
+                        class="flex-1 bg-golf-navy hover:bg-golf-navy-light text-white font-bold py-4 px-6 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2"
+                        type="button"
+                    >
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
+                        Leaderboard
+                    </button>
+                    <!-- Next Hole button (if more holes) OR New Course button (if last hole) -->
+                    <button
+                        @click="hasNextChallenge() ? goToNextChallenge() : (window.location.href = '/')"
+                        :class="hasNextChallenge() ? 'bg-golf-gold hover:bg-golf-gold-dark' : 'bg-golf-green hover:bg-golf-green-dark'"
+                        class="flex-1 font-bold py-4 px-6 rounded-xl transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2 text-white shadow-lg"
+                        type="button"
+                    >
+                        <template x-if="!hasNextChallenge()">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            </svg>
+                        </template>
+                        <span x-text="hasNextChallenge() ? 'Next Hole' : 'New Course'"></span>
+                        <template x-if="hasNextChallenge()">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/>
+                            </svg>
+                        </template>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT SIDEBAR: Consolidated Stats (35% width, lg:col-span-1) -->
+    <div class="lg:col-span-1">
+        <div class="bg-white rounded-2xl shadow-lg overflow-hidden sticky top-6"
+             x-data="statsPanel()"
+             hx-get="/api/game/status/{{ session_id }}"
+             hx-trigger="every 10s"
+             hx-swap="none"
+             @htmx:after-request="updateStats($event.detail.xhr.response)">
+
+            <!-- Player Header -->
+            <div class="bg-gradient-to-br from-golf-navy to-golf-navy-light text-white p-6">
+                <div class="flex items-center gap-3 mb-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    <div class="flex-1">
+                        <div class="text-xs text-golf-gray-light">Player</div>
+                        <div class="text-xl font-bold text-golf-gold">{{ user.username or 'Guest' }}</div>
+                    </div>
+                </div>
+
+                <!-- Quick Stats Grid -->
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                        <div class="text-xs text-golf-gray-light mb-1">Holes</div>
+                        <div class="text-2xl font-bold" x-text="holesCompleted">{{ user_stats.holes_completed or 0 }}</div>
+                        <div class="text-xs text-golf-gray-light">/5</div>
+                    </div>
+                    <div class="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                        <div class="text-xs text-golf-gray-light mb-1">Rank</div>
+                        <div class="text-2xl font-bold" x-text="rank">{{ user_stats.rank or '-' }}</div>
+                    </div>
+                    <div class="bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                        <div class="text-xs text-golf-gray-light mb-1">Attempts</div>
+                        <div class="text-2xl font-bold" x-text="attempts">{{ user_stats.attempts or 0 }}</div>
+                    </div>
+                </div>
+
+                <!-- Total Tokens -->
+                <div class="mt-3 text-center bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                    <div class="text-xs text-golf-gray-light mb-1">Total Tokens</div>
+                    <div class="text-3xl font-bold text-golf-gold" x-text="totalTokens">{{ user_stats.total_tokens or 0 }}</div>
+                </div>
+
+                <!-- VS Par Indicator (cumulative across all holes) -->
+                {% if user_stats.cumulative_par %}
+                <div class="mt-3 text-center bg-white/10 rounded-lg p-3 backdrop-blur-sm">
+                    <div class="text-xs text-golf-gray-light mb-1">vs Par (All Holes)</div>
+                    <div class="text-xl font-bold {{ 'text-golf-green' if user_stats.total_tokens <= user_stats.cumulative_par else 'text-warning' }}">
+                        {% if user_stats.total_tokens <= user_stats.cumulative_par %}
+                            -{{ user_stats.cumulative_par - user_stats.total_tokens }}
+                        {% else %}
+                            +{{ user_stats.total_tokens - user_stats.cumulative_par }}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="p-6 space-y-6">
+
+                <!-- Leaderboard Section -->
+                <div>
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-lg font-bold text-golf-navy flex items-center gap-2">
+                            <svg class="w-5 h-5 text-golf-gold" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                            </svg>
+                            Top 5
+                        </h3>
+                        <button
+                            @click="window.location.reload()"
+                            class="text-golf-gray hover:text-golf-green transition-colors"
+                            type="button"
+                            title="Refresh">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <div class="space-y-2">
+                        {% for entry in leaderboard[:5] %}
+                        <div class="flex items-center gap-2 p-2 rounded-lg {{ 'bg-golf-gold/10 border-l-2 border-golf-gold' if entry.user_id == user.id else 'hover:bg-golf-sand/30' }}">
+                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold {{ 'bg-golf-gold text-white' if loop.index <= 3 else 'bg-golf-gray-light text-golf-navy' }}">
+                                {{ loop.index }}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-sm font-semibold text-golf-navy truncate">
+                                    {{ entry.username }}
+                                    {% if entry.user_id == user.id %}
+                                        <span class="text-golf-gold">⭐</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="text-sm font-bold text-golf-green">{{ entry.total_tokens }}</div>
+                        </div>
+                        {% else %}
+                        <div class="text-sm text-center text-golf-gray italic py-3">
+                            No scores yet
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <a href="/leaderboard" class="block mt-3 text-center text-sm text-golf-green hover:text-golf-green-dark font-semibold">
+                        View Full Leaderboard →
+                    </a>
+                </div>
+
+                <!-- Challenge Stats Section -->
+                <div class="border-t border-golf-gray-light pt-6">
+                    <h3 class="text-lg font-bold text-golf-navy mb-3 flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        Challenge Stats
+                    </h3>
+
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-golf-navy-light">Best Score</span>
+                            <span class="font-bold text-golf-green">{{ stats.best_score or '-' }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-golf-navy-light">Average</span>
+                            <span class="font-semibold text-golf-navy">{{ stats.average_score or '-' }}</span>
+                        </div>
+                        {% if comparison_data %}
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-golf-navy-light">Your Best</span>
+                            <span class="font-semibold {{ 'text-golf-green' if comparison_data.best_attempt_tokens and stats.average_score and comparison_data.best_attempt_tokens < stats.average_score else 'text-warning' }}">
+                                {{ comparison_data.best_attempt_tokens or '-' }}
+                            </span>
+                        </div>
+                        {% endif %}
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm text-golf-navy-light">Total Attempts</span>
+                            <span class="font-semibold text-golf-navy">{{ stats.total_attempts or 0 }}</span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function statsPanel() {
+        return {
+            rank: '{{ user_stats.rank or "-" }}',
+            attempts: {{ user_stats.attempts or 0 }},
+            totalTokens: {{ user_stats.total_tokens or 0 }},
+            completedChallenges: 0,
+            holesCompleted: {{ user_stats.holes_completed or 0 }},  // Fix: Alpine variable for x-text binding
+
+            updateStats(responseText) {
+                try {
+                    const data = JSON.parse(responseText);
+
+                    // Update total tokens
+                    this.totalTokens = data.total_tokens || 0;
+
+                    // Update completed challenges count
+                    this.completedChallenges = data.completed_challenges || 0;
+                    this.holesCompleted = data.holes_completed || 0;  // Fix: update holesCompleted from response
+
+                    // Calculate total attempts across all challenges
+                    this.attempts = data.challenges.reduce((sum, c) => sum + (c.attempts || 0), 0);
+
+                    // For rank, we'd need to fetch leaderboard data separately
+                    // For now, keep the initial rank or update if it's in the response
+                    if (data.rank) {
+                        this.rank = data.rank;
+                    }
+                } catch (e) {
+                    console.error('Error updating stats:', e);
+                }
+            }
+        };
+    }
+
+    function courseNavigation() {
+        return {
+            challenges: [],
+            currentChallengeId: '{{ challenge.id }}',
+            sessionId: '{{ session_id }}',
+            currentHoleNumber: 1,
+            totalHoles: 0,
+            completedHoles: 0,
+            completionPercentage: 0,
+
+            async init() {
+                await this.loadCourseInfo();
+            },
+
+            async loadCourseInfo() {
+                try {
+                    const response = await fetch(`/api/game/status/${this.sessionId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.challenges = data.challenges || [];
+                        this.totalHoles = this.challenges.length;
+                        this.completedHoles = this.challenges.filter(c => c.completed).length;
+                        this.completionPercentage = this.totalHoles > 0
+                            ? Math.round((this.completedHoles / this.totalHoles) * 100)
+                            : 0;
+
+                        // Find current hole number
+                        const currentIndex = this.challenges.findIndex(c => c.id === this.currentChallengeId);
+                        this.currentHoleNumber = currentIndex >= 0 ? currentIndex + 1 : 1;
+                    }
+                } catch (error) {
+                    console.error('Error loading course info:', error);
+                }
+            },
+
+            canNavigatePrevious() {
+                return this.currentHoleNumber > 1;
+            },
+
+            canNavigateNext() {
+                return this.currentHoleNumber < this.totalHoles;
+            },
+
+            navigateToPrevious() {
+                if (this.canNavigatePrevious()) {
+                    const prevChallenge = this.challenges[this.currentHoleNumber - 2];
+                    if (prevChallenge) {
+                        window.location.href = `/game/${this.sessionId}?challenge=${prevChallenge.id}`;
+                    }
+                }
+            },
+
+            navigateToNext() {
+                if (this.canNavigateNext()) {
+                    const nextChallenge = this.challenges[this.currentHoleNumber];
+                    if (nextChallenge) {
+                        window.location.href = `/game/${this.sessionId}?challenge=${nextChallenge.id}`;
+                    }
+                }
+            }
+        };
+    }
+
+    function gameInterface() {
+        return {
+            // State
+            userPrompt: '',
+            systemPrompt: '{{ challenge_data.system_prompt.get("default", "You are a helpful coding assistant.") if challenge_data and challenge_data.get("system_prompt") else "You are a helpful coding assistant." }}',
+            contextFiles: {{ challenge_data.context_files | tojson | safe if challenge_data and challenge_data.get('context_files') else '[]' }},
+            submitting: false,
+            hasResponse: false,
+            validationResult: {},
+            llmResponse: '',
+            errorMessage: '',
+            errorType: '',
+            copied: false,
+            showCompletionModal: false,
+            completionStats: {
+                attempts: 0,
+                tokens: 0,
+                rank: '-'
+            },
+            sessionId: '{{ session_id }}',
+            currentChallengeId: '{{ challenge.id }}',
+            courseInfo: null,
+            // Practice Swings (ADR 011)
+            canSubmit: false,
+            lastAttemptCorrect: false,
+            practiceCount: 0,
+            submittedCount: 0,
+            lastPracticedPrompt: '',
+            promptChangedSincePractice: false,
+
+            // Methods
+            estimateTokens(text) {
+                // More accurate token estimation for Claude
+                // Average ~3.5 characters per token for English text
+                const userPromptTokens = Math.ceil((text || '').length / 3.5);
+
+                // Estimate system prompt tokens (if present)
+                const systemPrompt = this.systemPrompt || '';
+                const systemPromptTokens = Math.ceil(systemPrompt.length / 3.5);
+
+                // Estimate output tokens (assume similar length to input, minimum 20)
+                // This is a rough heuristic - actual output varies by task
+                const estimatedOutputTokens = Math.max(20, Math.ceil(userPromptTokens * 0.8));
+
+                // Message structure overhead (roughly 10-15 tokens)
+                const overhead = 12;
+
+                // Total estimate: input + system + output + overhead
+                const total = userPromptTokens + systemPromptTokens + estimatedOutputTokens + overhead;
+
+                return Math.ceil(total);
+            },
+
+            getTokenCountColor(tokenCount) {
+                const par = {{ challenge_data.metadata.get('estimated_tokens_expert', 150) if challenge_data and challenge_data.get('metadata') else 150 }};
+                if (tokenCount <= par) {
+                    return 'text-golf-green';
+                } else if (tokenCount <= par * 1.5) {
+                    return 'text-golf-gold';
+                } else {
+                    return 'text-warning';
+                }
+            },
+
+            getSuccessMessage() {
+                if (!this.validationResult.is_correct) {
+                    return '🏌️ Try Again';
+                }
+                // Use attempt_number from API response
+                const attemptNum = this.validationResult.attempt_number || 1;
+                if (attemptNum === 1) {
+                    return '⛳ Hole in One!';
+                } else if (attemptNum === 2) {
+                    return '⛳ Nice Shot!';
+                } else if (attemptNum === 3) {
+                    return '⛳ Well Done!';
+                } else {
+                    return '⛳ Success!';
+                }
+            },
+
+            getParComparison() {
+                if (!this.validationResult.is_correct || !this.validationResult.total_tokens) {
+                    return '';
+                }
+                const par = {{ challenge_data.metadata.get('estimated_tokens_expert', 50) if challenge_data and challenge_data.get('metadata') else 50 }};
+                const tokens = this.validationResult.total_tokens;
+                const diff = tokens - par;
+
+                if (diff <= -2) return `Eagle (${diff})`;
+                if (diff === -1) return 'Birdie (-1)';
+                if (diff === 0) return 'Par (E)';
+                if (diff === 1) return 'Bogey (+1)';
+                if (diff === 2) return 'Double Bogey (+2)';
+                if (diff > 2) return `+${diff} Over Par`;
+                return '';
+            },
+
+            getParComparisonColor() {
+                if (!this.validationResult.total_tokens) return '';
+                const par = {{ challenge_data.metadata.get('estimated_tokens_expert', 50) if challenge_data and challenge_data.get('metadata') else 50 }};
+                const diff = this.validationResult.total_tokens - par;
+
+                if (diff < 0) return 'text-golf-green';  // Under par
+                if (diff === 0) return 'text-golf-navy';  // Par
+                if (diff <= 2) return 'text-golf-gold';  // Bogey/Double Bogey
+                return 'text-warning';  // Over par
+            },
+
+            async copyToClipboard(text) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    this.copied = true;
+                    setTimeout(() => {
+                        this.copied = false;
+                    }, 2000);
+                } catch (err) {
+                    console.error('Failed to copy:', err);
+                    alert('Failed to copy to clipboard');
+                }
+            },
+
+            handleEscape() {
+                if (this.errorMessage) {
+                    this.clearError();
+                }
+            },
+
+            clearError() {
+                this.errorMessage = '';
+                this.errorType = '';
+            },
+
+            handleError(statusCode, errorDetail) {
+                // Determine error type based on status code
+                if (statusCode === 503) {
+                    this.errorType = 'weather_delay';
+                    this.errorMessage = errorDetail || 'The LLM service is temporarily unavailable.';
+                } else if (statusCode === 400) {
+                    this.errorType = 'validation';
+                    this.errorMessage = errorDetail || 'There was a problem with your request.';
+                } else if (statusCode === 401 || statusCode === 404) {
+                    this.errorType = 'session';
+                    this.errorMessage = errorDetail || 'Your session is invalid or has expired.';
+                } else {
+                    this.errorType = 'general';
+                    this.errorMessage = errorDetail || 'An unexpected error occurred.';
+                }
+
+                // Scroll to error message
+                setTimeout(() => {
+                    const errorElement = document.querySelector('[x-show="errorMessage"]');
+                    if (errorElement) {
+                        errorElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }, 100);
+            },
+
+            handlePromptChange() {
+                // Mark that prompt has changed since last practice
+                if (this.lastPracticedPrompt !== this.userPrompt) {
+                    this.promptChangedSincePractice = true;
+                    // Disable submit button if prompt changed after successful practice
+                    if (this.canSubmit) {
+                        this.canSubmit = false;
+                    }
+                }
+            },
+
+            async practiceSwing() {
+                if (!this.userPrompt.trim()) {
+                    this.handleError(400, 'Please enter a prompt before practicing.');
+                    return;
+                }
+
+                this.submitting = true;
+                this.hasResponse = false;
+                this.copied = false;
+                this.clearError();
+
+                try {
+                    const response = await fetch('/api/game/submit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            session_id: '{{ session_id }}',
+                            challenge_id: '{{ challenge.id }}',
+                            user_prompt: this.userPrompt,
+                            action: 'practice',
+                            system_prompt: this.systemPrompt,
+                            context_files: this.contextFiles.map(f => ({
+                                name: f.name,
+                                content: f.content || ''
+                            }))
+                        })
+                    });
+
+                    if (!response.ok) {
+                        let errorDetail = 'Failed to submit practice attempt';
+                        try {
+                            const error = await response.json();
+                            errorDetail = error.detail || errorDetail;
+                        } catch (e) {
+                            errorDetail = response.statusText || errorDetail;
+                        }
+                        this.handleError(response.status, errorDetail);
+                        return;
+                    }
+
+                    const result = await response.json();
+
+                    this.validationResult = result;
+                    this.llmResponse = result.llm_response;
+                    this.hasResponse = true;
+                    this.lastAttemptCorrect = result.is_correct;
+                    this.canSubmit = result.is_correct;
+                    this.practiceCount = result.practice_count || 0;
+                    this.submittedCount = result.submitted_count || 0;
+
+                    // Track practiced prompt and reset change flag
+                    this.lastPracticedPrompt = this.userPrompt;
+                    this.promptChangedSincePractice = false;
+
+                    // Scroll to results
+                    setTimeout(() => {
+                        const resultsElement = document.querySelector('[x-show="hasResponse"]');
+                        if (resultsElement) {
+                            resultsElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                    }, 100);
+
+                    // Don't show completion modal for practice swings
+                    // User must explicitly submit to record score
+
+                } catch (error) {
+                    console.error('Error with practice swing:', error);
+                    this.handleError(500, error.message || 'Network error - please check your connection and try again.');
+                } finally {
+                    this.submitting = false;
+                }
+            },
+
+            async submitAndRecord() {
+                if (!this.userPrompt.trim()) {
+                    this.handleError(400, 'Please enter a prompt before submitting.');
+                    return;
+                }
+
+                if (!this.lastAttemptCorrect) {
+                    this.handleError(400, 'Please complete a successful practice swing before submitting.');
+                    return;
+                }
+
+                this.submitting = true;
+                this.hasResponse = false;
+                this.copied = false;
+                this.clearError();
+
+                try {
+                    const response = await fetch('/api/game/submit', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            session_id: '{{ session_id }}',
+                            challenge_id: '{{ challenge.id }}',
+                            user_prompt: this.userPrompt,
+                            action: 'submit',
+                            system_prompt: this.systemPrompt,
+                            context_files: this.contextFiles.map(f => ({
+                                name: f.name,
+                                content: f.content || ''
+                            }))
+                        })
+                    });
+
+                    if (!response.ok) {
+                        let errorDetail = 'Failed to submit and record score';
+                        try {
+                            const error = await response.json();
+                            errorDetail = error.detail || errorDetail;
+                        } catch (e) {
+                            errorDetail = response.statusText || errorDetail;
+                        }
+                        this.handleError(response.status, errorDetail);
+                        return;
+                    }
+
+                    const result = await response.json();
+
+                    this.validationResult = result;
+                    this.llmResponse = result.llm_response;
+                    this.hasResponse = true;
+                    this.practiceCount = result.practice_count || 0;
+                    this.submittedCount = result.submitted_count || 0;
+
+                    // Reset submit button state
+                    this.canSubmit = false;
+                    this.lastAttemptCorrect = false;
+
+                    // Scroll to results
+                    setTimeout(() => {
+                        const resultsElement = document.querySelector('[x-show="hasResponse"]');
+                        if (resultsElement) {
+                            resultsElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                    }, 100);
+
+                    // Show completion modal on successful submission
+                    if (result.is_correct) {
+                        await this.showCompletionScreen(result);
+
+                        // Auto-navigate after showing success (2 seconds delay)
+                        setTimeout(() => {
+                            if (this.hasNextChallenge()) {
+                                // Move to next hole
+                                this.goToNextChallenge();
+                            } else {
+                                // Course complete - go to leaderboard
+                                this.goToLeaderboard();
+                            }
+                        }, 2000);
+                    } else {
+                        // This shouldn't happen (Submit button only enabled after successful practice)
+                        // But handle it gracefully just in case
+                        this.handleError(422, 'Oops! There was a problem with your submission. Please try practicing again.');
+                    }
+
+                } catch (error) {
+                    console.error('Error submitting and recording:', error);
+                    this.handleError(500, error.message || 'Oops! Network error - please check your connection and try again.');
+                } finally {
+                    this.submitting = false;
+                }
+            },
+
+            async showCompletionScreen(result) {
+                // Fetch current stats for the completion modal
+                try {
+                    const response = await fetch(`/api/game/status/${this.sessionId}`);
+                    if (response.ok) {
+                        const data = await response.json();
+                        const currentChallenge = data.challenges.find(c => c.id === this.currentChallengeId);
+
+                        this.completionStats = {
+                            attempts: currentChallenge?.attempts || result.attempt_number,
+                            tokens: currentChallenge?.tokens || result.total_tokens,
+                            rank: '-'  // We'll calculate this from leaderboard
+                        };
+
+                        // Store course info for navigation
+                        this.courseInfo = data;
+                    }
+                } catch (error) {
+                    console.error('Error fetching completion stats:', error);
+                    // Use fallback from result
+                    this.completionStats = {
+                        attempts: result.attempt_number,
+                        tokens: result.total_tokens,
+                        rank: '-'
+                    };
+                }
+
+                // Show the modal
+                this.showCompletionModal = true;
+            },
+
+            hasNextChallenge() {
+                if (!this.courseInfo) return false;
+                const currentIndex = this.courseInfo.challenges.findIndex(c => c.id === this.currentChallengeId);
+                return currentIndex >= 0 && currentIndex < this.courseInfo.challenges.length - 1;
+            },
+
+            goToLeaderboard() {
+                // Navigate to the leaderboard page
+                window.location.href = '/leaderboard';
+            },
+
+            goToNextChallenge() {
+                if (!this.courseInfo) return;
+                const currentIndex = this.courseInfo.challenges.findIndex(c => c.id === this.currentChallengeId);
+                if (currentIndex >= 0 && currentIndex < this.courseInfo.challenges.length - 1) {
+                    const nextChallenge = this.courseInfo.challenges[currentIndex + 1];
+                    window.location.href = `/game/${this.sessionId}?challenge=${nextChallenge.id}`;
+                }
+            },
+
+            viewLeaderboard() {
+                // Close modal and scroll to leaderboard sidebar
+                this.showCompletionModal = false;
+                setTimeout(() => {
+                    const sidebar = document.querySelector('.lg\\:col-span-1');
+                    if (sidebar) {
+                        sidebar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                }, 300);
+            }
+        }
+    }
+</script>
+{% endblock %}

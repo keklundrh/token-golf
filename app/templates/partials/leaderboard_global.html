@@ -1,0 +1,146 @@
+<!-- Global Leaderboard Partial -->
+
+<!-- Statistics Data (hidden, for JavaScript) -->
+<script type="application/json" id="leaderboard-stats-data">
+{
+    "totalPlayers": {{ (completed|length) + (in_progress|length) }},
+    "bestScore": {{ completed[0].total_tokens if completed else 0 }},
+    "averageScore": {{ ((completed|sum(attribute='total_tokens') + in_progress|sum(attribute='total_tokens')) / ((completed|length) + (in_progress|length)))|round|int if ((completed|length) + (in_progress|length)) > 0 else 0 }},
+    "completedCount": {{ completed|length }},
+    "inProgressCount": {{ in_progress|length }}
+}
+</script>
+
+<!-- COMPLETED SECTION -->
+{% if completed %}
+<div class="mb-6">
+    <div class="bg-gray-100 px-6 py-3 rounded-t-lg border-b-2 border-gray-300">
+        <h3 class="text-gray-900 font-bold text-2xl flex items-center gap-3">
+            <span class="text-3xl">🏆</span>
+            Completed Courses
+        </h3>
+    </div>
+    <div class="overflow-x-auto bg-white rounded-b-lg border-2 border-green-600">
+        <table class="w-full">
+            <thead class="bg-gray-100">
+                <tr class="text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th class="px-4 py-3 w-16">Rank</th>
+                    <th class="px-4 py-3">Player</th>
+                    <th class="px-4 py-3 text-right">Best Score</th>
+                    <th class="px-4 py-3 text-center">Courses</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for entry in completed %}
+                {% set is_current_user = (current_user_id and entry.user_id == current_user_id) %}
+                <tr class="transition-colors {% if is_current_user %}bg-blue-100 border-l-4 border-blue-500 hover:bg-blue-200{% elif loop.index <= 3 %}bg-yellow-50 hover:bg-yellow-100{% else %}hover:bg-gray-50{% endif %}">
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            {% if loop.index == 1 %}
+                            <span class="text-3xl mr-2">🥇</span>
+                            {% elif loop.index == 2 %}
+                            <span class="text-3xl mr-2">🥈</span>
+                            {% elif loop.index == 3 %}
+                            <span class="text-3xl mr-2">🥉</span>
+                            {% else %}
+                            <span class="text-lg font-bold text-gray-700">{{ loop.index }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-4 py-4">
+                        <div class="flex items-center gap-2">
+                            {% if is_current_user %}
+                            <span class="text-xl">👤</span>
+                            <span class="font-bold text-blue-900">{{ entry.username }}</span>
+                            <span class="text-xs font-semibold text-blue-700 bg-blue-200 px-2 py-1 rounded-full">YOU</span>
+                            {% else %}
+                            <span class="font-semibold text-gray-900">{{ entry.username }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-4 py-4 text-right">
+                        <div class="font-mono font-bold text-xl text-gray-900">
+                            {{ "{:,}".format(entry.total_tokens) }}
+                        </div>
+                        <div class="text-xs text-gray-600">{{ entry.total_attempts }} attempts</div>
+                    </td>
+                    <td class="px-4 py-4 text-center">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-green-600 text-white">
+                            ✓ {{ entry.completed_challenges }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="text-center py-8 bg-gray-50 rounded-lg border-2 border-gray-200 mb-6">
+    <p class="text-gray-600 text-lg font-semibold">🏌️ No completed courses yet</p>
+    <p class="text-gray-500 text-sm mt-2">Be the first to finish all holes!</p>
+</div>
+{% endif %}
+
+<!-- IN PROGRESS SECTION -->
+{% if in_progress %}
+<div>
+    <div class="bg-gray-100 px-6 py-3 rounded-t-lg border-b-2 border-gray-300">
+        <h3 class="text-gray-900 font-bold text-2xl flex items-center gap-3">
+            <span class="text-3xl">⏳</span>
+            In Progress
+        </h3>
+    </div>
+    <div class="overflow-x-auto bg-white rounded-b-lg border-2 border-blue-500">
+        <table class="w-full">
+            <thead class="bg-gray-100">
+                <tr class="text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    <th class="px-4 py-3 w-16">Rank</th>
+                    <th class="px-4 py-3">Player</th>
+                    <th class="px-4 py-3 text-right">Tokens</th>
+                    <th class="px-4 py-3 text-center">Progress</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for entry in in_progress %}
+                {% set is_current_user = (current_user_id and entry.user_id == current_user_id) %}
+                <tr class="transition-colors {% if is_current_user %}bg-blue-100 border-l-4 border-blue-700 hover:bg-blue-200{% else %}hover:bg-gray-50{% endif %}">
+                    <td class="px-4 py-4 whitespace-nowrap">
+                        <span class="text-lg font-bold text-gray-700">{{ loop.index }}</span>
+                    </td>
+                    <td class="px-4 py-4">
+                        <div class="flex items-center gap-2">
+                            {% if is_current_user %}
+                            <span class="text-xl">👤</span>
+                            <span class="font-bold text-blue-900">{{ entry.username }}</span>
+                            <span class="text-xs font-semibold text-blue-700 bg-blue-200 px-2 py-1 rounded-full">YOU</span>
+                            {% else %}
+                            <span class="font-semibold text-gray-900">{{ entry.username }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-4 py-4 text-right">
+                        <div class="font-mono font-bold text-xl text-gray-900">
+                            {{ "{:,}".format(entry.total_tokens) }}
+                        </div>
+                        <div class="text-xs text-gray-600">{{ entry.total_attempts }} attempts</div>
+                    </td>
+                    <td class="px-4 py-4 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold bg-blue-600 text-white">
+                                {{ entry.holes_completed }}/{{ entry.course_total_holes }} holes
+                            </span>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% elif not completed %}
+<div class="text-center py-8 bg-gray-50 rounded-lg border-2 border-gray-200">
+    <p class="text-gray-600 text-lg font-semibold">⛳ Nobody playing yet</p>
+    <p class="text-gray-500 text-sm mt-2">Start a game to see yourself here!</p>
+</div>
+{% endif %}

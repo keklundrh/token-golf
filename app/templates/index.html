@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block title %}Token Golf - Master AI Efficiency Through Competitive Play{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto space-y-16 py-8">
+    <!-- Hero Section -->
+    <section class="text-center space-y-6">
+        <!-- Logo Icons -->
+        <div class="flex justify-center items-center gap-4">
+            <div class="text-8xl" aria-label="Golf flag">⛳</div>
+            <div class="text-8xl" aria-label="Trophy">🏆</div>
+        </div>
+
+        <!-- Main Title -->
+        <h1 class="text-5xl font-bold text-golf-navy">
+            TOKEN GOLF
+        </h1>
+
+        <!-- Tagline -->
+        <p class="text-2xl text-golf-navy-light max-w-3xl mx-auto">
+            Master AI Efficiency Through Competitive Play
+        </p>
+
+        <!-- Description -->
+        <div class="max-w-3xl mx-auto space-y-3 text-lg text-gray-600">
+            <p>
+                Just like golf, lower scores win. Craft precise prompts,
+                minimize tokens, and compete for the top spot.
+            </p>
+        </div>
+    </section>
+
+    <!-- CTA Cards Section -->
+    <section class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto"
+             x-data="{
+                 selectedAction: null,
+                 showNewUserConfirm: false,
+                 generatedUsername: '',
+                 generatedPassword: '',
+                 signinError: '',
+                 signingIn: false,
+                 generating: false
+             }">
+
+        <!-- Start New Game Card -->
+        <div x-show="selectedAction === null"
+             class="bg-white rounded-2xl shadow-golf-lg p-8 text-center space-y-4 transition-all duration-300 hover:shadow-gold-lg hover:scale-105 cursor-pointer border-2 border-transparent hover:border-golf-green"
+             @click="selectedAction = 'new'">
+            <div class="text-6xl mb-4">⛳</div>
+            <h2 class="text-2xl font-bold text-golf-navy">START NEW GAME</h2>
+            <p class="text-gray-600">
+                Generate username & play
+            </p>
+        </div>
+
+        <!-- Continue Game Card -->
+        <div x-show="selectedAction === null"
+             class="bg-white rounded-2xl shadow-golf-lg p-8 text-center space-y-4 transition-all duration-300 hover:shadow-gold-lg hover:scale-105 cursor-pointer border-2 border-transparent hover:border-golf-gold"
+             @click="selectedAction = 'signin'">
+            <div class="text-6xl mb-4">👤</div>
+            <h2 class="text-2xl font-bold text-golf-navy">CONTINUE GAME</h2>
+            <p class="text-gray-600">
+                Sign in to your account
+            </p>
+        </div>
+
+        <!-- New Game Flow -->
+        <div x-show="selectedAction === 'new'"
+             x-transition
+             class="md:col-span-2 bg-white rounded-2xl shadow-lg p-8 space-y-6">
+
+            <div class="flex items-center justify-between border-b border-gray-200 pb-4">
+                <h2 class="text-3xl font-bold text-golf-navy">Start New Game</h2>
+                <button @click="selectedAction = null; showNewUserConfirm = false"
+                        class="text-golf-gray hover:text-golf-navy text-2xl">
+                    ✕
+                </button>
+            </div>
+
+            <!-- Generate Username Step -->
+            <div x-show="!showNewUserConfirm && !generating" class="text-center space-y-6">
+                <p class="text-lg text-gray-700">
+                    Click below to generate a unique username and password.
+                    <span class="font-semibold text-golf-green">Save your credentials!</span>
+                    You'll need them to return.
+                </p>
+
+                <button
+                    hx-post="/api/game/start"
+                    hx-ext="json-enc"
+                    hx-vals='{"action": "generate", "course_id": "full-tour"}'
+                    hx-swap="none"
+                    @click="generating = true"
+                    @htmx:after-request="
+                        const status = event.detail.xhr.status;
+                        if(event.detail.successful || status === 201) {
+                            const data = JSON.parse(event.detail.xhr.response);
+                            generatedUsername = data.username;
+                            generatedPassword = data.password;
+                            showNewUserConfirm = true;
+                            sessionStorage.setItem('token_golf_session_id', data.session_id);
+                            sessionStorage.setItem('token_golf_username', data.username);
+                        } else {
+                            generating = false;
+                            alert('Error: ' + (event.detail.xhr.response || 'Unknown error'));
+                        }
+                    "
+                    class="bg-golf-green hover:bg-golf-green-dark text-white font-semibold py-4 px-8 rounded-lg shadow-golf hover:shadow-golf-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed text-xl"
+                    :disabled="generating">
+                    <span class="text-2xl mr-2">🏌️</span>
+                    Generate My Username
+                </button>
+            </div>
+
+            <!-- Generating State -->
+            <div x-show="generating && !showNewUserConfirm" class="text-center space-y-4 py-8">
+                <div class="text-6xl animate-bounce-gentle">⛳</div>
+                <p class="text-xl text-golf-green font-semibold">Creating your session...</p>
+            </div>
+
+            <!-- Show Generated Credentials -->
+            <div x-show="showNewUserConfirm"
+                 x-transition
+                 class="space-y-6">
+
+                <div class="text-center">
+                    <div class="text-5xl mb-3">🎉</div>
+                    <h3 class="text-2xl font-bold text-golf-green mb-2">Welcome to Token Golf!</h3>
+                    <p class="text-lg text-gray-700">Save these credentials to continue your game later:</p>
+                </div>
+
+                <div class="bg-golf-sand p-6 rounded-xl space-y-4 border-2 border-golf-green">
+                    <div>
+                        <label class="block text-sm font-semibold text-golf-gray uppercase mb-2">Username</label>
+                        <div class="flex items-center gap-3">
+                            <input
+                                type="text"
+                                :value="generatedUsername"
+                                readonly
+                                class="flex-1 text-xl font-mono font-bold text-golf-navy bg-white border-2 border-golf-gray-light rounded-lg px-4 py-3">
+                            <button
+                                @click="navigator.clipboard.writeText(generatedUsername)"
+                                class="bg-golf-green hover:bg-golf-green-dark text-white px-6 py-3 rounded-lg font-semibold transition-all">
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-golf-gray uppercase mb-2">Password</label>
+                        <div class="flex items-center gap-3">
+                            <input
+                                type="text"
+                                :value="generatedPassword"
+                                readonly
+                                class="flex-1 text-xl font-mono font-bold text-golf-navy bg-white border-2 border-golf-gray-light rounded-lg px-4 py-3">
+                            <button
+                                @click="navigator.clipboard.writeText(generatedPassword)"
+                                class="bg-golf-green hover:bg-golf-green-dark text-white px-6 py-3 rounded-lg font-semibold transition-all">
+                                Copy
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <button
+                        @click="window.location.href = '/game/' + sessionStorage.getItem('token_golf_session_id')"
+                        class="bg-golf-gold hover:bg-golf-gold-dark text-white font-bold py-4 px-12 rounded-xl shadow-gold hover:shadow-gold-lg transition-all duration-200 hover:scale-105 text-xl">
+                        Start Playing
+                        <span class="ml-2">▶</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sign In Flow -->
+        <div x-show="selectedAction === 'signin'"
+             x-transition
+             class="md:col-span-2 bg-white rounded-2xl shadow-lg p-8 space-y-6">
+
+            <div class="flex items-center justify-between border-b border-gray-200 pb-4">
+                <h2 class="text-3xl font-bold text-golf-navy">Continue Game</h2>
+                <button @click="selectedAction = null; signinError = ''"
+                        class="text-golf-gray hover:text-golf-navy text-2xl">
+                    ✕
+                </button>
+            </div>
+
+            <form
+                hx-post="/api/game/start"
+                hx-ext="json-enc"
+                hx-vals='{"action": "signin", "course_id": "full-tour"}'
+                hx-swap="none"
+                @htmx:before-request="signinError = ''; signingIn = true;"
+                @htmx:after-request="
+                    signingIn = false;
+                    const status = event.detail.xhr.status;
+                    if(event.detail.successful || status === 201) {
+                        const data = JSON.parse(event.detail.xhr.response);
+                        sessionStorage.setItem('token_golf_session_id', data.session_id);
+                        sessionStorage.setItem('token_golf_username', data.username);
+                        window.location.href = '/game/' + data.session_id;
+                    } else {
+                        const response = JSON.parse(event.detail.xhr.response);
+                        signinError = response.detail || 'Sign in failed';
+                    }
+                "
+                class="space-y-6 max-w-md mx-auto">
+
+                <div>
+                    <label for="username" class="block text-sm font-semibold text-golf-navy mb-2">
+                        Username
+                    </label>
+                    <input
+                        type="text"
+                        id="username"
+                        name="username"
+                        required
+                        :disabled="signingIn"
+                        class="w-full px-4 py-3 border-2 border-golf-gray-light rounded-lg focus:border-golf-green focus:ring-2 focus:ring-golf-green/20 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base"
+                        placeholder="Blue-Pebblebeach-7">
+                </div>
+
+                <div>
+                    <label for="password" class="block text-sm font-semibold text-golf-navy mb-2">
+                        Password
+                    </label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                        :disabled="signingIn"
+                        class="w-full px-4 py-3 border-2 border-golf-gray-light rounded-lg focus:border-golf-green focus:ring-2 focus:ring-golf-green/20 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-base"
+                        placeholder="Enter your password">
+                </div>
+
+                <!-- Error Message -->
+                <div x-show="signinError"
+                     x-transition
+                     class="bg-red-50 border-2 border-error text-red-700 px-4 py-3 rounded-lg"
+                     role="alert">
+                    <span x-text="signinError"></span>
+                </div>
+
+                <!-- Loading State -->
+                <div x-show="signingIn" class="text-center py-4">
+                    <div class="text-4xl animate-bounce-gentle inline-block">⛳</div>
+                    <p class="text-lg text-golf-green mt-2">Signing in...</p>
+                </div>
+
+                <button
+                    type="submit"
+                    :disabled="signingIn"
+                    class="w-full bg-golf-gold hover:bg-golf-gold-dark text-white font-bold py-4 px-8 rounded-xl shadow-gold hover:shadow-gold-lg transition-all duration-200 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed text-lg">
+                    <span x-show="!signingIn">Sign In & Play</span>
+                    <span x-show="signingIn">Please wait...</span>
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Leaderboard Preview -->
+    <section class="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-2xl shadow-lg p-8 border-2 border-golf-gold">
+        <div class="text-center mb-8">
+            <div class="text-5xl mb-3">🏆</div>
+            <h2 class="text-3xl font-bold text-golf-navy mb-2">
+                TOP PLAYERS
+            </h2>
+            <p class="text-lg text-golf-navy-light">
+                Most Efficient Prompt Engineers
+            </p>
+        </div>
+
+        <!-- Leaderboard Data -->
+        <div
+            hx-get="/api/leaderboard/global?limit=3&completed_only=true"
+            hx-trigger="load"
+            hx-swap="innerHTML"
+            class="space-y-3">
+            <!-- Skeleton Loading State -->
+            <div class="space-y-3">
+                <div class="bg-white p-6 rounded-xl border-2 border-gray-200 animate-pulse">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-gray-300 rounded-full"></div>
+                            <div class="space-y-2">
+                                <div class="w-32 h-6 bg-gray-300 rounded"></div>
+                                <div class="w-24 h-4 bg-gray-200 rounded"></div>
+                            </div>
+                        </div>
+                        <div class="w-20 h-8 bg-gray-300 rounded"></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border-2 border-gray-200 animate-pulse">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-gray-300 rounded-full"></div>
+                            <div class="space-y-2">
+                                <div class="w-28 h-6 bg-gray-300 rounded"></div>
+                                <div class="w-20 h-4 bg-gray-200 rounded"></div>
+                            </div>
+                        </div>
+                        <div class="w-20 h-8 bg-gray-300 rounded"></div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border-2 border-gray-200 animate-pulse">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-gray-300 rounded-full"></div>
+                            <div class="space-y-2">
+                                <div class="w-36 h-6 bg-gray-300 rounded"></div>
+                                <div class="w-28 h-4 bg-gray-200 rounded"></div>
+                            </div>
+                        </div>
+                        <div class="w-20 h-8 bg-gray-300 rounded"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Full Leaderboard Link -->
+        <div class="text-center mt-6">
+            <a
+                href="/leaderboard"
+                class="inline-block bg-golf-gold hover:bg-golf-gold-dark text-white font-semibold py-3 px-8 rounded-xl shadow-gold hover:shadow-gold-lg transition-all duration-200 hover:scale-105 text-lg">
+                View Full Leaderboard
+                <span class="ml-2">→</span>
+            </a>
+        </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white rounded-xl shadow-md p-6 text-center space-y-4 border-2 border-golf-gray-light transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+            <div class="text-6xl">📖</div>
+            <h3 class="text-xl font-bold text-golf-navy">Read Challenge</h3>
+            <p class="text-base text-gray-600">
+                Unique AI task
+            </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 text-center space-y-4 border-2 border-golf-gray-light transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+            <div class="text-6xl">✍️</div>
+            <h3 class="text-xl font-bold text-golf-navy">Craft Prompt</h3>
+            <p class="text-base text-gray-600">
+                Efficient solve
+            </p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 text-center space-y-4 border-2 border-golf-gray-light transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+            <div class="text-6xl">📊</div>
+            <h3 class="text-xl font-bold text-golf-navy">Minimize Tokens</h3>
+            <p class="text-base text-gray-600">
+                Lower is better
+            </p>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // Transform leaderboard API response to HTML
+    document.body.addEventListener('htmx:afterSwap', function(event) {
+        const target = event.detail.target;
+
+        // Check if this is the leaderboard load
+        if (event.detail.xhr && event.detail.xhr.responseURL && event.detail.xhr.responseURL.includes('/api/leaderboard')) {
+            try {
+                const data = JSON.parse(event.detail.xhr.response);
+
+                if (data.entries && data.entries.length > 0) {
+                    let html = '<div class="space-y-3">';
+
+                    data.entries.forEach((entry, index) => {
+                        const medals = ['🥇', '🥈', '🥉'];
+                        const medal = medals[index] || '';
+                        const borderColors = [
+                            'border-l-4 border-golf-gold',
+                            'border-l-4 border-gray-400',
+                            'border-l-4 border-orange-400'
+                        ];
+                        const borderColor = borderColors[index] || 'border-l-2 border-golf-gray-light';
+
+                        html += `
+                            <div class="bg-white flex items-center justify-between p-5 rounded-xl shadow-md ${borderColor}">
+                                <div class="flex items-center gap-4">
+                                    <div class="text-4xl">${medal}</div>
+                                    <div>
+                                        <div class="text-xl font-bold text-golf-navy">${entry.username}</div>
+                                        <div class="text-sm text-gray-600">
+                                            ${entry.completed_challenges} course${entry.completed_challenges !== 1 ? 's' : ''} completed
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-2xl font-bold text-golf-gold">
+                                        ${entry.total_tokens.toLocaleString()}
+                                    </div>
+                                    <div class="text-xs text-golf-gray uppercase font-semibold">
+                                        tokens
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    html += '</div>';
+                    target.innerHTML = html;
+                } else {
+                    target.innerHTML = `
+                        <div class="text-center py-12">
+                            <div class="text-6xl mb-4">⛳</div>
+                            <p class="text-xl text-gray-600">No players yet!</p>
+                            <p class="text-base text-gray-500 mt-2">Be the first to complete a challenge.</p>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error('Error parsing leaderboard:', e);
+                target.innerHTML = `
+                    <div class="text-center py-8 text-error">
+                        <p class="text-lg">Unable to load leaderboard</p>
+                    </div>
+                `;
+            }
+        }
+    });
+</script>
+{% endblock %}

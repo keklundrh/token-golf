@@ -1,0 +1,35 @@
+id: hole-001
+name: "Hello World"
+difficulty: easy
+description: |
+  Write a greeting message that says "Hello, World!" exactly.
+
+  This is a warm-up challenge to get familiar with Token Golf.
+  Your response should be the exact text requested, nothing more, nothing less.
+
+task_type: generation
+
+validation:
+  type: exact_match
+  criteria:
+    expected_answer: "Hello, World!"
+    case_sensitive: true
+    trim_whitespace: true
+
+system_prompt:
+  default: "You are a helpful assistant."
+  removable: false
+  editable: true
+
+parameters:
+  max_iterations: null
+  time_limit_seconds: null
+  hints_available: 0
+
+metadata:
+  author: "Token Golf Team"
+  created_date: "2026-09-21"
+  tags: ["beginner", "warmup", "exact_match"]
+  estimated_tokens_expert: 50
+  estimated_tokens_beginner: 200
+  estimated_difficulty: 1.0

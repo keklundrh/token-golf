@@ -1,0 +1,16 @@
+{
+  "name": "token-golf",
+  "version": "0.1.0",
+  "description": "Token Golf - AI Token Optimization Game",
+  "private": true,
+  "scripts": {
+    "tailwind:watch": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --watch --minify",
+    "tailwind:build": "tailwindcss -i ./static/css/input.css -o ./static/css/output.css --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -9,10 +9,12 @@ Token Golf is designed for conference demonstrations and educational workshops w
 ## 🎮 Game Mechanics
 
 - **Golf-Style Scoring**: Fewer tokens = better score
-- **Progressive Difficulty**: Multiple "holes" (challenges) with increasing complexity
-- **All Tokens Count**: Input, output, system prompts, failed attempts - everything counts
-- **Iterate to Success**: Players can retry until they get the correct answer (all attempts count)
-- **Configurable Competitions**: Choose number of holes and difficulty levels
+- **Progressive Difficulty**: 5 "holes" (challenges) with increasing complexity
+- **Practice Swings**: Unlimited practice attempts to test your prompts (don't count toward score)
+- **Submit & Record**: When happy with a solution, submit it to record your score
+- **Best Score Wins**: Only your best submitted attempt per hole counts toward the leaderboard
+- **Retry to Improve**: Can submit multiple times to optimize your score
+- **Single Course Mode**: Currently all sessions play "Full Tour" (5 holes)
 
 ### Task Types
 - Coding challenges
@@ -30,23 +32,23 @@ Players can add/remove:
 ## 🏆 Leaderboards
 
 Three leaderboard views:
-1. **Global**: Total score across all completed holes
-2. **Per-Hole**: Best scores for individual challenges
-3. **Session**: Current competition/event rankings
+1. **Global**: Scores across all sessions in current deployment
+2. **Per-Hole**: Best scores for individual challenges across all sessions
+3. **Session**: Current session/competition rankings only
 
 ## 🎨 UI Layout
 
 ```
 ┌─────────────────────┬──────────────────────┐
-│ Problem Statement   │                      │
-│                     │                      │
-│                     │   Metrics & Results  │
-├─────────────────────┤                      │
-│                     │   - Leaderboards     │
-│ Chat Interface      │   - User Stats       │
-│ - Prompt input      │   - Comparisons      │
-│ - Context pills     │   - Distribution     │
-│ - System settings   │                      │
+│ Challenge Display   │                      │
+│ - Problem statement │                      │
+│ - Success criteria  │   Unified Stats      │
+│ - Context files     │   - Token count      │
+├─────────────────────┤   - Leaderboard      │
+│                     │   - Your rank        │
+│ Prompt Interface    │   - VS Par           │
+│ - Input area        │                      │
+│ - Token estimate    │                      │
 └─────────────────────┴──────────────────────┘
 ```
 
@@ -58,63 +60,24 @@ Three leaderboard views:
 - **LLM Backend**: 
   - Development: Claude API
   - Production: OpenShift AI Models as a Service
-- **Deployment**: Docker containers for OpenShift
+- **Deployment**: Podman containers for OpenShift (see ADR 006)
 
-## 🚀 Quick Start (Local Development)
+## 🚀 Quick Start
+
+**See [SETUP.md](SETUP.md) for complete setup instructions** (containerized or local Python).
 
 ```bash
-# Setup (coming soon)
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-
-# Configure
-cp .env.example .env
-# Add your Claude API key to .env
-
-# Run
-uvicorn app.main:app --reload
-
-# Visit
-# http://localhost:8000
+# Quick version:
+cp .env.example .env    # Add your Claude API key
+podman-compose up       # Or use ./run.sh for local Python
+# Visit http://localhost:8000
 ```
 
-## 📁 Project Structure
+## 📁 Project Structure & Documentation
 
-```
-token-golf/
-├── app/                    # FastAPI application
-│   ├── main.py            # Entry point
-│   ├── api/               # API routes
-│   ├── models/            # Database models
-│   ├── services/          # Business logic
-│   └── templates/         # HTML templates
-├── challenges/            # Challenge definitions
-│   ├── hole-001/
-│   │   ├── challenge.yaml
-│   │   └── assets/
-│   └── README.md
-├── docs/                  # Documentation
-│   ├── ADRs/             # Architecture Decision Records
-│   └── CHALLENGE_FORMAT.md
-├── static/               # CSS, JS, images
-├── tests/                # Test suite
-└── README.md
-```
-
-## 📝 Creating Challenges
-
-Challenges are defined in YAML files. See [Challenge Format Documentation](docs/CHALLENGE_FORMAT.md) for details.
-
-```yaml
-id: hole-001
-name: "Simple Function Generation"
-difficulty: easy
-task_type: coding
-validation:
-  type: test_cases
-# ... see full spec in docs/
-```
+- **Architecture**: See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- **Creating Challenges**: See [docs/CHALLENGE_FORMAT.md](docs/CHALLENGE_FORMAT.md)
+- **Contributing**: See [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## 🎯 Development Workflow
 
@@ -124,28 +87,11 @@ This project uses **gitflow**:
 - Feature branches created from `dev`
 - All decisions documented in ADRs
 
-## 🏗️ Roadmap
+## 🏗️ Project Status
 
-### Phase 1: MVP (Current)
-- [ ] Single-player mode
-- [ ] 3-5 basic challenges
-- [ ] Simple leaderboard
-- [ ] Local SQLite storage
-- [ ] Claude API backend
+**Phase 8 in progress** (UI Redesign ✅, Bug Fixes ✅, Challenge Creation next).
 
-### Phase 2: Multi-Player
-- [ ] Real-time competition mode
-- [ ] Session management
-- [ ] WebSocket updates
-- [ ] Name generation system
-
-### Phase 3: Production
-- [ ] OpenShift deployment
-- [ ] OpenShift AI integration
-- [ ] PostgreSQL migration
-- [ ] High availability
-- [ ] Concurrency handling
-- [ ] Advanced metrics
+**See [PROJECT_STATUS.md](PROJECT_STATUS.md) for detailed current status, completed phases, and roadmap.**
 
 ## 🤝 Contributing
 

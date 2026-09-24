@@ -1,0 +1,49 @@
+id: hole-004
+name: "Email Extraction"
+difficulty: medium
+description: |
+  Extract all email addresses from the provided text file and return them as a JSON array.
+
+  Requirements:
+  - Extract ALL email addresses from the text
+  - Return them as a valid JSON array
+  - Sort the emails alphabetically
+  - Each email should be a string in the array
+  - No duplicates
+
+  Expected format: ["email1@domain.com", "email2@domain.com", ...]
+
+task_type: extraction
+
+validation:
+  type: exact_match
+  criteria:
+    expected_answer: '["david.kim@consultingfirm.net", "emily.rodriguez@techcorp.com", "help@techcorp.com", "marcus.chen@techcorp.com", "sarah.johnson@techcorp.com"]'
+    case_sensitive: true
+    trim_whitespace: true
+
+context_files:
+  - name: "sample_text.txt"
+    path: "./challenges/hole-004/assets/sample_text.txt"
+    description: "Text containing email addresses to extract"
+    removable: false
+    editable: false
+    default_included: true
+
+system_prompt:
+  default: "You are a helpful assistant skilled at extracting information from text."
+  removable: false
+  editable: true
+
+parameters:
+  max_iterations: null
+  time_limit_seconds: null
+  hints_available: 0
+
+metadata:
+  author: "Token Golf Team"
+  created_date: "2026-09-21"
+  tags: ["extraction", "regex", "text_processing", "json"]
+  estimated_tokens_expert: 200
+  estimated_tokens_beginner: 500
+  estimated_difficulty: 3.0
