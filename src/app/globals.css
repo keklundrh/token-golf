@@ -3,6 +3,10 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --ledger-input: #3b82f6; /* blue */
+  --ledger-output: #16a34a; /* green */
+  --ledger-reasoning: #a855f7; /* purple */
+  --ledger-tools: #f59e0b; /* amber */
 }
 
 @theme inline {

@@ -13,6 +13,9 @@ export interface PracticeEvent {
     reasoningTokens: number | null;
     toolTokens: number;
     toolCalls: number;
+    inputUsd: number;
+    outputUsd: number;
+    reasoningUsd: number;
     costUsd: number;
   };
 }
@@ -53,6 +56,9 @@ export function renderPracticeStream({
           ...tokens,
           toolTokens: 0,
           toolCalls: toolCalls.length,
+          inputUsd: cost.inputUsd,
+          outputUsd: cost.outputUsd,
+          reasoningUsd: cost.reasoningUsd,
           costUsd: cost.totalUsd,
         },
       };

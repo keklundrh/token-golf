@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Challenge, Option } from "@/lib/config";
+import TokenLedger from "./token-ledger";
+import { buildLedger } from "@/lib/ledger";
 
 export interface ChallengeViewProps {
   challenge: Challenge;
@@ -14,7 +16,16 @@ interface RunState {
   streaming: boolean;
   error: string | null;
   costUsd: number | null;
-  usage: { inputTokens: number; outputTokens: number; reasoningTokens: number | null } | null;
+  usage: {
+    inputTokens: number;
+    outputTokens: number;
+    reasoningTokens: number | null;
+    toolTokens: number;
+    toolCalls: number;
+    inputUsd: number;
+    outputUsd: number;
+    reasoningUsd: number;
+  } | null;
 }
 
 export default function ChallengeView({ challenge, holeCount }: ChallengeViewProps) {
@@ -71,7 +82,17 @@ export default function ChallengeView({ challenge, holeCount }: ChallengeViewPro
             const event = JSON.parse(frame.slice(6)) as {
               type: string;
               text?: string;
-              usage?: { inputTokens: number; outputTokens: number; reasoningTokens: number | null; costUsd: number };
+              usage?: {
+                inputTokens: number;
+                outputTokens: number;
+                reasoningTokens: number | null;
+                toolTokens: number;
+                toolCalls: number;
+                inputUsd: number;
+                outputUsd: number;
+                reasoningUsd: number;
+                costUsd: number;
+              };
             };
             if (event.type === "chunk" && event.text) {
               setRun((r) => ({ ...r, output: r.output + event.text }));
@@ -83,6 +104,11 @@ export default function ChallengeView({ challenge, holeCount }: ChallengeViewPro
                   inputTokens: event.usage!.inputTokens,
                   outputTokens: event.usage!.outputTokens,
                   reasoningTokens: event.usage!.reasoningTokens,
+                  toolTokens: event.usage!.toolTokens,
+                  toolCalls: event.usage!.toolCalls,
+                  inputUsd: event.usage!.inputUsd,
+                  outputUsd: event.usage!.outputUsd,
+                  reasoningUsd: event.usage!.reasoningUsd,
                 },
               }));
             }
@@ -159,12 +185,13 @@ export default function ChallengeView({ challenge, holeCount }: ChallengeViewPro
             {run.streaming && <span className="animate-pulse">▌</span>}
           </div>
         )}
-        {run.costUsd !== null && (
-          <p className="text-xs text-zinc-500">
-            {run.usage?.inputTokens ?? 0} input · {run.usage?.outputTokens ?? 0} output
-            {run.usage?.reasoningTokens != null && ` · ${run.usage.reasoningTokens} reasoning`}{" "}
-            tokens — ${run.costUsd.toFixed(4)}
-          </p>
+        {run.costUsd !== null && run.usage && (
+          <TokenLedger {...buildLedger(run.usage, {
+            inputUsd: run.usage.inputUsd,
+            outputUsd: run.usage.outputUsd,
+            reasoningUsd: run.usage.reasoningUsd,
+            totalUsd: run.costUsd,
+          })} />
         )}
         {run.error && (
           <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{run.error}</p>
