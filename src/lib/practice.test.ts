@@ -34,8 +34,8 @@ describe("renderPracticeStream streamText args", () => {
   beforeEach(() => {
     streamTextMock.mockReset();
     streamTextMock.mockReturnValue({
-      textStream: (async function* () {
-        yield "ok";
+      fullStream: (async function* () {
+        yield { type: "text-delta", text: "ok" };
       })(),
       usage: Promise.resolve({
         inputTokens: 1,

@@ -3,9 +3,12 @@ import { renderPrompt, modelFor } from "@/lib/llm";
 import { streamText } from "ai";
 import { computeCost } from "@/lib/cost";
 
+export type ChunkKind = "input" | "output" | "reasoning" | "tools";
+
 export interface PracticeEvent {
   type: "chunk" | "done";
   text?: string;
+  kind?: ChunkKind;
   usage?: {
     inputTokens: number;
     outputTokens: number;
@@ -32,9 +35,10 @@ export function renderPracticeStream({
   return new ReadableStream<Uint8Array>({
     async start(controller) {
       const model = modelFor(option.model ?? challenge.model);
+      const renderedPrompt = renderPrompt(option, challenge.question, skills);
       const result = streamText({
         model,
-        prompt: renderPrompt(option, challenge.question, skills),
+        prompt: renderedPrompt,
         ...(option.thinking
           ? {
               providerOptions: {
@@ -45,9 +49,19 @@ export function renderPracticeStream({
             }
           : {}),
       });
-      for await (const chunk of result.textStream) {
-        const event: PracticeEvent = { type: "chunk", text: chunk };
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+      const inputEvent: PracticeEvent = { type: "chunk", text: renderedPrompt, kind: "input" };
+      controller.enqueue(encoder.encode(`data: ${JSON.stringify(inputEvent)}\n\n`));
+      for await (const part of result.fullStream) {
+        if (part.type === "text-delta") {
+          const event: PracticeEvent = { type: "chunk", text: part.text, kind: "output" };
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+        } else if (part.type === "reasoning-delta") {
+          const event: PracticeEvent = { type: "chunk", text: part.text, kind: "reasoning" };
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+        } else if (part.type === "tool-call") {
+          const event: PracticeEvent = { type: "chunk", text: "calling tool…", kind: "tools" };
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
+        }
       }
       const usage = await result.usage;
       const toolCalls = await result.toolCalls;
