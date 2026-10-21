@@ -1,0 +1,14 @@
+title: "Token Golf"
+intro: "Play the fastest round of prompt golf. Pick a club, practice your swing, record your spend."
+howToPlay:
+  - "Scan in and get a player name"
+  - "Pick your club for each hole"
+  - "Practice swing to see the output and cost"
+  - "Record your score — lowest total spend wins"
+cta:
+  label: "Start Playing"
+  target: "/hole/1"
+username:
+  players: ["Tiger", "Rory", "Scottie", "Jon", "Collin", "Xander", "Viktor", "Hideki", "Brooks", "Bryson"]
+  courses: ["Augusta", "Pebble", "StAndrews", "Pinehurst", "Oakmont", "Shinnecock", "Cypress", "Baltusrol"]
+  colors: ["white", "black", "green", "yellow", "red"]
