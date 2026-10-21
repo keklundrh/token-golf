@@ -5,8 +5,6 @@ import { users, scores } from "@/db/schema";
 import { listChallengeIds } from "@/lib/config";
 import { readCookie, USER_COOKIE } from "@/lib/cookies";
 
-export const dynamic = "force-dynamic";
-
 const ScoreBodySchema = z.object({
   challengeId: z.number().int().positive(),
   costUsd: z.number().nonnegative(),

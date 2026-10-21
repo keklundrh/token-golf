@@ -6,7 +6,6 @@ import { loadChallenge } from "@/lib/config";
 import { renderPracticeStream } from "@/lib/practice";
 import { SPEND_CAP_USD } from "@/lib/cost";
 
-export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function POST(request: Request): Promise<Response> {

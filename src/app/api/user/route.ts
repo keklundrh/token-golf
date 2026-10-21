@@ -5,8 +5,6 @@ import { generateUsername } from "@/lib/username";
 import { loadHomepage } from "@/lib/config";
 import { readCookie, USER_COOKIE } from "@/lib/cookies";
 
-export const dynamic = "force-dynamic";
-
 export async function POST(request: Request): Promise<Response> {
   const db = getDb();
   const cookieUserId = readCookie(request.headers.get("cookie"), USER_COOKIE);
