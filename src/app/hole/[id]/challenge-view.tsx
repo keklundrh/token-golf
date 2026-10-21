@@ -2,13 +2,13 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { Challenge, Option } from "@/lib/config";
+import type { Challenge, Option, Skills } from "@/lib/config";
 import TokenLedger from "./token-ledger";
 import { buildLedger } from "@/lib/ledger";
-
 export interface ChallengeViewProps {
   challenge: Challenge;
   holeCount: number;
+  skills: Skills;
 }
 
 interface RunState {
@@ -28,7 +28,7 @@ interface RunState {
   } | null;
 }
 
-export default function ChallengeView({ challenge, holeCount }: ChallengeViewProps) {
+export default function ChallengeView({ challenge, holeCount, skills }: ChallengeViewProps) {
   const [selected, setSelected] = useState<Option | null>(null);
   const [run, setRun] = useState<RunState>({
     output: "",
@@ -173,6 +173,23 @@ export default function ChallengeView({ challenge, holeCount }: ChallengeViewPro
             >
               <span className="block font-medium">{option.label}</span>
               <span className="block text-sm text-zinc-500">{option.detail}</span>
+              {(option.thinking || (option.skills && option.skills.length > 0)) && (
+                <span className="mt-1.5 flex flex-wrap gap-1.5">
+                  {option.thinking && (
+                    <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                      thinking
+                    </span>
+                  )}
+                  {option.skills?.map((id) => (
+                    <span
+                      key={id}
+                      className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700"
+                    >
+                      {skills[id]?.label ?? id}
+                    </span>
+                  ))}
+                </span>
+              )}
             </button>
           ))}
         </div>

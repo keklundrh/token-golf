@@ -1,4 +1,4 @@
-import { loadChallenge, listChallengeIds } from "@/lib/config";
+import { loadChallenge, listChallengeIds, loadSkills } from "@/lib/config";
 import ChallengeView from "./challenge-view";
 
 export function generateStaticParams(): Array<{ id: string }> {
@@ -15,5 +15,5 @@ export default async function Hole({
   const challenge = loadChallenge(challengeId);
   const holeCount = listChallengeIds().length;
 
-  return <ChallengeView challenge={challenge} holeCount={holeCount} />;
+  return <ChallengeView challenge={challenge} holeCount={holeCount} skills={loadSkills()} />;
 }
