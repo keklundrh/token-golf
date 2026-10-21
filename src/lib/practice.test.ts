@@ -19,25 +19,17 @@ import { renderPracticeStream } from "./practice";
 
 const skills: Skills = loadSkills();
 
-function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
-  const { promise, resolve, reject } = Promise.withResolvers<string>();
+async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let out = "";
   for (;;) {
-    reader
-      .read()
-      .then(({ done, value }) => {
-        if (done) {
-          resolve(out);
-          return;
-        }
-        out += decoder.decode(value, { stream: true });
-      })
-      .catch(reject);
+    const { done, value } = await reader.read();
+    if (done) return out;
+    out += decoder.decode(value, { stream: true });
   }
-  return promise;
 }
+
 describe("renderPracticeStream streamText args", () => {
   beforeEach(() => {
     streamTextMock.mockReset();

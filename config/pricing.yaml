@@ -7,3 +7,7 @@ models:
     input_per_mtok: 3.00
     output_per_mtok: 15.00
     reasoning_per_mtok: 15.00
+  anthropic/claude-haiku-4-5:
+    input_per_mtok: 1.00
+    output_per_mtok: 5.00
+    reasoning_per_mtok: 5.00
