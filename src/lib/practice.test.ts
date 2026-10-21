@@ -87,6 +87,66 @@ describe("renderPracticeStream streamText args", () => {
     );
   });
 
+  it("emits input chunk first with the rendered prompt", async () => {
+    const challenge = loadChallenge(1);
+    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills }));
+    const frames = raw.split("\n\n").filter((f) => f.startsWith("data: "));
+    const first = JSON.parse(frames[0].slice(6));
+    expect(first.type).toBe("chunk");
+    expect(first.kind).toBe("input");
+    expect(first.text).toContain("Why is the sky blue");
+  });
+
+  it("tags text-delta chunks as output kind", async () => {
+    const challenge = loadChallenge(1);
+    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills }));
+    const kinds = raw.split("\n\n").filter((f) => f.startsWith("data: ")).map((f) => JSON.parse(f.slice(6)).kind);
+    expect(kinds[0]).toBe("input");
+    expect(kinds[1]).toBe("output");
+  });
+
+  it("tags reasoning-delta chunks as reasoning kind", async () => {
+    streamTextMock.mockReset();
+    streamTextMock.mockReturnValue({
+      fullStream: (async function* () {
+        yield { type: "reasoning-delta", text: "thinking..." };
+        yield { type: "text-delta", text: "answer" };
+      })(),
+      usage: Promise.resolve({
+        inputTokens: 1,
+        outputTokens: 1,
+        outputTokenDetails: { reasoningTokens: undefined },
+      }),
+      toolCalls: Promise.resolve([]),
+    });
+    const challenge = loadChallenge(1);
+    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills }));
+    const kinds = raw.split("\n\n").filter((f) => f.startsWith("data: ")).map((f) => JSON.parse(f.slice(6))).filter((e) => e.type === "chunk").map((e) => e.kind);
+    expect(kinds).toEqual(["input", "reasoning", "output"]);
+  });
+
+  it("tags tool-call parts as tools kind without raw JSON", async () => {
+    streamTextMock.mockReset();
+    streamTextMock.mockReturnValue({
+      fullStream: (async function* () {
+        yield { type: "tool-call", toolCallId: "t1", toolName: "web-search", input: { q: "x" } };
+      })(),
+      usage: Promise.resolve({
+        inputTokens: 1,
+        outputTokens: 1,
+        outputTokenDetails: { reasoningTokens: undefined },
+      }),
+      toolCalls: Promise.resolve([]),
+    });
+    const challenge = loadChallenge(1);
+    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills }));
+    const frames = raw.split("\n\n").filter((f) => f.startsWith("data: "));
+    const toolFrame = JSON.parse(frames[1].slice(6));
+    expect(toolFrame.kind).toBe("tools");
+    expect(toolFrame.text).toBe("calling tool…");
+    expect(toolFrame.text).not.toContain("{");
+  });
+
   it("emits done frame with tool call count and per-category costs", async () => {
     const challenge = loadChallenge(1);
     const events: string[] = [];
