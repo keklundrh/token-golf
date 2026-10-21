@@ -1,10 +1,17 @@
 import type { Challenge, Option } from "@/lib/config";
 import { renderPrompt, modelFor } from "@/lib/llm";
 import { streamText } from "ai";
+import { computeCost } from "@/lib/cost";
 
 export interface PracticeEvent {
   type: "chunk" | "done";
   text?: string;
+  usage?: {
+    inputTokens: number;
+    outputTokens: number;
+    reasoningTokens: number | null;
+    costUsd: number;
+  };
 }
 
 export function renderPracticeStream({
@@ -26,7 +33,14 @@ export function renderPracticeStream({
         const event: PracticeEvent = { type: "chunk", text: chunk };
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       }
-      const done: PracticeEvent = { type: "done" };
+      const usage = await result.usage;
+      const tokens = {
+        inputTokens: usage.inputTokens ?? 0,
+        outputTokens: usage.outputTokens ?? 0,
+        reasoningTokens: usage.outputTokenDetails?.reasoningTokens ?? null,
+      };
+      const cost = computeCost(challenge.model, tokens);
+      const done: PracticeEvent = { type: "done", usage: { ...tokens, costUsd: cost.totalUsd } };
       controller.enqueue(encoder.encode(`data: ${JSON.stringify(done)}\n\n`));
       controller.close();
     },

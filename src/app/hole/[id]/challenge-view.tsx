@@ -13,18 +13,26 @@ interface RunState {
   output: string;
   streaming: boolean;
   error: string | null;
+  costUsd: number | null;
+  usage: { inputTokens: number; outputTokens: number; reasoningTokens: number | null } | null;
 }
 
 export default function ChallengeView({ challenge, holeCount }: ChallengeViewProps) {
   const [selected, setSelected] = useState<Option | null>(null);
-  const [run, setRun] = useState<RunState>({ output: "", streaming: false, error: null });
+  const [run, setRun] = useState<RunState>({
+    output: "",
+    streaming: false,
+    error: null,
+    costUsd: null,
+    usage: null,
+  });
   const [recording, setRecording] = useState(false);
   const router = useRouter();
   const outputRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setSelected(null);
-    setRun({ output: "", streaming: false, error: null });
+    setRun({ output: "", streaming: false, error: null, costUsd: null, usage: null });
     setRecording(false);
   }, [challenge.id]);
 
@@ -36,7 +44,7 @@ export default function ChallengeView({ challenge, holeCount }: ChallengeViewPro
 
   function practiceSwing() {
     if (!selected || run.streaming) return;
-    setRun({ output: "", streaming: true, error: null });
+    setRun({ output: "", streaming: true, error: null, costUsd: null, usage: null });
 
     fetch("/api/practice", {
       method: "POST",
@@ -60,24 +68,40 @@ export default function ChallengeView({ challenge, holeCount }: ChallengeViewPro
           buffer = frames.pop() ?? "";
           for (const frame of frames) {
             if (!frame.startsWith("data: ")) continue;
-            const event = JSON.parse(frame.slice(6)) as { type: string; text?: string };
+            const event = JSON.parse(frame.slice(6)) as {
+              type: string;
+              text?: string;
+              usage?: { inputTokens: number; outputTokens: number; reasoningTokens: number | null; costUsd: number };
+            };
             if (event.type === "chunk" && event.text) {
               setRun((r) => ({ ...r, output: r.output + event.text }));
+            } else if (event.type === "done" && event.usage) {
+              setRun((r) => ({
+                ...r,
+                costUsd: event.usage!.costUsd,
+                usage: {
+                  inputTokens: event.usage!.inputTokens,
+                  outputTokens: event.usage!.outputTokens,
+                  reasoningTokens: event.usage!.reasoningTokens,
+                },
+              }));
             }
           }
         }
         setRun((r) => ({ ...r, streaming: false }));
       })
-      .catch((e: Error) => setRun({ output: "", streaming: false, error: e.message }));
+      .catch((e: Error) =>
+        setRun({ output: "", streaming: false, error: e.message, costUsd: null, usage: null }),
+      );
   }
 
   function recordScore() {
-    if (!selected || recording) return;
+    if (!selected || recording || run.costUsd === null) return;
     setRecording(true);
     fetch("/api/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ challengeId: challenge.id, costUsd: 0.01 }),
+      body: JSON.stringify({ challengeId: challenge.id, costUsd: run.costUsd }),
     })
       .then((res) => {
         if (!res.ok) throw new Error(`record failed: ${res.status}`);
@@ -102,7 +126,11 @@ export default function ChallengeView({ challenge, holeCount }: ChallengeViewPro
           <p className="text-sm text-zinc-500">
             Hole {challenge.id} / {holeCount} · Par {challenge.par}
           </p>
-          <p className="text-sm text-zinc-500">Spend $0.00</p>
+          <p className="text-sm text-zinc-500">
+            {run.costUsd !== null
+              ? `Spend $${run.costUsd.toFixed(4)}`
+              : "Spend $0.00"}
+          </p>
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">{challenge.question}</h1>
         <div className="flex flex-col gap-3">
@@ -130,6 +158,13 @@ export default function ChallengeView({ challenge, holeCount }: ChallengeViewPro
             {run.output}
             {run.streaming && <span className="animate-pulse">▌</span>}
           </div>
+        )}
+        {run.costUsd !== null && (
+          <p className="text-xs text-zinc-500">
+            {run.usage?.inputTokens ?? 0} input · {run.usage?.outputTokens ?? 0} output
+            {run.usage?.reasoningTokens != null && ` · ${run.usage.reasoningTokens} reasoning`}{" "}
+            tokens — ${run.costUsd.toFixed(4)}
+          </p>
         )}
         {run.error && (
           <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{run.error}</p>
