@@ -40,6 +40,7 @@ export function renderPracticeStream({
         controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
       }
       const usage = await result.usage;
+      const toolCalls = await result.toolCalls;
       const tokens = {
         inputTokens: usage.inputTokens ?? 0,
         outputTokens: usage.outputTokens ?? 0,
@@ -48,7 +49,12 @@ export function renderPracticeStream({
       const cost = computeCost(option.model ?? challenge.model, tokens);
       const done: PracticeEvent = {
         type: "done",
-        usage: { ...tokens, toolTokens: 0, toolCalls: 0, costUsd: cost.totalUsd },
+        usage: {
+          ...tokens,
+          toolTokens: 0,
+          toolCalls: toolCalls.length,
+          costUsd: cost.totalUsd,
+        },
       };
       controller.enqueue(encoder.encode(`data: ${JSON.stringify(done)}\n\n`));
       controller.close();
