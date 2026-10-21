@@ -11,8 +11,13 @@ export interface ChallengeViewProps {
   skills: Skills;
 }
 
+interface RunSegment {
+  kind: "input" | "output" | "reasoning" | "tools";
+  text: string;
+}
+
 interface RunState {
-  output: string;
+  segments: RunSegment[];
   streaming: boolean;
   error: string | null;
   costUsd: number | null;
@@ -31,7 +36,7 @@ interface RunState {
 export default function ChallengeView({ challenge, holeCount, skills }: ChallengeViewProps) {
   const [selected, setSelected] = useState<Option | null>(null);
   const [run, setRun] = useState<RunState>({
-    output: "",
+    segments: [],
     streaming: false,
     error: null,
     costUsd: null,
@@ -43,7 +48,7 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
 
   useEffect(() => {
     setSelected(null);
-    setRun({ output: "", streaming: false, error: null, costUsd: null, usage: null });
+    setRun({ segments: [], streaming: false, error: null, costUsd: null, usage: null });
     setRecording(false);
   }, [challenge.id]);
 
@@ -51,11 +56,11 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
     if (run.streaming && outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
-  }, [run.output, run.streaming]);
+  }, [run.segments, run.streaming]);
 
   function practiceSwing() {
     if (!selected || run.streaming) return;
-    setRun({ output: "", streaming: true, error: null, costUsd: null, usage: null });
+    setRun({ segments: [], streaming: true, error: null, costUsd: null, usage: null });
 
     fetch("/api/practice", {
       method: "POST",
@@ -82,6 +87,7 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
             const event = JSON.parse(frame.slice(6)) as {
               type: string;
               text?: string;
+              kind?: string;
               usage?: {
                 inputTokens: number;
                 outputTokens: number;
@@ -95,7 +101,18 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
               };
             };
             if (event.type === "chunk" && event.text) {
-              setRun((r) => ({ ...r, output: r.output + event.text }));
+              const kind = (event.kind ?? "output") as RunSegment["kind"];
+              const text = event.text;
+              setRun((r) => {
+                const segments = [...r.segments];
+                const last = segments[segments.length - 1];
+                if (last && last.kind === kind) {
+                  segments[segments.length - 1] = { kind, text: last.text + text };
+                } else {
+                  segments.push({ kind, text });
+                }
+                return { ...r, segments };
+              });
             } else if (event.type === "done" && event.usage) {
               setRun((r) => ({
                 ...r,
@@ -117,7 +134,7 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
         setRun((r) => ({ ...r, streaming: false }));
       })
       .catch((e: Error) =>
-        setRun({ output: "", streaming: false, error: e.message, costUsd: null, usage: null }),
+        setRun({ segments: [], streaming: false, error: e.message, costUsd: null, usage: null }),
       );
   }
 
@@ -193,12 +210,20 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
             </button>
           ))}
         </div>
-        {run.output.length > 0 && (
+        {run.segments.length > 0 && (
           <div
             ref={outputRef}
             className="max-h-64 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm whitespace-pre-wrap"
           >
-            {run.output}
+            {run.segments.map((seg, i) => (
+              <span
+                key={i}
+                style={{ color: `var(--ledger-${seg.kind === "output" ? "output" : seg.kind})` }}
+                className={seg.kind === "input" ? "border-b border-dashed border-zinc-300 block pb-2 mb-2" : ""}
+              >
+                {seg.text}
+              </span>
+            ))}
             {run.streaming && <span className="animate-pulse">▌</span>}
           </div>
         )}
@@ -224,8 +249,7 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
           </button>
           <button
             type="button"
-            disabled={!selected || run.streaming || run.output.length === 0 || recording}
-            onClick={recordScore}
+            disabled={!selected || run.streaming || run.segments.length === 0 || recording}
             className="h-12 flex-1 rounded-full border border-zinc-300 font-medium text-black transition-colors hover:bg-zinc-50 disabled:opacity-40"
           >
             {recording ? "Recording…" : "Record Score"}
