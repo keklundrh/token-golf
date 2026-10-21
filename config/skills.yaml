@@ -1,0 +1,11 @@
+skills:
+  web-search:
+    id: web-search
+    label: "Web search"
+    prompt: |
+      Search the web for current information before answering.
+  cite-sources:
+    id: cite-sources
+    label: "Cite sources"
+    prompt: |
+      Cite every source you use with a URL.

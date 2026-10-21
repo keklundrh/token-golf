@@ -1,4 +1,5 @@
-import type { Challenge, Option } from "@/lib/config";
+import type { Challenge, Option, Skills } from "@/lib/config";
+import { loadSkills } from "@/lib/config";
 import { renderPrompt, modelFor } from "@/lib/llm";
 import { streamText } from "ai";
 import { computeCost } from "@/lib/cost";
@@ -10,6 +11,8 @@ export interface PracticeEvent {
     inputTokens: number;
     outputTokens: number;
     reasoningTokens: number | null;
+    toolTokens: number;
+    toolCalls: number;
     costUsd: number;
   };
 }
@@ -17,17 +20,20 @@ export interface PracticeEvent {
 export function renderPracticeStream({
   challenge,
   option,
+  skills,
 }: {
   challenge: Challenge;
   option: Option;
+  skills: Skills;
 }): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   return new ReadableStream<Uint8Array>({
     async start(controller) {
-      const model = modelFor(challenge.model);
+      const model = modelFor(option.model ?? challenge.model);
       const result = streamText({
         model,
-        prompt: renderPrompt(option, challenge.question),
+        prompt: renderPrompt(option, challenge.question, skills),
+        ...(option.thinking ? { providerOptions: { anthropic: { thinking: { type: "enabled" } } } } : {}),
       });
       for await (const chunk of result.textStream) {
         const event: PracticeEvent = { type: "chunk", text: chunk };
@@ -39,8 +45,11 @@ export function renderPracticeStream({
         outputTokens: usage.outputTokens ?? 0,
         reasoningTokens: usage.outputTokenDetails?.reasoningTokens ?? null,
       };
-      const cost = computeCost(challenge.model, tokens);
-      const done: PracticeEvent = { type: "done", usage: { ...tokens, costUsd: cost.totalUsd } };
+      const cost = computeCost(option.model ?? challenge.model, tokens);
+      const done: PracticeEvent = {
+        type: "done",
+        usage: { ...tokens, toolTokens: 0, toolCalls: 0, costUsd: cost.totalUsd },
+      };
       controller.enqueue(encoder.encode(`data: ${JSON.stringify(done)}\n\n`));
       controller.close();
     },

@@ -2,7 +2,7 @@ import { readCookie, USER_COOKIE } from "@/lib/cookies";
 import { getDb } from "@/db";
 import { users, scores } from "@/db/schema";
 import { eq, sql } from "drizzle-orm";
-import { loadChallenge } from "@/lib/config";
+import { loadChallenge, loadSkills } from "@/lib/config";
 import { renderPracticeStream } from "@/lib/practice";
 import { SPEND_CAP_USD } from "@/lib/cost";
 
@@ -59,7 +59,7 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ error: "unknown option" }, { status: 404 });
   }
 
-  const stream = renderPracticeStream({ challenge, option });
+  const stream = renderPracticeStream({ challenge, option, skills: loadSkills() });
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",

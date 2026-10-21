@@ -29,7 +29,19 @@ export const OptionSchema = z.object({
   label: z.string().min(1),
   detail: z.string().min(1),
   prompt: z.string().min(1),
+  model: z.string().min(1).optional(),
+  thinking: z.boolean().optional(),
+  skills: z.array(z.string().min(1)).optional(),
 });
+
+export const SkillSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  prompt: z.string().min(1),
+});
+
+export const SkillsSchema = z.record(z.string(), SkillSchema);
+export const SkillsFileSchema = z.object({ skills: SkillsSchema });
 
 export const ChallengeSchema = z.object({
   id: z.number().int().positive(),
@@ -54,6 +66,8 @@ export type Challenge = z.infer<typeof ChallengeSchema>;
 export type Option = z.infer<typeof OptionSchema>;
 export type Pricing = z.infer<typeof PricingSchema>;
 export type ModelPrice = z.infer<typeof ModelPriceSchema>;
+export type Skill = z.infer<typeof SkillSchema>;
+export type Skills = z.infer<typeof SkillsSchema>;
 
 function loadYaml<T>(path: string, schema: z.ZodType<T>): T {
   const raw = parse(readFileSync(path, "utf8"));
@@ -74,6 +88,10 @@ export function loadPricing(): Pricing {
 
 function holeDir(challengeId: number): string {
   return `hole-${String(challengeId).padStart(3, "0")}`;
+}
+
+export function loadSkills(): Skills {
+  return loadYaml(join(CONFIG_DIR, "skills.yaml"), SkillsFileSchema).skills;
 }
 
 export function loadChallenge(challengeId: number): Challenge {
