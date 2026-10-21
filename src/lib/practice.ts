@@ -1,5 +1,4 @@
 import type { Challenge, Option, Skills } from "@/lib/config";
-import { loadSkills } from "@/lib/config";
 import { renderPrompt, modelFor } from "@/lib/llm";
 import { streamText } from "ai";
 import { computeCost } from "@/lib/cost";
@@ -36,7 +35,15 @@ export function renderPracticeStream({
       const result = streamText({
         model,
         prompt: renderPrompt(option, challenge.question, skills),
-        ...(option.thinking ? { providerOptions: { anthropic: { thinking: { type: "enabled" } } } } : {}),
+        ...(option.thinking
+          ? {
+              providerOptions: {
+                anthropic: {
+                  thinking: { type: "enabled" as const, budgetTokens: 4096 },
+                },
+              },
+            }
+          : {}),
       });
       for await (const chunk of result.textStream) {
         const event: PracticeEvent = { type: "chunk", text: chunk };
