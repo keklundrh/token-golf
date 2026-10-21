@@ -45,13 +45,21 @@ export default function Splash({ content }: { content: HomepageContent }) {
             </li>
           ))}
         </ul>
-        <p className="text-sm text-zinc-500">
-          {error
-            ? `Failed to get player name: ${error}`
-            : username
-              ? `Playing as ${username}`
-              : "Getting your player name…"}
-        </p>
+        <div className="mt-6 flex w-full flex-col items-center gap-1 rounded-xl bg-green-50 px-4 py-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-green-700">
+            Your player name
+          </p>
+          {error ? (
+            <p className="text-sm text-red-700">Failed to get player name: {error}</p>
+          ) : username ? (
+            <p className="font-mono text-lg font-semibold text-black">{username}</p>
+          ) : (
+            <p className="text-sm text-zinc-500">Getting your player name…</p>
+          )}
+          <p className="mt-1 text-xs text-zinc-500">
+            Remember this name — it identifies you on the leaderboard
+          </p>
+        </div>
         <button
           type="button"
           disabled={!username || starting}
