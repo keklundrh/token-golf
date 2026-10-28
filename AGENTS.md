@@ -14,8 +14,23 @@ Guidance for AI agents working in this repo.
   branch, and NEVER merge to `dev` yourself.
   **Bootstrap:** if `dev` doesn't exist, create it from the default branch
   (`main`) before first use, then branch from it.
-- **AI agents MUST NOT close GitHub issues.** Closing is the user's call;
-  report completion and let the user close.
+- **NEVER record which branch implements a spec in the issue body.**
+  Branch names like "implemented on `gameplay-2`" are transient — merges,
+  rebases, and deleted branches leave stale references, and the issue body
+  is the spec, not a changelog. Say "implemented" or "open"; the branch is
+  discoverable via `gh`/git at review time. Never write "merged to dev"
+  either — the merge itself is the record.
+- **No implementation while the spec is inconsistent.** Before writing
+  code, read the issues in scope and check them against each other (a
+  scoped spec-audit). If two issues contradict, duplicate a rule, or state
+  something the code already supersedes, STOP and report the
+  inconsistencies to the user — do not pick an interpretation and build on
+  it. Implementation resumes only after the user resolves them by editing
+  the issue bodies in place. Contradictory specs produce code that
+  implements one reading while the other stays broken; the audit then
+  re-flags what a consistent spec would have prevented. (Full spec-audit
+  over all issues vs code remains an on-request review pass; the gate here
+  is only the issues in scope.)
 - **Source of truth is updated by EDITS, never comments.** Issue bodies and
   docs are edited in place (`gh issue edit --body-file`, file edits).
   NEVER append a comment to record a change, status, or decision — edit the
@@ -32,6 +47,16 @@ Guidance for AI agents working in this repo.
   incomplete; do not report it done.
 - Tests must be deterministic and isolated: no network, no real LLM calls
   (mock the provider), no shared state, no flakiness.
+- **Never write specific test counts into GitHub issues.** Numbers like
+  "Tests: 33 passing" go stale at every merge and mislead the next reader
+  (audits keep flagging them). Say "all tests pass" / "the suite
+  fails" — verification status, not a count. The same applies to counts of
+  files, routes, or holes: anything that changes at each merge. Permanent
+  facts (a route exists, a behavior is tested) are fine; running totals
+  are not.
+- **Never write which branch the work was implemented on into GitHub
+  issues** (see "Where work is defined" for the full rule). Say
+  "implemented" or "open", not where.
 - **Check, double check, and test your work.** Never yield unverified:
   run the changed code path and observe the result before reporting done.
   Reproduce bugs before fixing; confirm after with the failing-before/

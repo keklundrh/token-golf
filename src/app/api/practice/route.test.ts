@@ -95,6 +95,23 @@ describe("POST /api/practice one attempt per option", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("text/event-stream");
   });
+
+  it("returns 429 when the spend cap is reached over attempts (not scores)", async () => {
+    ensureUser();
+    // scoped clean slate: the earlier test's leaked attempt must not count
+    getDb()
+      .delete(attempts)
+      .where(and(eq(attempts.userId, TEST_USER_ID), eq(attempts.challengeId, 1)))
+      .run();
+    // attempts sum over the cap ($0.50 default); a lower recorded score must
+    // not matter — the cap counts actual provider spend (#7)
+    seedAttempt("terse", 0.30, 1);
+    seedAttempt("verbose", 0.30, 1);
+    const res = await POST(request({ challengeId: 1, optionId: "large-input" }, userCookie()));
+    expect(res.status).toBe(429);
+    const data = await res.json();
+    expect(data.error).toContain("spend cap reached");
+  });
 });
 
 describe("GET /api/practice returns all attempts", () => {

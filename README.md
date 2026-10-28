@@ -4,16 +4,10 @@ Conference-goer education app: progressive prompt-engineering challenges
 ("holes") scored by LLM spend. Lowest total recorded spend wins on a shared
 golf-format leaderboard.
 
-## Where work is defined
+## Where things live
 
-**AI tasks and build prompts are defined in GitHub issues — the issue body is
-the specification.** `docs/` is for end-user documentation ONLY. Never put
-AI task definitions, build prompts, agent instructions, or implementation
-notes in `docs/`.
-
-- Product requirements: issues #1–#6, #8 (epic: #1; open ideas: #9, #10)
-- Architecture: issue #7 (canonical); `docs/ARCHITECTURE.md` is a pointer to it
-- Gameplay and flow: issue #2
-- UI style, color scheme, and currency units: issue #3
-- Model cost display: issue #8
-- Agent conventions: see AGENTS.md
+- **Project specs** — GitHub issues; the issue body is the specification
+  (canonical architecture spec: issue #7, pointed to by
+  [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)).
+- **Key issue map** — [`AGENTS.md`](AGENTS.md) "Key issues".
+- **Agent conventions** — [`AGENTS.md`](AGENTS.md).
