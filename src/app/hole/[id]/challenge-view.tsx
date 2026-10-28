@@ -4,11 +4,21 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Challenge, Option, Skills } from "@/lib/config";
 import TokenLedger from "./token-ledger";
-import { buildLedger } from "@/lib/ledger";
+import GolfAnimation from "./golf-animation";
+import { shouldShowWaitingAnimation } from "@/lib/golf-animation";
+import { buildRunBlocks, type RunRecord, type RunRecordUsage } from "@/lib/ledger";
+import { formatMicroUsd, formatModelRates, type ModelRates } from "@/lib/currency";
+
+export interface OptionRateInfo {
+  modelId: string;
+  rates: ModelRates;
+}
+
 export interface ChallengeViewProps {
   challenge: Challenge;
   holeCount: number;
   skills: Skills;
+  optionRates: Record<string, OptionRateInfo>;
 }
 
 interface RunSegment {
@@ -17,39 +27,44 @@ interface RunSegment {
 }
 
 interface RunState {
+  runs: RunRecord[];
+  activeIndex: number;
   segments: RunSegment[];
   streaming: boolean;
   error: string | null;
-  costUsd: number | null;
-  usage: {
-    inputTokens: number;
-    outputTokens: number;
-    reasoningTokens: number | null;
-    toolTokens: number;
-    toolCalls: number;
-    inputUsd: number;
-    outputUsd: number;
-    reasoningUsd: number;
-  } | null;
 }
 
-export default function ChallengeView({ challenge, holeCount, skills }: ChallengeViewProps) {
+export default function ChallengeView({ challenge, holeCount, skills, optionRates }: ChallengeViewProps) {
   const [selected, setSelected] = useState<Option | null>(null);
   const [run, setRun] = useState<RunState>({
+    runs: [],
+    activeIndex: -1,
     segments: [],
     streaming: false,
     error: null,
-    costUsd: null,
-    usage: null,
   });
   const [recording, setRecording] = useState(false);
-  const router = useRouter();
+  // running total of recorded scores: fetched client-side from the
+  // leaderboard API per hole mount; null = still loading (renders "…")
+  const [recordedTotalUsd, setRecordedTotalUsd] = useState<number | null>(null);
+  const [recordedTotalLoading, setRecordedTotalLoading] = useState(true);
   const outputRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
-    setSelected(null);
-    setRun({ segments: [], streaming: false, error: null, costUsd: null, usage: null });
-    setRecording(false);
+    let cancelled = false;
+    fetch("/api/leaderboard")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { leaderboard: Array<{ userId: string; totalUsd: number }>; currentUserId: string | null } | null) => {
+        if (cancelled) return;
+        const mine = data?.leaderboard.find((e) => e.userId === data.currentUserId);
+        setRecordedTotalUsd(mine ? mine.totalUsd : 0);
+        setRecordedTotalLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setRecordedTotalLoading(false);
+      });
+    return () => { cancelled = true; };
   }, [challenge.id]);
 
   useEffect(() => {
@@ -60,7 +75,7 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
 
   function practiceSwing() {
     if (!selected || run.streaming) return;
-    setRun({ segments: [], streaming: true, error: null, costUsd: null, usage: null });
+    setRun((r) => ({ ...r, segments: [], streaming: true, error: null }));
 
     fetch("/api/practice", {
       method: "POST",
@@ -114,10 +129,8 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
                 return { ...r, segments };
               });
             } else if (event.type === "done" && event.usage) {
-              setRun((r) => ({
-                ...r,
-                costUsd: event.usage!.costUsd,
-                usage: {
+              setRun((r) => {
+                const usage: RunRecordUsage = {
                   inputTokens: event.usage!.inputTokens,
                   outputTokens: event.usage!.outputTokens,
                   reasoningTokens: event.usage!.reasoningTokens,
@@ -126,28 +139,48 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
                   inputUsd: event.usage!.inputUsd,
                   outputUsd: event.usage!.outputUsd,
                   reasoningUsd: event.usage!.reasoningUsd,
-                },
-              }));
+                };
+                const record: RunRecord = {
+                  optionId: selected!.id,
+                  optionLabel: selected!.label,
+                  timestamp: Date.now(),
+                  usage,
+                  costUsd: event.usage!.costUsd,
+                  recorded: false,
+                };
+                return {
+                  ...r,
+                  runs: [...r.runs, record],
+                  activeIndex: r.runs.length,
+                };
+              });
             }
           }
         }
         setRun((r) => ({ ...r, streaming: false }));
       })
       .catch((e: Error) =>
-        setRun({ segments: [], streaming: false, error: e.message, costUsd: null, usage: null }),
+        setRun({ runs: [], activeIndex: -1, segments: [], streaming: false, error: e.message }),
       );
   }
 
   function recordScore() {
-    if (!selected || recording || run.costUsd === null) return;
+    if (!selected || recording || run.runs.length === 0) return;
+    const activeRun = run.runs[run.activeIndex];
+    if (!activeRun) return;
     setRecording(true);
     fetch("/api/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ challengeId: challenge.id, costUsd: run.costUsd }),
+      body: JSON.stringify({ challengeId: challenge.id, costUsd: activeRun.costUsd }),
     })
       .then((res) => {
         if (!res.ok) throw new Error(`record failed: ${res.status}`);
+        setRun((r) => {
+          const runs = [...r.runs];
+          if (runs[r.activeIndex]) runs[r.activeIndex] = { ...runs[r.activeIndex], recorded: true };
+          return { ...r, runs };
+        });
         router.push(nextHoleUrl());
       })
       .catch((e: Error) => {
@@ -167,12 +200,12 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
         <div className="flex items-center justify-between">
           <p className="text-sm text-zinc-500">
-            Hole {challenge.id} / {holeCount} · Par {challenge.par}
+            Hole {challenge.id} / {holeCount}
           </p>
           <p className="text-sm text-zinc-500">
-            {run.costUsd !== null
-              ? `Spend $${run.costUsd.toFixed(4)}`
-              : "Spend $0.00"}
+            {recordedTotalLoading
+              ? "Spend …"
+              : `Spend ${formatMicroUsd(recordedTotalUsd ?? 0)}`}
           </p>
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">{challenge.question}</h1>
@@ -194,7 +227,7 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
                 <span className="mt-1.5 flex flex-wrap gap-1.5">
                   {option.thinking && (
                     <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
-                      thinking
+                      thinking{option.thinking !== true ? ` · ${option.thinking}` : ""}
                     </span>
                   )}
                   {option.skills?.map((id) => (
@@ -205,6 +238,14 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
                       {skills[id]?.label ?? id}
                     </span>
                   ))}
+                </span>
+              )}
+              {optionRates[option.id] && (
+                <span className="mt-1.5 block border-t border-zinc-100 pt-1.5 font-mono text-xs text-zinc-600">
+                  {optionRates[option.id].modelId}
+                  <span className="block text-zinc-500">
+                    {formatModelRates(optionRates[option.id].rates)}
+                  </span>
                 </span>
               )}
             </button>
@@ -224,16 +265,18 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
                 {seg.text}
               </span>
             ))}
-            {run.streaming && <span className="animate-pulse">▌</span>}
+            {shouldShowWaitingAnimation(run.streaming, run.segments) && (
+              <GolfAnimation />
+            )}
+            {run.streaming && !shouldShowWaitingAnimation(run.streaming, run.segments) && (
+              <span className="animate-pulse">▌</span>
+            )}
           </div>
         )}
-        {run.costUsd !== null && run.usage && (
-          <TokenLedger {...buildLedger(run.usage, {
-            inputUsd: run.usage.inputUsd,
-            outputUsd: run.usage.outputUsd,
-            reasoningUsd: run.usage.reasoningUsd,
-            totalUsd: run.costUsd,
-          })} />
+        {run.runs.length > 0 && (
+          <TokenLedger
+            runs={buildRunBlocks(run.runs)}
+          />
         )}
         {run.error && (
           <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{run.error}</p>
@@ -249,7 +292,8 @@ export default function ChallengeView({ challenge, holeCount, skills }: Challeng
           </button>
           <button
             type="button"
-            disabled={!selected || run.streaming || run.segments.length === 0 || recording}
+            disabled={!selected || run.streaming || run.runs.length === 0 || recording}
+            onClick={recordScore}
             className="h-12 flex-1 rounded-full border border-zinc-300 font-medium text-black transition-colors hover:bg-zinc-50 disabled:opacity-40"
           >
             {recording ? "Recording…" : "Record Score"}

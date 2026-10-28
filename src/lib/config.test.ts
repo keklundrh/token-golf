@@ -35,7 +35,6 @@ describe("config schemas", () => {
   it("rejects challenge with no options", () => {
     const result = ChallengeSchema.safeParse({
       id: 1,
-      par: 3,
       question: "Q",
       model: "m",
       options: [],

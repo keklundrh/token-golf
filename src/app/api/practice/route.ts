@@ -8,7 +8,9 @@ import { SPEND_CAP_USD } from "@/lib/cost";
 
 export const maxDuration = 60;
 
+/** Route handler per Next.js signature; config dir override via env for tests. */
 export async function POST(request: Request): Promise<Response> {
+  const configDir = process.env.PRACTICE_CONFIG_DIR;
   const userId = readCookie(request.headers.get("cookie"), USER_COOKIE);
   if (!userId) {
     return Response.json({ error: "no user" }, { status: 401 });
@@ -49,8 +51,11 @@ export async function POST(request: Request): Promise<Response> {
 
   let challenge;
   try {
-    challenge = loadChallenge(body.challengeId);
-  } catch {
+    challenge = loadChallenge(body.challengeId, configDir);
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith("Invalid config at")) {
+      return Response.json({ error: e.message }, { status: 500 });
+    }
     return Response.json({ error: "unknown challenge" }, { status: 404 });
   }
 

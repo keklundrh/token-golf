@@ -30,7 +30,7 @@ export const OptionSchema = z.object({
   detail: z.string().min(1),
   prompt: z.string().min(1),
   model: z.string().min(1).optional(),
-  thinking: z.boolean().optional(),
+  thinking: z.union([z.boolean(), z.enum(["low", "medium", "high"])]).optional(),
   skills: z.array(z.string().min(1)).optional(),
 });
 
@@ -45,7 +45,6 @@ export const SkillsFileSchema = z.object({ skills: SkillsSchema });
 
 export const ChallengeSchema = z.object({
   id: z.number().int().positive(),
-  par: z.number().int().positive(),
   question: z.string().min(1),
   model: z.string().min(1),
   options: z.array(OptionSchema).min(1),
@@ -94,9 +93,9 @@ export function loadSkills(): Skills {
   return loadYaml(join(CONFIG_DIR, "skills.yaml"), SkillsFileSchema).skills;
 }
 
-export function loadChallenge(challengeId: number): Challenge {
+export function loadChallenge(challengeId: number, configDir: string = CONFIG_DIR): Challenge {
   return loadYaml(
-    join(CONFIG_DIR, "challenges", holeDir(challengeId), "challenge.yaml"),
+    join(configDir, "challenges", holeDir(challengeId), "challenge.yaml"),
     ChallengeSchema,
   );
 }

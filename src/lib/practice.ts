@@ -1,9 +1,31 @@
 import type { Challenge, Option, Skills } from "@/lib/config";
 import { renderPrompt, modelFor } from "@/lib/llm";
-import { streamText } from "ai";
+import { streamText, type JSONValue } from "ai";
 import { computeCost } from "@/lib/cost";
 
 export type ChunkKind = "input" | "output" | "reasoning" | "tools";
+
+/** Anthropic has no native effort knob: graded modes map to budget tiers. */
+const ANTHROPIC_BUDGET: Record<"low" | "medium" | "high", number> = {
+  low: 2048,
+  medium: 4096,
+  high: 8192,
+};
+
+
+export function effortProviderOptions(
+  thinking: Option["thinking"],
+  modelSpec: string,
+): Record<string, Record<string, JSONValue>> | undefined {
+  const provider = modelSpec.split("/")[0];
+  if (!thinking) return undefined;
+  if (provider.startsWith("openai")) {
+    const effort = thinking === true ? "medium" : thinking;
+    return { openai: { reasoningEffort: effort } };
+  }
+  const budgetTokens = thinking === true ? 4096 : ANTHROPIC_BUDGET[thinking];
+  return { anthropic: { thinking: { type: "enabled" as const, budgetTokens } } };
+}
 
 export interface PracticeEvent {
   type: "chunk" | "done";
@@ -34,20 +56,14 @@ export function renderPracticeStream({
   const encoder = new TextEncoder();
   return new ReadableStream<Uint8Array>({
     async start(controller) {
-      const model = modelFor(option.model ?? challenge.model);
+      const modelSpec = option.model ?? challenge.model;
+      const model = modelFor(modelSpec);
       const renderedPrompt = renderPrompt(option, challenge.question, skills);
+      const providerOptions = effortProviderOptions(option.thinking, modelSpec);
       const result = streamText({
         model,
         prompt: renderedPrompt,
-        ...(option.thinking
-          ? {
-              providerOptions: {
-                anthropic: {
-                  thinking: { type: "enabled" as const, budgetTokens: 4096 },
-                },
-              },
-            }
-          : {}),
+        ...(providerOptions ? { providerOptions } : {}),
       });
       const inputEvent: PracticeEvent = { type: "chunk", text: renderedPrompt, kind: "input" };
       controller.enqueue(encoder.encode(`data: ${JSON.stringify(inputEvent)}\n\n`));

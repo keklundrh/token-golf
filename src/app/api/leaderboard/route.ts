@@ -17,13 +17,14 @@ export async function GET(request: Request): Promise<Response> {
     .select({
       userId: users.id,
       username: users.username,
-      totalUsd: sql<number>`CAST(SUM(${scores.costUsd}) AS REAL)`,
+      // golf: sum of the lowest recorded score per hole — retries only count once, at their best
+      totalUsd: sql<number>`CAST((SELECT SUM(best) FROM (SELECT MIN(s2.cost_usd) AS best FROM scores s2 WHERE s2.user_id = ${users.id} GROUP BY s2.challenge_id)) AS REAL)`,
       holes: sql<number>`COUNT(DISTINCT ${scores.challengeId})`,
     })
     .from(users)
     .innerJoin(scores, eq(users.id, scores.userId))
     .groupBy(users.id, users.username)
-    .orderBy(sql`SUM(${scores.costUsd}) ASC`);
+    .orderBy(sql`(SELECT SUM(best) FROM (SELECT MIN(s2.cost_usd) AS best FROM scores s2 WHERE s2.user_id = ${users.id} GROUP BY s2.challenge_id)) ASC`);
 
   const leaderboard: LeaderboardRow[] = rows.map((r, i) => ({
     ...r,

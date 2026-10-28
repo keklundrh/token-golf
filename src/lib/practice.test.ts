@@ -60,7 +60,7 @@ describe("renderPracticeStream streamText args", () => {
     expect(streamTextMock.mock.calls[0][0].model.modelId).toBe("claude-sonnet-4-5");
   });
 
-  it("passes thinking enabled with budgetTokens when option.thinking is set", async () => {
+  it("passes Anthropic thinking enabled with budgetTokens 4096 when option.thinking is true", async () => {
     const challenge = loadChallenge(1);
     const option = { ...challenge.options[0], thinking: true };
     await drain(renderPracticeStream({ challenge, option, skills }));
@@ -72,9 +72,63 @@ describe("renderPracticeStream streamText args", () => {
 
   it("passes no providerOptions when thinking is unset", async () => {
     const challenge = loadChallenge(1);
-    await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills }));
+    const option = { ...challenge.options[0], thinking: undefined };
+    await drain(renderPracticeStream({ challenge, option, skills }));
     const args = streamTextMock.mock.calls[0][0];
     expect(args.providerOptions).toBeUndefined();
+  });
+
+  it("maps thinking low to Anthropic budget 2048", async () => {
+    const challenge = loadChallenge(1);
+    const option = { ...challenge.options[0], thinking: "low" as const };
+    await drain(renderPracticeStream({ challenge, option, skills }));
+    expect(streamTextMock.mock.calls[0][0].providerOptions).toEqual({
+      anthropic: { thinking: { type: "enabled", budgetTokens: 2048 } },
+    });
+  });
+
+  it("maps thinking high to Anthropic budget 8192", async () => {
+    const challenge = loadChallenge(1);
+    const option = { ...challenge.options[0], thinking: "high" as const };
+    await drain(renderPracticeStream({ challenge, option, skills }));
+    expect(streamTextMock.mock.calls[0][0].providerOptions).toEqual({
+      anthropic: { thinking: { type: "enabled", budgetTokens: 8192 } },
+    });
+  });
+
+  it("passes OpenAI reasoningEffort for graded thinking on an openai model", async () => {
+    const challenge = loadChallenge(1);
+    const option = { ...challenge.options[0], model: "openai/gpt-5-mini", thinking: "high" as const };
+    await drain(renderPracticeStream({ challenge, option, skills }));
+    expect(streamTextMock.mock.calls[0][0].providerOptions).toEqual({
+      openai: { reasoningEffort: "high" },
+    });
+  });
+
+  it("maps thinking true to OpenAI reasoningEffort medium", async () => {
+    const challenge = loadChallenge(1);
+    const option = { ...challenge.options[0], model: "openai/gpt-5-mini", thinking: true as const };
+    await drain(renderPracticeStream({ challenge, option, skills }));
+    expect(streamTextMock.mock.calls[0][0].providerOptions).toEqual({
+      openai: { reasoningEffort: "medium" },
+    });
+  });
+
+  it("maps graded Anthropic budgets low, medium, high via the budget table", async () => {
+    const challenge = loadChallenge(1);
+    const cases = [
+      { mode: "low", budget: 2048 },
+      { mode: "medium", budget: 4096 },
+      { mode: "high", budget: 8192 },
+    ] as const;
+    for (const { mode, budget } of cases) {
+      const option = { ...challenge.options[0], thinking: mode };
+      await drain(renderPracticeStream({ challenge, option, skills }));
+      expect(streamTextMock.mock.calls[0][0].providerOptions).toEqual({
+        anthropic: { thinking: { type: "enabled", budgetTokens: budget } },
+      });
+      streamTextMock.mockClear();
+    }
   });
 
   it("prepends skill prompts before the option prompt", async () => {
@@ -82,8 +136,9 @@ describe("renderPracticeStream streamText args", () => {
     const option = { ...challenge.options[0], skills: ["web-search"] };
     await drain(renderPracticeStream({ challenge, option, skills }));
     const prompt: string = streamTextMock.mock.calls[0][0].prompt;
+    // skills come first; the option's own prompt (question substituted) follows
     expect(prompt.indexOf("Search the web")).toBeLessThan(
-      prompt.indexOf("You are a thorough science teacher"),
+      prompt.indexOf(challenge.question),
     );
   });
 

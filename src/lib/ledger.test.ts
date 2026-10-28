@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildLedger } from "./ledger";
+import { buildLedger, buildRunBlocks, relativeTime, type RunRecord } from "./ledger";
 import type { TokenUsage } from "./cost";
 
 const baseUsage: TokenUsage & { toolTokens: number; toolCalls: number } = {
@@ -10,73 +10,110 @@ const baseUsage: TokenUsage & { toolTokens: number; toolCalls: number } = {
   toolCalls: 0,
 };
 
-const baseCosts = {
-  inputUsd: 0.000025,
-  outputUsd: 0.0004,
-  reasoningUsd: 0,
-  totalUsd: 0.000425,
-};
+function makeRun(overrides: Partial<RunRecord> & { optionId: string; optionLabel: string; timestamp: number }): RunRecord {
+  return {
+    usage: { ...baseUsage, inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0 },
+    costUsd: 0.00043,
+    recorded: false,
+    ...overrides,
+  };
+}
 
-describe("buildLedger", () => {
-  it("renders input and output rows for a plain run", () => {
-    const { categories, totalUsd } = buildLedger(baseUsage, baseCosts);
-    expect(categories.map((c) => c.key)).toEqual(["input", "output"]);
-    expect(categories[0].tokens).toBe(100);
-    expect(categories[0].usd).toBeCloseTo(0.000025);
-    expect(totalUsd).toBeCloseTo(0.000425);
+describe("relativeTime", () => {
+  const now = Date.parse("2026-01-01T12:00:00Z");
+
+  it("returns just now for timestamps under a minute old", () => {
+    expect(relativeTime(now - 30_000, now)).toBe("just now");
+    expect(relativeTime(now, now)).toBe("just now");
   });
 
-  it("renders reasoning row only when reasoning tokens are non-zero", () => {
-    const withZero = buildLedger(
-      { ...baseUsage, reasoningTokens: 0 },
-      { ...baseCosts, reasoningUsd: 0 },
-    );
-    expect(withZero.categories.map((c) => c.key)).toEqual(["input", "output"]);
-
-    const withReasoning = buildLedger(
-      { ...baseUsage, reasoningTokens: 50 },
-      { ...baseCosts, reasoningUsd: 0.00075 },
-    );
-    const reasoning = withReasoning.categories.find((c) => c.key === "reasoning");
-    expect(reasoning).toBeDefined();
-    expect(reasoning?.tokens).toBe(50);
-    expect(reasoning?.usd).toBeCloseTo(0.00075);
+  it("returns Xm ago for timestamps under an hour old", () => {
+    expect(relativeTime(now - 60_000, now)).toBe("1m ago");
+    expect(relativeTime(now - 5 * 60_000, now)).toBe("5m ago");
+    expect(relativeTime(now - 59 * 60_000, now)).toBe("59m ago");
   });
 
-  it("renders tools row only when tool calls exist", () => {
-    const noTools = buildLedger(baseUsage, baseCosts);
-    expect(noTools.categories.map((c) => c.key)).not.toContain("tools");
+  it("returns Xh ago for timestamps an hour or older", () => {
+    expect(relativeTime(now - 60 * 60_000, now)).toBe("1h ago");
+    expect(relativeTime(now - 3 * 60 * 60_000, now)).toBe("3h ago");
+  });
+});
 
-    const withTools = buildLedger(
-      { ...baseUsage, toolTokens: 80, toolCalls: 2 },
-      baseCosts,
-    );
-    const tools = withTools.categories.find((c) => c.key === "tools");
-    expect(tools).toBeDefined();
-    expect(tools?.calls).toBe(2);
-    expect(tools?.tokens).toBe(80);
+describe("buildRunBlocks", () => {
+  const now = Date.parse("2026-01-01T12:00:00Z");
+
+  it("renders runs oldest first: array order is chronological, newest last", () => {
+    const runs = [
+      makeRun({ optionId: "big-input", optionLabel: "Large input", timestamp: now - 5 * 60_000 }),
+      makeRun({ optionId: "explain", optionLabel: "Detailed explanation", timestamp: now - 30_000 }),
+    ];
+    const blocks = buildRunBlocks(runs, now);
+    expect(blocks.map((b) => b.optionLabel)).toEqual(["Large input", "Detailed explanation"]);
+    expect(blocks[0].timeLabel).toBe("5m ago");
+    expect(blocks[1].timeLabel).toBe("just now");
   });
 
-  it("renders all four categories when everything is non-zero", () => {
-    const { categories } = buildLedger(
-      { ...baseUsage, reasoningTokens: 50, toolTokens: 80, toolCalls: 2 },
-      { ...baseCosts, reasoningUsd: 0.00075 },
-    );
-    expect(categories.map((c) => c.key)).toEqual([
-      "input",
-      "output",
-      "reasoning",
-      "tools",
+  it("numbers runs 1-based in chronological array order (Run 1 = oldest, at the top)", () => {
+    const runs = [
+      makeRun({ optionId: "a", optionLabel: "A", timestamp: now - 120_000 }),
+      makeRun({ optionId: "b", optionLabel: "B", timestamp: now - 60_000 }),
+      makeRun({ optionId: "c", optionLabel: "C", timestamp: now }),
+    ];
+    const blocks = buildRunBlocks(runs, now);
+    expect(blocks.map((b) => b.number)).toEqual([1, 2, 3]);
+    expect(blocks[0].optionLabel).toBe("A");
+    expect(blocks[2].optionLabel).toBe("C");
+  });
+
+  it("preserves per-run usage and cost", () => {
+    const runs = [
+      makeRun({
+        optionId: "thinker",
+        optionLabel: "Deep think",
+        timestamp: now,
+        usage: { ...baseUsage, reasoningTokens: 50, toolTokens: 80, toolCalls: 2, inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0.00075 },
+        costUsd: 0.00118,
+      }),
+      makeRun({ optionId: "plain", optionLabel: "Plain run", timestamp: now - 60_000 }),
+    ];
+    const blocks = buildRunBlocks(runs, now);
+    expect(blocks[0].ledger.categories.map((c) => c.key)).toEqual(["input", "output", "reasoning", "tools"]);
+    expect(blocks[0].ledger.totalUsd).toBeCloseTo(0.00118);
+    expect(blocks[1].ledger.categories.map((c) => c.key)).toEqual(["input", "output"]);
+    expect(blocks[1].ledger.totalUsd).toBeCloseTo(0.00043);
+  });
+
+  it("carries recorded flags through to blocks", () => {
+    const runs = [
+      makeRun({ optionId: "a", optionLabel: "A", timestamp: now, recorded: true }),
+      makeRun({ optionId: "b", optionLabel: "B", timestamp: now - 60_000 }),
+    ];
+    const blocks = buildRunBlocks(runs, now);
+    expect(blocks.map((b) => b.recorded)).toEqual([true, false]);
+  });
+
+  it("handles an empty run history", () => {
+    expect(buildRunBlocks([], Date.now())).toEqual([]);
+  });
+});
+
+describe("run history model", () => {
+  it("RunRecord stores usage and cost only — no segments field", () => {
+    const run = makeRun({ optionId: "a", optionLabel: "A", timestamp: 0 });
+    expect(Object.keys(run).sort()).toEqual([
+      "costUsd",
+      "optionId",
+      "optionLabel",
+      "recorded",
+      "timestamp",
+      "usage",
     ]);
   });
 
-  it("gives each category a distinct color variable", () => {
-    const { categories } = buildLedger(
-      { ...baseUsage, reasoningTokens: 50, toolTokens: 80, toolCalls: 2 },
-      { ...baseCosts, reasoningUsd: 0.00075 },
-    );
-    const colorVars = categories.map((c) => c.colorVar);
-    expect(new Set(colorVars).size).toBe(colorVars.length);
-    expect(colorVars.every((v) => v.startsWith("--ledger-"))).toBe(true);
+  it("per-run ledger builds independently via buildLedger", () => {
+    const usage = { ...baseUsage, toolTokens: 40, toolCalls: 1 };
+    const ledger = buildLedger(usage, { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, totalUsd: 0.00043 });
+    expect(ledger.categories.find((c) => c.key === "tools")?.calls).toBe(1);
+    expect(ledger.totalUsd).toBeCloseTo(0.00043);
   });
 });

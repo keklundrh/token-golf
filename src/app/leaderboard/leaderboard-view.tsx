@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
+import { formatMicroUsd } from "@/lib/currency";
 export interface LeaderboardEntry {
   userId: string;
   username: string;
@@ -75,7 +75,7 @@ export default function Leaderboard() {
           <p className="text-center text-lg">
             You are <span className="font-bold">{ordinal(mine.rank)}</span> of{" "}
             {data.leaderboard.length} — total spend{" "}
-            <span className="font-bold">${mine.totalUsd.toFixed(4)}</span>
+            <span className="font-bold">{formatMicroUsd(mine.totalUsd)}</span>
           </p>
         )}
         <table className="w-full text-sm">
@@ -105,7 +105,7 @@ export default function Leaderboard() {
                   <td className="py-2 pr-2">{row.rank}</td>
                   <td className="py-2 pr-2">{row.username}</td>
                   <td className="py-2 pr-2 text-right text-zinc-500">{row.holes}</td>
-                  <td className="py-2 text-right">${row.totalUsd.toFixed(4)}</td>
+                  <td className="py-2 text-right">{formatMicroUsd(row.totalUsd)}</td>
                 </tr>
               ),
             )}

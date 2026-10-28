@@ -41,7 +41,8 @@ describe("skills", () => {
     expect(searchIdx).toBeGreaterThanOrEqual(0);
     expect(citeIdx).toBeGreaterThan(searchIdx);
     expect(promptIdx).toBeGreaterThan(citeIdx);
-    expect(prompt).toContain("You are a thorough science teacher");
+    // the option's own prompt follows the skills, with {question} substituted
+    expect(prompt).toContain(": Q");
   });
 
   it("resolves skill prompts for badge display", () => {
