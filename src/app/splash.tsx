@@ -65,7 +65,11 @@ export default function Splash({ content }: { content: HomepageContent }) {
           disabled={!username || starting}
           onClick={() => {
             setStarting(true);
-            router.push(content.cta.target);
+            // Start Playing starts a new game: clear per-hole progress for
+            // the existing identity, then navigate to the first challenge
+            fetch("/api/game/reset", { method: "POST" })
+              .catch(() => {})
+              .finally(() => router.push(content.cta.target));
           }}
           className="h-12 w-full rounded-full bg-green-700 text-base font-medium text-white transition-colors hover:bg-green-800 disabled:opacity-40"
         >

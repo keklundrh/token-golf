@@ -2,6 +2,8 @@ import type { Challenge, Option, Skills } from "@/lib/config";
 import { renderPrompt, modelFor } from "@/lib/llm";
 import { streamText, type JSONValue } from "ai";
 import { computeCost } from "@/lib/cost";
+import { getDb } from "@/db";
+import { attempts } from "@/db/schema";
 
 export type ChunkKind = "input" | "output" | "reasoning" | "tools";
 
@@ -48,14 +50,16 @@ export function renderPracticeStream({
   challenge,
   option,
   skills,
+  userId,
 }: {
   challenge: Challenge;
   option: Option;
   skills: Skills;
+  userId: string;
 }): ReadableStream<Uint8Array> {
-  const encoder = new TextEncoder();
   return new ReadableStream<Uint8Array>({
     async start(controller) {
+      const encoder = new TextEncoder();
       const modelSpec = option.model ?? challenge.model;
       const model = modelFor(modelSpec);
       const renderedPrompt = renderPrompt(option, challenge.question, skills);
@@ -87,6 +91,18 @@ export function renderPracticeStream({
         reasoningTokens: usage.outputTokenDetails?.reasoningTokens ?? null,
       };
       const cost = computeCost(option.model ?? challenge.model, tokens);
+      // server-side run tracking: the proxy measured this cost, so the server
+      // records the attempt (#7 invariant — the client never self-reports cost)
+      getDb()
+        .insert(attempts)
+        .values({
+          userId,
+          challengeId: challenge.id,
+          optionId: option.id,
+          costUsd: cost.totalUsd,
+          createdAt: Date.now(),
+        })
+        .run();
       const done: PracticeEvent = {
         type: "done",
         usage: {

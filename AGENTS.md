@@ -57,18 +57,23 @@ Guidance for AI agents working in this repo.
 
 ## Key issues
 
-- #1 — epic: token golf education app
+- #1 — epic: token golf education app (open items tracked in its body)
 - #2 — gameplay and flow
-- #3 — UI style and color scheme (Masters palette, `config/homepage.yaml`,
-  `config/challenges/hole-NNN/challenge.yaml`)
+- #3 — UI style, color scheme, and currency units (Masters palette, µ$ in UI,
+  `config/homepage.yaml`, `config/challenges/hole-NNN/challenge.yaml`)
 - #4 — challenge creation logic
 - #5 — challenge experience
-- #6 — leaderboard
+- #6 — leaderboard (scoring/storage semantics: best-per-hole)
 - #7 — architecture (canonical spec; `docs/ARCHITECTURE.md` points to it)
+- #8 — model cost display (pre-swing price line per option)
+- #9 — tips / "explain what just happened after the run" (open idea)
+- #10 — cache read/write tokens in pricing and display (open idea; follow-up
+  to #8's cache deferral)
 
 ## Stack
 
-Next.js + TypeScript + Tailwind + shadcn/ui, better-sqlite3 + Drizzle,
-Vercel AI SDK (Anthropic + OpenAI now; open-weight via
-`@ai-sdk/openai-compatible` later), SSE streaming, Docker deploy with
-persistent filesystem (SQLite requirement).
+Stack details live in issue #7 (canonical architecture spec). Summary:
+Next.js + TypeScript + Tailwind, better-sqlite3 + Drizzle, Vercel AI SDK
+(Anthropic + OpenAI now; open-weight via `@ai-sdk/openai-compatible`
+later), SSE streaming, Docker deploy with persistent filesystem (SQLite
+requirement).

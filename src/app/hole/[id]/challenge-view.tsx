@@ -51,6 +51,44 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
   const outputRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // refresh-safe record: if the user already swung options on this hole
+  // (server-side attempts exist), seed recordable runs per option so
+  // Record Score works post-reload for any already-run option
+  useEffect(() => {
+    fetch(`/api/practice?challengeId=${challenge.id}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { attempts: Array<{ optionId: string; costUsd: number }> } | null) => {
+        if (!data?.attempts?.length) return;
+        const records: RunRecord[] = data.attempts.map((a) => {
+          const option = challenge.options.find((o) => o.id === a.optionId);
+          return {
+            optionId: a.optionId,
+            optionLabel: option?.label ?? a.optionId,
+            timestamp: Date.now(),
+            usage: {
+              inputTokens: 0,
+              outputTokens: 0,
+              reasoningTokens: null,
+              toolTokens: 0,
+              toolCalls: 0,
+              inputUsd: 0,
+              outputUsd: 0,
+              reasoningUsd: 0,
+            },
+            costUsd: a.costUsd,
+            recorded: false,
+          };
+        });
+        setRun((r) => ({ ...r, runs: records, activeIndex: records.length - 1 }));
+        const last = data.attempts[data.attempts.length - 1];
+        const lastOption = challenge.options.find((o) => o.id === last.optionId);
+        if (lastOption) setSelected(lastOption);
+      })
+      .catch(() => {});
+  }, [challenge.id]);
+
+  // running total of recorded scores: fetched client-side per hole mount;
+  // loading renders "Spend …" (never a false 0)
   useEffect(() => {
     let cancelled = false;
     fetch("/api/leaderboard")
@@ -74,7 +112,7 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
   }, [run.segments, run.streaming]);
 
   function practiceSwing() {
-    if (!selected || run.streaming) return;
+    if (!selected || run.streaming || run.runs.some((r) => r.optionId === selected.id)) return;
     setRun((r) => ({ ...r, segments: [], streaming: true, error: null }));
 
     fetch("/api/practice", {
@@ -165,20 +203,21 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
   }
 
   function recordScore() {
-    if (!selected || recording || run.runs.length === 0) return;
-    const activeRun = run.runs[run.activeIndex];
-    if (!activeRun) return;
+    if (!selected || recording || !run.runs.some((r) => r.optionId === selected.id)) return;
     setRecording(true);
+    // no cost in the body — the server records its own attempt measurement (#7);
+    // the optionId selects which run to keep (#2 steps 14–15)
     fetch("/api/score", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ challengeId: challenge.id, costUsd: activeRun.costUsd }),
+      body: JSON.stringify({ challengeId: challenge.id, optionId: selected.id }),
     })
       .then((res) => {
         if (!res.ok) throw new Error(`record failed: ${res.status}`);
         setRun((r) => {
           const runs = [...r.runs];
-          if (runs[r.activeIndex]) runs[r.activeIndex] = { ...runs[r.activeIndex], recorded: true };
+          const idx = runs.findIndex((run) => run.optionId === selected!.id);
+          if (idx >= 0) runs[idx] = { ...runs[idx], recorded: true };
           return { ...r, runs };
         });
         router.push(nextHoleUrl());
@@ -284,15 +323,28 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
         <div className="flex gap-3">
           <button
             type="button"
-            disabled={!selected || run.streaming}
+            disabled={
+              !selected ||
+              run.streaming ||
+              (selected !== null && run.runs.some((r) => r.optionId === selected.id))
+            }
             onClick={practiceSwing}
             className="h-12 flex-1 rounded-full bg-green-700 font-medium text-white transition-colors hover:bg-green-800 disabled:opacity-40"
           >
-            {run.streaming ? "Swinging…" : "Practice Swing"}
+            {run.streaming
+              ? "Swinging…"
+              : selected !== null && run.runs.some((r) => r.optionId === selected.id)
+                ? "Already ran this option"
+                : "Practice Swing"}
           </button>
           <button
             type="button"
-            disabled={!selected || run.streaming || run.runs.length === 0 || recording}
+            disabled={
+              !selected ||
+              run.streaming ||
+              recording ||
+              (selected !== null && !run.runs.some((r) => r.optionId === selected.id))
+            }
             onClick={recordScore}
             className="h-12 flex-1 rounded-full border border-zinc-300 font-medium text-black transition-colors hover:bg-zinc-50 disabled:opacity-40"
           >

@@ -14,6 +14,12 @@ writeFileSync(
   join(process.env.PRACTICE_CONFIG_DIR, "challenges", "hole-998", "challenge.yaml"),
   'id: 998\nquestion: q\noptions:\n  - id: a\n    label: A\n    detail: d\n    prompt: p\n    thinking: "ultra"\n',
 );
+// valid hole-001 with two options: exercises the per-option one-swing guard
+mkdirSync(join(process.env.PRACTICE_CONFIG_DIR, "challenges", "hole-001"), { recursive: true });
+writeFileSync(
+  join(process.env.PRACTICE_CONFIG_DIR, "challenges", "hole-001", "challenge.yaml"),
+  'id: 1\nquestion: q\nmodel: "anthropic/claude-sonnet-4-5"\noptions:\n  - id: terse\n    label: T\n    detail: d\n    prompt: p\n  - id: verbose\n    label: V\n    detail: d\n    prompt: p\n',
+);
 
 export default defineConfig({
   test: {

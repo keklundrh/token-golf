@@ -11,7 +11,9 @@ the specification.** `docs/` is for end-user documentation ONLY. Never put
 AI task definitions, build prompts, agent instructions, or implementation
 notes in `docs/`.
 
-- Product requirements: issues #1–#6 (epic: #1)
+- Product requirements: issues #1–#6, #8 (epic: #1; open ideas: #9, #10)
 - Architecture: issue #7 (canonical); `docs/ARCHITECTURE.md` is a pointer to it
 - Gameplay and flow: issue #2
-- UI style and color scheme: issue #3
+- UI style, color scheme, and currency units: issue #3
+- Model cost display: issue #8
+- Agent conventions: see AGENTS.md

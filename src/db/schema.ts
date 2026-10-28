@@ -6,6 +6,17 @@ export const users = sqliteTable("users", {
   createdAt: integer("created_at").notNull(),
 });
 
+export const attempts = sqliteTable("attempts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: text("user_id")
+    .notNull()
+    .references(() => users.id),
+  challengeId: integer("challenge_id").notNull(),
+  optionId: text("option_id").notNull(),
+  costUsd: real("cost_usd").notNull(),
+  createdAt: integer("created_at").notNull(),
+});
+
 export const scores = sqliteTable("scores", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: text("user_id")

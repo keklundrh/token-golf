@@ -3,6 +3,14 @@ import { loadChallenge, loadSkills, type Skills } from "./config";
 
 const streamTextMock = vi.hoisted(() => vi.fn());
 
+const TEST_USER_ID = "practice-test-user";
+const insertValuesMock = vi.hoisted(() => vi.fn(() => ({ run: vi.fn() })));
+const insertMock = vi.hoisted(() => vi.fn(() => ({ values: insertValuesMock })));
+
+vi.mock("@/db", () => ({
+  getDb: () => ({ insert: insertMock }),
+}));
+
 vi.mock("ai", () => ({
   streamText: streamTextMock,
 }));
@@ -33,6 +41,9 @@ async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
 describe("renderPracticeStream streamText args", () => {
   beforeEach(() => {
     streamTextMock.mockReset();
+    insertMock.mockClear();
+    insertValuesMock.mockClear();
+    insertValuesMock.mockImplementation(() => ({ run: vi.fn() }));
     streamTextMock.mockReturnValue({
       fullStream: (async function* () {
         yield { type: "text-delta", text: "ok" };
@@ -49,21 +60,21 @@ describe("renderPracticeStream streamText args", () => {
   it("resolves option-level model over hole default", async () => {
     const challenge = loadChallenge(1);
     const option = { ...challenge.options[0], model: "anthropic/claude-haiku-4-5" };
-    await drain(renderPracticeStream({ challenge, option, skills }));
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
     expect(streamTextMock).toHaveBeenCalledTimes(1);
     expect(streamTextMock.mock.calls[0][0].model.modelId).toBe("claude-haiku-4-5");
   });
 
   it("uses hole default model when option has none", async () => {
     const challenge = loadChallenge(1);
-    await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills }));
+    await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills, userId: TEST_USER_ID }));
     expect(streamTextMock.mock.calls[0][0].model.modelId).toBe("claude-sonnet-4-5");
   });
 
   it("passes Anthropic thinking enabled with budgetTokens 4096 when option.thinking is true", async () => {
     const challenge = loadChallenge(1);
     const option = { ...challenge.options[0], thinking: true };
-    await drain(renderPracticeStream({ challenge, option, skills }));
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
     const args = streamTextMock.mock.calls[0][0];
     expect(args.providerOptions).toEqual({
       anthropic: { thinking: { type: "enabled", budgetTokens: 4096 } },
@@ -73,7 +84,7 @@ describe("renderPracticeStream streamText args", () => {
   it("passes no providerOptions when thinking is unset", async () => {
     const challenge = loadChallenge(1);
     const option = { ...challenge.options[0], thinking: undefined };
-    await drain(renderPracticeStream({ challenge, option, skills }));
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
     const args = streamTextMock.mock.calls[0][0];
     expect(args.providerOptions).toBeUndefined();
   });
@@ -81,7 +92,7 @@ describe("renderPracticeStream streamText args", () => {
   it("maps thinking low to Anthropic budget 2048", async () => {
     const challenge = loadChallenge(1);
     const option = { ...challenge.options[0], thinking: "low" as const };
-    await drain(renderPracticeStream({ challenge, option, skills }));
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
     expect(streamTextMock.mock.calls[0][0].providerOptions).toEqual({
       anthropic: { thinking: { type: "enabled", budgetTokens: 2048 } },
     });
@@ -90,7 +101,7 @@ describe("renderPracticeStream streamText args", () => {
   it("maps thinking high to Anthropic budget 8192", async () => {
     const challenge = loadChallenge(1);
     const option = { ...challenge.options[0], thinking: "high" as const };
-    await drain(renderPracticeStream({ challenge, option, skills }));
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
     expect(streamTextMock.mock.calls[0][0].providerOptions).toEqual({
       anthropic: { thinking: { type: "enabled", budgetTokens: 8192 } },
     });
@@ -99,7 +110,7 @@ describe("renderPracticeStream streamText args", () => {
   it("passes OpenAI reasoningEffort for graded thinking on an openai model", async () => {
     const challenge = loadChallenge(1);
     const option = { ...challenge.options[0], model: "openai/gpt-5-mini", thinking: "high" as const };
-    await drain(renderPracticeStream({ challenge, option, skills }));
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
     expect(streamTextMock.mock.calls[0][0].providerOptions).toEqual({
       openai: { reasoningEffort: "high" },
     });
@@ -108,7 +119,7 @@ describe("renderPracticeStream streamText args", () => {
   it("maps thinking true to OpenAI reasoningEffort medium", async () => {
     const challenge = loadChallenge(1);
     const option = { ...challenge.options[0], model: "openai/gpt-5-mini", thinking: true as const };
-    await drain(renderPracticeStream({ challenge, option, skills }));
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
     expect(streamTextMock.mock.calls[0][0].providerOptions).toEqual({
       openai: { reasoningEffort: "medium" },
     });
@@ -123,7 +134,7 @@ describe("renderPracticeStream streamText args", () => {
     ] as const;
     for (const { mode, budget } of cases) {
       const option = { ...challenge.options[0], thinking: mode };
-      await drain(renderPracticeStream({ challenge, option, skills }));
+      await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
       expect(streamTextMock.mock.calls[0][0].providerOptions).toEqual({
         anthropic: { thinking: { type: "enabled", budgetTokens: budget } },
       });
@@ -134,7 +145,7 @@ describe("renderPracticeStream streamText args", () => {
   it("prepends skill prompts before the option prompt", async () => {
     const challenge = loadChallenge(1);
     const option = { ...challenge.options[0], skills: ["web-search"] };
-    await drain(renderPracticeStream({ challenge, option, skills }));
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
     const prompt: string = streamTextMock.mock.calls[0][0].prompt;
     // skills come first; the option's own prompt (question substituted) follows
     expect(prompt.indexOf("Search the web")).toBeLessThan(
@@ -144,7 +155,7 @@ describe("renderPracticeStream streamText args", () => {
 
   it("emits input chunk first with the rendered prompt", async () => {
     const challenge = loadChallenge(1);
-    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills }));
+    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills, userId: TEST_USER_ID }));
     const frames = raw.split("\n\n").filter((f) => f.startsWith("data: "));
     const first = JSON.parse(frames[0].slice(6));
     expect(first.type).toBe("chunk");
@@ -154,7 +165,7 @@ describe("renderPracticeStream streamText args", () => {
 
   it("tags text-delta chunks as output kind", async () => {
     const challenge = loadChallenge(1);
-    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills }));
+    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills, userId: TEST_USER_ID }));
     const kinds = raw.split("\n\n").filter((f) => f.startsWith("data: ")).map((f) => JSON.parse(f.slice(6)).kind);
     expect(kinds[0]).toBe("input");
     expect(kinds[1]).toBe("output");
@@ -175,7 +186,7 @@ describe("renderPracticeStream streamText args", () => {
       toolCalls: Promise.resolve([]),
     });
     const challenge = loadChallenge(1);
-    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills }));
+    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills, userId: TEST_USER_ID }));
     const kinds = raw.split("\n\n").filter((f) => f.startsWith("data: ")).map((f) => JSON.parse(f.slice(6))).filter((e) => e.type === "chunk").map((e) => e.kind);
     expect(kinds).toEqual(["input", "reasoning", "output"]);
   });
@@ -194,7 +205,7 @@ describe("renderPracticeStream streamText args", () => {
       toolCalls: Promise.resolve([]),
     });
     const challenge = loadChallenge(1);
-    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills }));
+    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills, userId: TEST_USER_ID }));
     const frames = raw.split("\n\n").filter((f) => f.startsWith("data: "));
     const toolFrame = JSON.parse(frames[1].slice(6));
     expect(toolFrame.kind).toBe("tools");
@@ -205,7 +216,7 @@ describe("renderPracticeStream streamText args", () => {
   it("emits done frame with tool call count and per-category costs", async () => {
     const challenge = loadChallenge(1);
     const events: string[] = [];
-    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills }));
+    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills, userId: TEST_USER_ID }));
     for (const frame of raw.split("\n\n")) {
       if (frame.startsWith("data: ")) events.push(frame.slice(6));
     }
