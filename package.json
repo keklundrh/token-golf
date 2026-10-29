@@ -10,10 +10,10 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^4.0.84",
-    "@ai-sdk/openai": "^4.0.98",
-    "@ai-sdk/openai-compatible": "^3.0.80",
-    "ai": "^7.0.146",
+    "@ai-sdk/anthropic": "^4.0.91",
+    "@ai-sdk/openai": "^4.0.104",
+    "@ai-sdk/openai-compatible": "3.0.81",
+    "ai": "7.0.157",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.4",
     "next": "16.4.2",

@@ -89,7 +89,10 @@ describe("modelFor", () => {
     withEnv(
       { AI_BU_CAI_BASE_URL: "https://litemaas.example.com/v1", AI_BU_CAI_API_KEY: "k1" },
       () => {
-        const model = modelFor("ai-bu-cai/Qwen3.8-27B");
+        const model = modelFor("ai-bu-cai/Qwen3.8-27B") as {
+          provider: string;
+          modelId: string;
+        };
         expect(model.provider).toContain("ai-bu-cai");
         expect(model.modelId).toBe("Qwen3.8-27B");
       },
@@ -100,7 +103,9 @@ describe("modelFor", () => {
     withEnv(
       { AI_BU_TMM_BASE_URL: "https://maas.example.com/v1", AI_BU_TMM_API_KEY: "k2" },
       () => {
-        const model = modelFor("ai-bu-tmm/publishers/prelude-maas/models/glm-53-flash");
+        const model = modelFor(
+          "ai-bu-tmm/publishers/prelude-maas/models/glm-53-flash",
+        ) as { provider: string; modelId: string };
         expect(model.provider).toContain("ai-bu-tmm");
         expect(model.modelId).toBe("publishers/prelude-maas/models/glm-53-flash");
       },
@@ -109,7 +114,7 @@ describe("modelFor", () => {
 
   it("keeps the full model id when it contains slashes", () => {
     withEnv({ AI_BU_TMM_BASE_URL: "https://x/v1" }, () => {
-      expect(modelFor("ai-bu-tmm/a/b/c").modelId).toBe("a/b/c");
+      expect((modelFor("ai-bu-tmm/a/b/c") as { modelId: string }).modelId).toBe("a/b/c");
     });
   });
 
