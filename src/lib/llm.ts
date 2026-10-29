@@ -18,6 +18,7 @@ export function modelFor(name: string): LanguageModel {
       name: "ai-bu-cai",
       baseURL: process.env.AI_BU_CAI_BASE_URL ?? "",
       apiKey: process.env.AI_BU_CAI_API_KEY,
+      includeUsage: true,
     })(modelId);
   }
   if (provider === "ai-bu-tmm") {
@@ -25,6 +26,7 @@ export function modelFor(name: string): LanguageModel {
       name: "ai-bu-tmm",
       baseURL: process.env.AI_BU_TMM_BASE_URL ?? "",
       apiKey: process.env.AI_BU_TMM_API_KEY,
+      includeUsage: true,
     })(modelId);
   }
   throw new Error(`unsupported provider: ${provider}`);

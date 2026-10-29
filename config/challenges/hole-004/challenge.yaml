@@ -1,0 +1,9 @@
+id: 4
+question: "Write a function that reverses words in a sentence while keeping punctuation attached to each word. Explain your approach in one sentence."
+model: "ai-bu-cai/Qwen3.8-27B"
+options:
+  - id: local-standard
+    label: "Local · Qwen3.8-27B"
+    detail: "Same prompt, LiteMaaS-hosted Qwen model."
+    prompt: |
+      Answer with a single sentence. {question}
