@@ -1,0 +1,17 @@
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: token-golf
+  labels:
+    app: token-golf
+spec:
+  source:
+    git:
+      uri: https://github.com/keklundrh/token-golf.git
+      ref: dev
+  strategy:
+    dockerStrategy: {}
+  output:
+    to:
+      kind: ImageStreamTag
+      name: token-golf:latest

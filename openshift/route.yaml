@@ -1,0 +1,15 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: token-golf
+  labels:
+    app: token-golf
+spec:
+  to:
+    kind: Service
+    name: token-golf
+  port:
+    targetPort: 3000
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

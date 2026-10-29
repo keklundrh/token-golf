@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: token-golf
+  labels:
+    app: token-golf
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: token-golf
+  template:
+    metadata:
+      labels:
+        app: token-golf
+    spec:
+      containers:
+        - name: token-golf
+          image: token-golf:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: token-golf-keys
+          env:
+            - name: DATABASE_PATH
+              value: /data/token-golf.db
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: token-golf-data
+  triggers:
+    - type: ConfigChange
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+          - token-golf
+        from:
+          kind: ImageStreamTag
+          name: token-golf:latest

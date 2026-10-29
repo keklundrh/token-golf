@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: token-golf
+  labels:
+    app: token-golf
+spec:
+  selector:
+    app: token-golf
+  ports:
+    - port: 3000
+      targetPort: 3000
