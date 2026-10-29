@@ -12,8 +12,8 @@ models:
     output_per_mtok: 5.00
     reasoning_per_mtok: 5.00
   ai-bu-cai/Qwen3.8-27B:
-    input_per_mtok: 0.50 # 5.00
-    output_per_mtok: 1.50 # 25.00
+    input_per_mtok: 0.00 # 5.00
+    output_per_mtok: 0.00 # 25.00
     reasoning_per_mtok: null
   ai-bu-tmm/publishers/prelude-maas/models/glm-53-flash:
     input_per_mtok: 1.00 # 5.00
