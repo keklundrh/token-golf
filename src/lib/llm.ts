@@ -1,5 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { type LanguageModel } from "ai";
 import type { Option, Skills } from "@/lib/config";
 
@@ -11,6 +12,20 @@ export function modelFor(name: string): LanguageModel {
   }
   if (provider === "anthropic") {
     return createAnthropic()(modelId);
+  }
+  if (provider === "ai-bu-cai") {
+    return createOpenAICompatible({
+      name: "ai-bu-cai",
+      baseURL: process.env.AI_BU_CAI_BASE_URL ?? "",
+      apiKey: process.env.AI_BU_CAI_API_KEY,
+    })(modelId);
+  }
+  if (provider === "ai-bu-tmm") {
+    return createOpenAICompatible({
+      name: "ai-bu-tmm",
+      baseURL: process.env.AI_BU_TMM_BASE_URL ?? "",
+      apiKey: process.env.AI_BU_TMM_API_KEY,
+    })(modelId);
   }
   throw new Error(`unsupported provider: ${provider}`);
 }
