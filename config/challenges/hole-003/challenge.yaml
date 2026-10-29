@@ -1,16 +1,15 @@
 id: 3
-question: "Given a grid where each cell is a height, water poured at any cell flows to lower neighbors. Compute, for every cell, whether water there can eventually reach the border. O(n·m) required."
+question: "A sweater and a shirt together cost 110. The sweater costs 100 more than the shirt. How much is the shirt?"
 model: "anthropic/claude-sonnet-4-5"
 options:
-  - id: verbose
-    label: "High thinking"
-    detail: "Same prompt, thinking high."
+  - id: thinking
+    label: "With thinking"
+    detail: "Extended thinking on before answering."
     prompt: |
-      Write code to solve this. {question}
+      Take your time and reason carefully before answering. {question}
     thinking: "high"
-  - id: balanced
-    label: "Low thinking"
-    detail: "Same prompt, thinking low."
+  - id: no-thinking
+    label: "Without thinking"
+    detail: "Answer immediately, no extended thinking."
     prompt: |
-      Write code to solve this. {question}
-    thinking: "low"
+      Answer immediately with your first instinct. {question}

@@ -37,8 +37,8 @@ afterAll(() => {
   db.delete(scores).where(eq(scores.userId, USER_ID)).run();
 });
 
-describe("POST /api/game/reset (Start Playing = new game)", () => {
-  it("clears attempts for the existing identity; recorded scores are kept", async () => {
+describe("POST /api/game/reset (Start Playing = abandoned game starts over)", () => {
+  it("clears attempts AND recorded scores; the identity survives", async () => {
     ensureUser();
     seedProgress();
 
@@ -55,8 +55,8 @@ describe("POST /api/game/reset (Start Playing = new game)", () => {
     const db = getDb();
     // attempts cleared (fresh swings, cap counter reset)
     expect(db.select().from(attempts).where(eq(attempts.userId, USER_ID)).all()).toHaveLength(0);
-    // recorded scores kept (the leaderboard's best-per-hole rule handles replays)
-    expect(db.select().from(scores).where(eq(scores.userId, USER_ID)).all()).toHaveLength(1);
+    // recorded scores cleared (an abandoned game does not carry spend into the next round)
+    expect(db.select().from(scores).where(eq(scores.userId, USER_ID)).all()).toHaveLength(0);
     // the user identity itself survives
     expect(db.select().from(users).where(eq(users.id, USER_ID)).all()).toHaveLength(1);
   });
