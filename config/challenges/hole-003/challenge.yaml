@@ -6,7 +6,8 @@ options:
     label: "With thinking"
     detail: "Extended thinking on before answering."
     prompt: |
-      Take your time and reason carefully before answering. {question}
+      Take your time and reason carefully before answering. Answer with a 
+      single sentence. {question}
     thinking: "high"
   - id: no-thinking
     label: "Without thinking"

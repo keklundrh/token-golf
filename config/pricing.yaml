@@ -19,3 +19,7 @@ models:
     input_per_mtok: 1.00 # 5.00
     output_per_mtok: 5.00 # 25.00
     reasoning_per_mtok: 5.00 #25.00
+  ai-bu-tmm/publishers/prelude-maas/models/qwen38-27b:
+    input_per_mtok: 0.50 # 5.00
+    output_per_mtok: 1.50 # 25.00
+    reasoning_per_mtok: 1.50 #25.00

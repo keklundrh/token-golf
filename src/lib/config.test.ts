@@ -42,6 +42,30 @@ describe("config schemas", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts an option with tags", () => {
+    const result = ChallengeSchema.safeParse({
+      id: 1,
+      question: "Q",
+      model: "m",
+      options: [
+        { id: "a", label: "A", detail: "d", prompt: "p", tags: ["Local", "GPU cluster"] },
+      ],
+    });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.options[0]?.tags).toEqual(["Local", "GPU cluster"]);
+  });
+
+  it("accepts an option without tags", () => {
+    const result = ChallengeSchema.safeParse({
+      id: 1,
+      question: "Q",
+      model: "m",
+      options: [{ id: "a", label: "A", detail: "d", prompt: "p" }],
+    });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.options[0]?.tags).toBeUndefined();
+  });
+
   it("rejects negative price", () => {
     const result = PricingSchema.safeParse({
       models: { m: { input_per_mtok: -1, output_per_mtok: 2, reasoning_per_mtok: null } },

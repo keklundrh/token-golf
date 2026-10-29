@@ -13,3 +13,10 @@ options:
     prompt: |
       Answer in exactly one sentence: {question}
     model: "anthropic/claude-haiku-4-5"
+  - id: local 
+    label: "Local model"
+    detail: "Local model with hard constraint on output length."
+    prompt: |
+      Answer in exactly one sentence: {question}
+    model: "ai-bu-cai/Qwen3.8-27B"
+    tags: ["Local"]
