@@ -5,7 +5,8 @@ in-cluster and is never committed to git.
 
 - `buildconfig.yaml` — BuildConfig, docker strategy, git source tracking
   the `dev` branch; output ImageStream `token-golf:latest`.
-- `imagestream.yaml` — ImageStream receiving the built image.
+- `pvc.yaml` — PersistentVolumeClaim `token-golf-data` (1Gi, ReadWriteOnce)
+  backing the SQLite mount; the Deployment references it by name.
 - `deployment.yaml` — envFrom the `token-golf-keys` Secret;
   `DATABASE_PATH=/data/token-golf.db`; PVC `token-golf-data` mounted at
   `/data`; imageChange trigger for auto-rollout.
