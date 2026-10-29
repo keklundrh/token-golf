@@ -263,7 +263,9 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
             >
               <span className="block font-medium">{option.label}</span>
               <span className="block text-sm text-zinc-500">{option.detail}</span>
-              {(option.thinking || (option.skills && option.skills.length > 0)) && (
+              {(option.thinking ||
+                (option.skills && option.skills.length > 0) ||
+                (option.tags && option.tags.length > 0)) && (
                 <span className="mt-1.5 flex flex-wrap gap-1.5">
                   {option.thinking && (
                     <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
@@ -276,6 +278,14 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
                       className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700"
                     >
                       {skills[id]?.label ?? id}
+                    </span>
+                  ))}
+                  {option.tags?.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-600"
+                    >
+                      {tag}
                     </span>
                   ))}
                 </span>

@@ -32,6 +32,7 @@ export const OptionSchema = z.object({
   model: z.string().min(1).optional(),
   thinking: z.union([z.boolean(), z.enum(["low", "medium", "high"])]).optional(),
   skills: z.array(z.string().min(1)).optional(),
+  tags: z.array(z.string().min(1)).optional(),
 });
 
 export const SkillSchema = z.object({
