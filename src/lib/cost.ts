@@ -35,4 +35,11 @@ export function computeCost(model: string, usage: TokenUsage): CostBreakdown {
   };
 }
 
-export const SPEND_CAP_USD = Number(process.env.SPEND_CAP_USD ?? 0.5);
+export function parseSpendCap(): number {
+  const raw = process.env.SPEND_CAP_USD;
+  if (raw === undefined) return 0.5;
+  const parsed = Number(raw);
+  return Number.isNaN(parsed) || parsed < 0 ? 0.5 : parsed;
+}
+
+export const SPEND_CAP_USD = parseSpendCap();

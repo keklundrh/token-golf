@@ -1,6 +1,50 @@
 import { describe, it, expect } from "vitest";
-import { computeCost, SPEND_CAP_USD, type TokenUsage } from "./cost";
+import { computeCost, SPEND_CAP_USD, parseSpendCap, type TokenUsage } from "./cost";
 
+const ORIGINAL_ENV = process.env.SPEND_CAP_USD;
+
+function withEnv(value: string | undefined, run: () => void): void {
+  if (value === undefined) {
+    delete process.env.SPEND_CAP_USD;
+  } else {
+    process.env.SPEND_CAP_USD = value;
+  }
+  try {
+    run();
+  } finally {
+    if (ORIGINAL_ENV === undefined) {
+      delete process.env.SPEND_CAP_USD;
+    } else {
+      process.env.SPEND_CAP_USD = ORIGINAL_ENV;
+    }
+  }
+}
+
+describe("SPEND_CAP_USD parsing", () => {
+  it("parses a valid override", () => {
+    withEnv("0.75", () => {
+      expect(parseSpendCap()).toBe(0.75);
+    });
+  });
+
+  it("falls back to 0.5 on a non-numeric value", () => {
+    withEnv("not-a-number", () => {
+      expect(parseSpendCap()).toBe(0.5);
+    });
+  });
+
+  it("falls back to 0.5 on a negative value", () => {
+    withEnv("-1", () => {
+      expect(parseSpendCap()).toBe(0.5);
+    });
+  });
+
+  it("defaults to 0.5 when absent", () => {
+    withEnv(undefined, () => {
+      expect(parseSpendCap()).toBe(0.5);
+    });
+  });
+});
 const usage: TokenUsage = {
   inputTokens: 1_000_000,
   outputTokens: 100_000,
@@ -55,3 +99,4 @@ describe("SPEND_CAP_USD", () => {
     expect(SPEND_CAP_USD).toBe(0.5);
   });
 });
+
