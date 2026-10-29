@@ -16,8 +16,8 @@ spec:
     spec:
       containers:
         - name: token-golf
-          image: token-golf:latest
-          imagePullPolicy: IfNotPresent
+          image: image-registry.openshift-image-registry.svc:5000/token-golf/token-golf:latest
+          command: ["node_modules/.bin/next", "start"]
           ports:
             - containerPort: 3000
           envFrom:
