@@ -160,7 +160,7 @@ describe("renderPracticeStream streamText args", () => {
     const first = JSON.parse(frames[0].slice(6));
     expect(first.type).toBe("chunk");
     expect(first.kind).toBe("input");
-    expect(first.text).toContain("Why is the sky blue");
+    expect(first.text).toContain(challenge.question);
   });
 
   it("tags text-delta chunks as output kind", async () => {

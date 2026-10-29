@@ -1,0 +1,16 @@
+id: 3
+question: "Given a grid where each cell is a height, water poured at any cell flows to lower neighbors. Compute, for every cell, whether water there can eventually reach the border. O(n·m) required."
+model: "anthropic/claude-sonnet-4-5"
+options:
+  - id: verbose
+    label: "High thinking"
+    detail: "Same prompt, thinking high."
+    prompt: |
+      Write code to solve this. {question}
+    thinking: "high"
+  - id: balanced
+    label: "Low thinking"
+    detail: "Same prompt, thinking low."
+    prompt: |
+      Write code to solve this. {question}
+    thinking: "low"

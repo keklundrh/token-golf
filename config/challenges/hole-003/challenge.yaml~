@@ -1,0 +1,23 @@
+id: 3
+question: "Why is the sky blue"
+model: "anthropic/claude-sonnet-4-5"
+options:
+  - id: verbose
+    label: "Detailed explanation"
+    detail: "Long system prompt, unconstrained output. Bigger model, bigger spend."
+    prompt: |
+      You are a thorough science teacher. Explain in complete detail why
+      {question}. Cover the physics, the history of the discovery, and
+      related phenomena. Use thinking and respond in several paragraphs.
+    thinking: "high"
+  - id: balanced
+    label: "Clear summary"
+    detail: "Moderate system prompt, thinking, one paragraph. Reasoning with limited output."
+    prompt: |
+      Explain clearly and concisely why {question}. One paragraph.
+    thinking: "medium"
+  - id: terse
+    label: "One sentence"
+    detail: "Hard constraint on output length. Constrained input & output."
+    prompt: |
+      Answer in exactly one sentence: {question}

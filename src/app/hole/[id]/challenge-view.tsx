@@ -87,8 +87,9 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
       .catch(() => {});
   }, [challenge.id]);
 
-  // running total of recorded scores: fetched client-side per hole mount;
-  // loading renders "Spend …" (never a false 0)
+  // Spend header: the player's total of recorded scores, fetched once per
+  // hole mount; static while on that hole — recording updates the header on
+  // the next hole (loading renders "Spend …", never a false 0)
   useEffect(() => {
     let cancelled = false;
     fetch("/api/leaderboard")

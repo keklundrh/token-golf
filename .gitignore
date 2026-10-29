@@ -26,6 +26,7 @@
 
 # sqlite
 token-golf.db*
+app.db*
 
 # debug
 npm-debug.log*
@@ -42,3 +43,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+

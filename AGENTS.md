@@ -61,9 +61,9 @@ Guidance for AI agents working in this repo.
   run the changed code path and observe the result before reporting done.
   Reproduce bugs before fixing; confirm after with the failing-before/
   passing-after test. Run the full suite before reporting done.
-- Test tooling (once the scaffold exists): Vitest for units/API routes,
-  Playwright for UI flows. Until then, throwaway scripts are for smoke
-  checks only — they never substitute for the explicit test that ships.
+- Test tooling: Vitest for units/API routes (the scaffold exists).
+  Throwaway scripts are for smoke checks only — they never substitute for
+  the explicit test that ships.
 
 ## Documentation
 
