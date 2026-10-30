@@ -100,7 +100,7 @@ options:
       Using ONLY the document above, answer in one sentence: {question}
   - id: cache-first
     label: "Cache it (run this first)"
-    detail: "Caching on. This run pays the cache WRITE (1.25x input rate) — the upfront cost of caching. Run this one first."
+    detail: "Caching on. This run pays the cache WRITE on the reference doc (1.25x input rate) — the upfront cost that lets the third option read it at ~0.1x. Run this one first."
     caching: true
     prompt: |
       You are given the following reference document.

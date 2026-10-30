@@ -7,8 +7,8 @@
   --ledger-output: #16a34a; /* green */
   --ledger-reasoning: #a855f7; /* purple */
   --ledger-tools: #f59e0b; /* amber */
-  --ledger-cache-read: #0ea5e9; /* sky */
-  --ledger-cache-write: #eab308; /* yellow */
+  --ledger-cache-read: #14b8a6; /* teal — unmistakable vs input blue */
+  --ledger-cache-write: #0d9488; /* darker teal — same caching family */
 }
 
 @theme inline {

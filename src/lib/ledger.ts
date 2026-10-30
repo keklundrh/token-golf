@@ -95,11 +95,18 @@ export function buildLedger(
   },
   flags: { thinking?: boolean; caching?: boolean; tools?: boolean } = {},
 ): LedgerRowData {
+  // The SDK's inputTokens INCLUDES cached tokens (verified in the provider
+  // SDK sources): the input row must show only the tokens actually charged
+  // at input rate, so the row's tok count and µ$ agree — the cached tokens
+  // are listed in their own cache read/write rows.
+  const cachedTokens =
+    (flags.caching ? (usage.cacheReadTokens ?? 0) + (usage.cacheWriteTokens ?? 0) : 0);
+  const uncachedInputTokens = Math.max(0, usage.inputTokens - cachedTokens);
   const categories: LedgerCategory[] = [
     {
       key: "input",
       label: "input",
-      tokens: usage.inputTokens,
+      tokens: uncachedInputTokens,
       usd: costs.inputUsd,
       colorVar: "--ledger-input",
     },
@@ -137,7 +144,7 @@ export function buildLedger(
   if (flags.caching && usage.cacheWriteTokens !== null && usage.cacheWriteTokens > 0) {
     categories.push({
       key: "cache-write",
-      label: "cache write",
+      label: "cache write (input)",
       tokens: usage.cacheWriteTokens,
       usd: costs.cacheWriteUsd,
       colorVar: "--ledger-cache-write",

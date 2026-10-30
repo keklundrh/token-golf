@@ -152,15 +152,22 @@ describe("run history model", () => {
   });
 
   it("renders cache read/write rows only when non-zero and caching flag set", () => {
+    // baseUsage inputTokens=100: 30 uncached + 50 read + 20 write
     const withCache = buildLedger(
-      { ...baseUsage, cacheReadTokens: 50_000, cacheWriteTokens: 20_000 },
+      { ...baseUsage, cacheReadTokens: 50, cacheWriteTokens: 20 },
       { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0.000015, cacheWriteUsd: 0.000075, totalUsd: 0.00052 },
       { caching: true },
     );
     expect(withCache.categories.map((c) => c.key)).toEqual(["input", "output", "cache-read", "cache-write"]);
     const cacheRead = withCache.categories.find((c) => c.key === "cache-read");
-    expect(cacheRead?.tokens).toBe(50_000);
+    expect(cacheRead?.tokens).toBe(50);
     expect(cacheRead?.colorVar).toBe("--ledger-cache-read");
+    const cacheWrite = withCache.categories.find((c) => c.key === "cache-write");
+    expect(cacheWrite?.label).toBe("cache write (input)");
+    expect(cacheWrite?.colorVar).toBe("--ledger-cache-write");
+    // the input row shows only the tokens charged at input rate — the
+    // cached tokens are listed in their own rows, so tok and µ$ agree
+    expect(withCache.categories.find((c) => c.key === "input")?.tokens).toBe(30);
 
     const zeroCache = buildLedger(
       { ...baseUsage, cacheReadTokens: 0, cacheWriteTokens: null },
@@ -169,11 +176,13 @@ describe("run history model", () => {
     );
     expect(zeroCache.categories.map((c) => c.key)).toEqual(["input", "output"]);
 
-    // non-zero cache tokens without the flag: no rows (training-display rule)
+    // non-zero cache tokens without the flag: no rows (training-display
+    // rule); input row shows the full count since nothing is cached
     const unflagged = buildLedger(
-      { ...baseUsage, cacheReadTokens: 50_000, cacheWriteTokens: 20_000 },
+      { ...baseUsage, cacheReadTokens: 50, cacheWriteTokens: 20 },
       { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0.000015, cacheWriteUsd: 0.000075, totalUsd: 0.00052 },
     );
     expect(unflagged.categories.map((c) => c.key)).toEqual(["input", "output"]);
+    expect(unflagged.categories.find((c) => c.key === "input")?.tokens).toBe(100);
   });
 });
