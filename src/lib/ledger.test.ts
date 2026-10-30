@@ -176,13 +176,15 @@ describe("run history model", () => {
     );
     expect(zeroCache.categories.map((c) => c.key)).toEqual(["input", "output"]);
 
-    // non-zero cache tokens without the flag: no rows (training-display
-    // rule); input row shows the full count since nothing is cached
+    // non-zero cache tokens without the flag: no cache rows (training-
+    // display rule), but the input-row math mirrors computeCost
+    // unconditionally — tokens charged at input rate only, so tok and µ$
+    // agree even with the cache rows hidden
     const unflagged = buildLedger(
       { ...baseUsage, cacheReadTokens: 50, cacheWriteTokens: 20 },
       { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0.000015, cacheWriteUsd: 0.000075, totalUsd: 0.00052 },
     );
     expect(unflagged.categories.map((c) => c.key)).toEqual(["input", "output"]);
-    expect(unflagged.categories.find((c) => c.key === "input")?.tokens).toBe(100);
+    expect(unflagged.categories.find((c) => c.key === "input")?.tokens).toBe(30);
   });
 });

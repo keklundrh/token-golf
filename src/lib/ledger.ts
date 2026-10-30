@@ -97,10 +97,11 @@ export function buildLedger(
 ): LedgerRowData {
   // The SDK's inputTokens INCLUDES cached tokens (verified in the provider
   // SDK sources): the input row must show only the tokens actually charged
-  // at input rate, so the row's tok count and µ$ agree — the cached tokens
-  // are listed in their own cache read/write rows.
-  const cachedTokens =
-    (flags.caching ? (usage.cacheReadTokens ?? 0) + (usage.cacheWriteTokens ?? 0) : 0);
+  // at input rate, so the row's tok count and µ$ agree. Mirrors
+  // computeCost, which subtracts unconditionally — an implicitly-caching
+  // backend (OpenAI) reports cache tokens without a config flag, and the
+  // flag only gates the read/write ROWS, not this math.
+  const cachedTokens = (usage.cacheReadTokens ?? 0) + (usage.cacheWriteTokens ?? 0);
   const uncachedInputTokens = Math.max(0, usage.inputTokens - cachedTokens);
   const categories: LedgerCategory[] = [
     {
