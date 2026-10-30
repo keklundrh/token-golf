@@ -91,7 +91,7 @@ export function buildLedger(
   if (usage.reasoningTokens !== null && usage.reasoningTokens > 0) {
     categories.push({
       key: "reasoning",
-      label: "reasoning",
+      label: "thinking",
       tokens: usage.reasoningTokens,
       usd: costs.reasoningUsd,
       colorVar: "--ledger-reasoning",
