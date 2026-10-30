@@ -19,6 +19,8 @@ export interface ModelRates {
   inputPerMtok: number;
   outputPerMtok: number;
   reasoningPerMtok: number | null;
+  cacheReadPerMtok?: number | null;
+  cacheWritePerMtok?: number | null;
 }
 
 /**

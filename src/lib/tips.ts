@@ -62,7 +62,7 @@ export function buildRunTip({ optionLabel, modelId, rates, usage, costs }: RunTi
       label: "cache read",
       tokens: cacheReadTokens,
       usd: costs.cacheReadUsd,
-      rate: rates.inputPerMtok > 0 ? rates.inputPerMtok / 10 : 0,
+      rate: rates.cacheReadPerMtok ?? 0,
       suggestion: "cache reads are cheaper than fresh input — that's the saving",
     });
   }
@@ -71,7 +71,7 @@ export function buildRunTip({ optionLabel, modelId, rates, usage, costs }: RunTi
       label: "cache write",
       tokens: cacheWriteTokens,
       usd: costs.cacheWriteUsd,
-      rate: rates.inputPerMtok * 1.25,
+      rate: rates.cacheWritePerMtok ?? 0,
       suggestion: "cache writes cost more upfront but are cheaper on the next equivalent run",
     });
   }

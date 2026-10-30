@@ -7,6 +7,8 @@ const pricing: Record<string, ModelPrice> = {
     input_per_mtok: 3,
     output_per_mtok: 15,
     reasoning_per_mtok: 15,
+    cache_read_per_mtok: 0.3,
+    cache_write_per_mtok: 3.75,
   },
   "anthropic/claude-haiku-4-5": {
     input_per_mtok: 1,
@@ -29,6 +31,8 @@ describe("buildOptionRates", () => {
       inputPerMtok: 3,
       outputPerMtok: 15,
       reasoningPerMtok: 15,
+      cacheReadPerMtok: 0.3,
+      cacheWritePerMtok: 3.75,
     });
   });
 
@@ -45,6 +49,8 @@ describe("buildOptionRates", () => {
       inputPerMtok: 1,
       outputPerMtok: 5,
       reasoningPerMtok: 5,
+      cacheReadPerMtok: null,
+      cacheWritePerMtok: null,
     });
   });
 

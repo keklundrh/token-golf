@@ -62,10 +62,10 @@ describe("buildRunTip", () => {
     expect(tip).toContain("220 tok at 15 µ$/tok");
   });
 
-  it("renders cache read tokens at the read rate", () => {
+  it("renders cache read tokens at the read rate from real config rates", () => {
     const tip = buildRunTip({
       ...base,
-      rates: { inputPerMtok: 3, outputPerMtok: 15, reasoningPerMtok: 15 },
+      rates: { inputPerMtok: 3, outputPerMtok: 15, reasoningPerMtok: 15, cacheReadPerMtok: 0.3, cacheWritePerMtok: 3.75 },
       usage: { inputTokens: 50_000, outputTokens: 30, reasoningTokens: null, cacheReadTokens: 49_000 },
       costs: { inputUsd: 0.00003, outputUsd: 0.00045, reasoningUsd: 0, cacheReadUsd: 0.0147, cacheWriteUsd: 0 },
     });

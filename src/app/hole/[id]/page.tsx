@@ -15,6 +15,8 @@ function ratesFor(
     inputPerMtok: price.input_per_mtok,
     outputPerMtok: price.output_per_mtok,
     reasoningPerMtok: price.reasoning_per_mtok,
+    cacheReadPerMtok: price.cache_read_per_mtok ?? null,
+    cacheWritePerMtok: price.cache_write_per_mtok ?? null,
   };
 }
 
