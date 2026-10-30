@@ -44,10 +44,19 @@ export function resolveSkillPrompts(
   });
 }
 
-export function renderPrompt(option: Option, question: string, skills: Skills): string {
+export function renderPrompt(
+  option: Option,
+  question: string,
+  skills: Skills,
+  user?: string,
+): string {
   const skillText = resolveSkillPrompts(option, skills);
   const composed =
     skillText.length > 0 ? `${skillText.join("\n\n")}\n\n${option.prompt}` : option.prompt;
-  return composed.replaceAll("{question}", question);
+  // {user} → the signed-in player's user id: per-user cache isolation for
+  // caching holes (#4). Substituted before {question}; untouched when no
+  // user id is passed (badge display paths).
+  const withUser = user ? composed.replaceAll("{user}", user) : composed;
+  return withUser.replaceAll("{question}", question);
 }
 

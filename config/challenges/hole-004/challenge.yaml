@@ -10,6 +10,7 @@ options:
       You are given the following reference document.
 
       <reference>
+      Cache session: {user}
       
       # Prompt caching with the Claude API
 
@@ -106,6 +107,7 @@ options:
       You are given the following reference document.
 
       <reference>
+      Cache session: {user}
       
       # Prompt caching with the Claude API
 
@@ -202,6 +204,7 @@ options:
       You are given the following reference document.
 
       <reference>
+      Cache session: {user}
       
       # Prompt caching with the Claude API
 

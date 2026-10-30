@@ -88,7 +88,7 @@ export function renderPracticeStream({
       const encoder = new TextEncoder();
       const modelSpec = option.model ?? challenge.model;
       const model = modelFor(modelSpec);
-      const renderedPrompt = renderPrompt(option, challenge.question, skills);
+      const renderedPrompt = renderPrompt(option, challenge.question, skills, userId);
       const providerOptions = effortProviderOptions(option.thinking, modelSpec);
       // Cache metadata must ride on the prompt BLOCK's providerOptions — both
       // providers read it per message (Anthropic CacheControlValidator pulls

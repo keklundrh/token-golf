@@ -19,10 +19,28 @@ describe("renderPrompt", () => {
     }
   });
 
-  it("leaves no-skills options unchanged", () => {
-    const challenge = loadChallenge(1);
-    const option = challenge.options[0];
-    expect(renderPrompt(option, "Q", skills)).toBe(option.prompt.replaceAll("{question}", "Q"));
+  it("substitutes {user} with the player's user id", () => {
+    const challenge = loadChallenge(4);
+    const option = challenge.options[1];
+    const prompt = renderPrompt(option, challenge.question, skills, "player-abc-1");
+    expect(prompt).toContain("player-abc-1");
+    expect(prompt).not.toContain("{user}");
+  });
+
+  it("leaves {user} untouched when no user id is passed (badge display paths)", () => {
+    const challenge = loadChallenge(4);
+    const option = challenge.options[1];
+    const prompt = renderPrompt(option, challenge.question, skills);
+    // no user: the placeholder stays (display paths never render it)
+    expect(prompt).toContain("{user}");
+  });
+
+  it("renders different users with different prompts but identical structure", () => {
+    const challenge = loadChallenge(4);
+    const a = renderPrompt(challenge.options[1], challenge.question, skills, "user-a");
+    const b = renderPrompt(challenge.options[1], challenge.question, skills, "user-b");
+    expect(a).not.toBe(b);
+    expect(a.replace("user-a", "user-b")).toBe(b);
   });
 });
 
