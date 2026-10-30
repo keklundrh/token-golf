@@ -366,7 +366,7 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
             runs={buildRunBlocks(run.runs)}
           />
         )}
-        {challenge.takeaway && !run.error && (
+        {run.runs.length > 0 && challenge.takeaway && !run.error && (
           <p className="rounded-lg bg-zinc-50 px-4 py-3 text-sm text-zinc-600">{challenge.takeaway}</p>
         )}
         {run.error && (
