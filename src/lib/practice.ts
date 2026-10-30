@@ -29,6 +29,28 @@ export function effortProviderOptions(
   return { anthropic: { thinking: { type: "enabled" as const, budgetTokens } } };
 }
 
+/**
+ * Cache wiring per provider. Anthropic: cache_control on the prompt block
+ * (cacheable on user message parts, applied at the last part). OpenAI:
+ * promptCacheBreakpoint. OpenAI-compatible endpoints (ai-bu-*) have no
+ * cache-control wire format — the flag is a no-op there; usage still reports
+ * cache tokens when the backend serves them.
+ */
+export function cacheProviderOptions(
+  caching: Option["caching"],
+  modelSpec: string,
+): Record<string, Record<string, JSONValue>> | undefined {
+  if (!caching) return undefined;
+  const provider = modelSpec.split("/")[0];
+  if (provider.startsWith("openai")) {
+    return { openai: { promptCacheBreakpoint: true } };
+  }
+  if (provider.startsWith("anthropic")) {
+    return { anthropic: { cacheControl: { type: "ephemeral" as const } } };
+  }
+  return undefined;
+}
+
 export interface PracticeEvent {
   type: "chunk" | "done";
   text?: string;
@@ -37,11 +59,15 @@ export interface PracticeEvent {
     inputTokens: number;
     outputTokens: number;
     reasoningTokens: number | null;
+    cacheReadTokens: number | null;
+    cacheWriteTokens: number | null;
     toolTokens: number;
     toolCalls: number;
     inputUsd: number;
     outputUsd: number;
     reasoningUsd: number;
+    cacheReadUsd: number;
+    cacheWriteUsd: number;
     costUsd: number;
   };
 }
@@ -64,9 +90,24 @@ export function renderPracticeStream({
       const model = modelFor(modelSpec);
       const renderedPrompt = renderPrompt(option, challenge.question, skills);
       const providerOptions = effortProviderOptions(option.thinking, modelSpec);
+      // Cache metadata must ride on the prompt BLOCK's providerOptions — both
+      // providers read it per message (Anthropic CacheControlValidator pulls
+      // cacheControl from part/message providerOptions; OpenAI
+      // getPromptCacheBreakpoint reads the prompt block's providerOptions).
+      // Call-level providerOptions never reaches the wire for caching.
+      const cacheOptions = cacheProviderOptions(option.caching, modelSpec);
       const result = streamText({
         model,
-        prompt: renderedPrompt,
+        ...(cacheOptions
+          ? {
+              messages: [
+                {
+                  role: "user" as const,
+                  content: [{ type: "text" as const, text: renderedPrompt, providerOptions: cacheOptions }],
+                },
+              ],
+            }
+          : { prompt: renderedPrompt }),
         ...(providerOptions ? { providerOptions } : {}),
       });
       const inputEvent: PracticeEvent = { type: "chunk", text: renderedPrompt, kind: "input" };
@@ -89,6 +130,8 @@ export function renderPracticeStream({
         inputTokens: usage.inputTokens ?? 0,
         outputTokens: usage.outputTokens ?? 0,
         reasoningTokens: usage.outputTokenDetails?.reasoningTokens ?? null,
+        cacheReadTokens: usage.inputTokenDetails?.cacheReadTokens ?? null,
+        cacheWriteTokens: usage.inputTokenDetails?.cacheWriteTokens ?? null,
       };
       const cost = computeCost(option.model ?? challenge.model, tokens);
       // server-side run tracking: the proxy measured this cost, so the server
@@ -112,6 +155,8 @@ export function renderPracticeStream({
           inputUsd: cost.inputUsd,
           outputUsd: cost.outputUsd,
           reasoningUsd: cost.reasoningUsd,
+          cacheReadUsd: cost.cacheReadUsd,
+          cacheWriteUsd: cost.cacheWriteUsd,
           costUsd: cost.totalUsd,
         },
       };

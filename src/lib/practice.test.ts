@@ -23,6 +23,14 @@ vi.mock("@ai-sdk/anthropic", () => ({
   createAnthropic: () => (id: string) => ({ provider: "anthropic", modelId: id }),
 }));
 
+vi.mock("@ai-sdk/openai-compatible", () => ({
+  createOpenAICompatible:
+    (config: { name: string }) => (id: string) => ({
+      provider: config.name,
+      modelId: id,
+    }),
+}));
+
 import { renderPracticeStream } from "./practice";
 
 const skills: Skills = loadSkills();
@@ -225,5 +233,116 @@ describe("renderPracticeStream streamText args", () => {
     expect(done.usage.toolCalls).toBe(0);
     expect(done.usage.inputUsd).toBeTypeOf("number");
     expect(done.usage.costUsd).toBeGreaterThan(0);
+  });
+
+
+
+  it("sends no cache metadata when caching is off", async () => {
+    const challenge = loadChallenge(1);
+    const option = { ...challenge.options[0], caching: false };
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
+    const args = streamTextMock.mock.calls[0][0];
+    expect(args.prompt).toBeDefined();
+    expect(args.messages).toBeUndefined();
+  });
+
+  it("puts Anthropic cacheControl on the prompt block's providerOptions", async () => {
+    const challenge = loadChallenge(1);
+    const option = { ...challenge.options[0], caching: true };
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
+    const args = streamTextMock.mock.calls[0][0];
+    expect(args.prompt).toBeUndefined();
+    expect(args.messages).toEqual([
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: expect.any(String),
+            providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("puts OpenAI promptCacheBreakpoint on the prompt block's providerOptions", async () => {
+    const challenge = loadChallenge(1);
+    const option = { ...challenge.options[0], model: "openai/gpt-5-mini", caching: true };
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
+    const args = streamTextMock.mock.calls[0][0];
+    expect(args.messages).toEqual([
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: expect.any(String),
+            providerOptions: { openai: { promptCacheBreakpoint: true } },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("sends plain prompt for openai-compatible endpoints with caching on", async () => {
+    const challenge = loadChallenge(1);
+    const option = { ...challenge.options[0], model: "ai-bu-cai/Qwen3.8-27B", caching: true };
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
+    const args = streamTextMock.mock.calls[0][0];
+    expect(args.prompt).toBeDefined();
+    expect(args.messages).toBeUndefined();
+  });
+
+  it("keeps thinking at call level and cache on the prompt block", async () => {
+    const challenge = loadChallenge(1);
+    const option = { ...challenge.options[0], thinking: "low" as const, caching: true };
+    await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
+    const args = streamTextMock.mock.calls[0][0];
+    expect(args.providerOptions).toEqual({
+      anthropic: { thinking: { type: "enabled", budgetTokens: 2048 } },
+    });
+    expect(args.messages[0].content[0].providerOptions).toEqual({
+      anthropic: { cacheControl: { type: "ephemeral" } },
+    });
+  });
+
+  it("emits done frame cache fields from inputTokenDetails", async () => {
+    streamTextMock.mockReturnValue({
+      fullStream: (async function* () {
+        yield { type: "text-delta", text: "ok" };
+      })(),
+      usage: Promise.resolve({
+        inputTokens: 100_000,
+        outputTokens: 10_000,
+        outputTokenDetails: { reasoningTokens: undefined },
+        inputTokenDetails: { cacheReadTokens: 50_000, cacheWriteTokens: 20_000 },
+      }),
+      toolCalls: Promise.resolve([]),
+    });
+    const challenge = loadChallenge(1);
+    // anthropic/claude-sonnet-4-5: input 3.00, output 15.00, cache read 0.30,
+    // cache write 3.75 — inputTokens includes cached tokens, so uncached is 30k
+    const option = { ...challenge.options[0], model: "anthropic/claude-sonnet-4-5", caching: true };
+    const raw = await drain(renderPracticeStream({ challenge, option, skills, userId: TEST_USER_ID }));
+    const frames = raw.split("\n\n").filter((f) => f.startsWith("data: "));
+    const done = JSON.parse(frames[frames.length - 1].slice(6));
+    expect(done.usage.cacheReadTokens).toBe(50_000);
+    expect(done.usage.cacheWriteTokens).toBe(20_000);
+    expect(done.usage.cacheReadUsd).toBeCloseTo(0.015); // 50_000/1e6 * 0.30
+    expect(done.usage.cacheWriteUsd).toBeCloseTo(0.075); // 20_000/1e6 * 3.75
+    // total = uncached 30k*3 + read + write + output 10k*15; no double-charge
+    expect(done.usage.costUsd).toBeCloseTo(0.09 + 0.015 + 0.075 + 0.15);
+  });
+
+  it("emits null cache fields when the SDK reports no cache details", async () => {
+    const challenge = loadChallenge(1);
+    const raw = await drain(renderPracticeStream({ challenge, option: challenge.options[0], skills, userId: TEST_USER_ID }));
+    const frames = raw.split("\n\n").filter((f) => f.startsWith("data: "));
+    const done = JSON.parse(frames[frames.length - 1].slice(6));
+    expect(done.usage.cacheReadTokens).toBeNull();
+    expect(done.usage.cacheWriteTokens).toBeNull();
+    expect(done.usage.cacheReadUsd).toBe(0);
+    expect(done.usage.cacheWriteUsd).toBe(0);
   });
 });

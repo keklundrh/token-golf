@@ -2,17 +2,24 @@ import { describe, it, expect } from "vitest";
 import { buildLedger, buildRunBlocks, relativeTime, type RunRecord } from "./ledger";
 import type { TokenUsage } from "./cost";
 
-const baseUsage: TokenUsage & { toolTokens: number; toolCalls: number } = {
+const baseUsage: TokenUsage & {
+  toolTokens: number;
+  toolCalls: number;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
+} = {
   inputTokens: 100,
   outputTokens: 200,
   reasoningTokens: null,
+  cacheReadTokens: null,
+  cacheWriteTokens: null,
   toolTokens: 0,
   toolCalls: 0,
 };
 
 function makeRun(overrides: Partial<RunRecord> & { optionId: string; optionLabel: string; timestamp: number }): RunRecord {
   return {
-    usage: { ...baseUsage, inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0 },
+    usage: { ...baseUsage, inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0, cacheWriteUsd: 0 },
     costUsd: 0.00043,
     recorded: false,
     ...overrides,
@@ -71,7 +78,7 @@ describe("buildRunBlocks", () => {
         optionId: "thinker",
         optionLabel: "Deep think",
         timestamp: now,
-        usage: { ...baseUsage, reasoningTokens: 50, toolTokens: 80, toolCalls: 2, inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0.00075 },
+        usage: { ...baseUsage, reasoningTokens: 50, toolTokens: 80, toolCalls: 2, inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0.00075, cacheReadUsd: 0, cacheWriteUsd: 0 },
         costUsd: 0.00118,
       }),
       makeRun({ optionId: "plain", optionLabel: "Plain run", timestamp: now - 60_000 }),
@@ -112,8 +119,25 @@ describe("run history model", () => {
 
   it("per-run ledger builds independently via buildLedger", () => {
     const usage = { ...baseUsage, toolTokens: 40, toolCalls: 1 };
-    const ledger = buildLedger(usage, { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, totalUsd: 0.00043 });
+    const ledger = buildLedger(usage, { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0, cacheWriteUsd: 0, totalUsd: 0.00043 });
     expect(ledger.categories.find((c) => c.key === "tools")?.calls).toBe(1);
     expect(ledger.totalUsd).toBeCloseTo(0.00043);
+  });
+
+  it("renders cache read/write rows only when non-zero", () => {
+    const withCache = buildLedger(
+      { ...baseUsage, cacheReadTokens: 50_000, cacheWriteTokens: 20_000 },
+      { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0.000015, cacheWriteUsd: 0.000075, totalUsd: 0.00052 },
+    );
+    expect(withCache.categories.map((c) => c.key)).toEqual(["input", "output", "cache-read", "cache-write"]);
+    const cacheRead = withCache.categories.find((c) => c.key === "cache-read");
+    expect(cacheRead?.tokens).toBe(50_000);
+    expect(cacheRead?.colorVar).toBe("--ledger-cache-read");
+
+    const zeroCache = buildLedger(
+      { ...baseUsage, cacheReadTokens: 0, cacheWriteTokens: null },
+      { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0, cacheWriteUsd: 0, totalUsd: 0.00043 },
+    );
+    expect(zeroCache.categories.map((c) => c.key)).toEqual(["input", "output"]);
   });
 });

@@ -76,4 +76,32 @@ describe("OptionSchema thinking and skills fields", () => {
       expect(result.data.model).toBeUndefined();
     }
   });
+
+
+  it("accepts the caching boolean toggle", () => {
+    for (const caching of [true, false]) {
+      const result = OptionSchema.safeParse({
+        id: "a",
+        label: "A",
+        detail: "d",
+        prompt: "p",
+        caching,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) expect(result.data.caching).toBe(caching);
+    }
+  });
+
+  it("rejects non-boolean cache flags loudly", () => {
+    for (const caching of ["maybe", "read", 42, {}]) {
+      const result = OptionSchema.safeParse({
+        id: "a",
+        label: "A",
+        detail: "d",
+        prompt: "p",
+        caching,
+      });
+      expect(result.success).toBe(false);
+    }
+  });
 });

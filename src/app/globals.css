@@ -7,6 +7,8 @@
   --ledger-output: #16a34a; /* green */
   --ledger-reasoning: #a855f7; /* purple */
   --ledger-tools: #f59e0b; /* amber */
+  --ledger-cache-read: #0ea5e9; /* sky */
+  --ledger-cache-write: #eab308; /* yellow */
 }
 
 @theme inline {

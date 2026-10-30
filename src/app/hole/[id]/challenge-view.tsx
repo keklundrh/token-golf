@@ -69,11 +69,15 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
               inputTokens: 0,
               outputTokens: 0,
               reasoningTokens: null,
+              cacheReadTokens: null,
+              cacheWriteTokens: null,
               toolTokens: 0,
               toolCalls: 0,
               inputUsd: 0,
               outputUsd: 0,
               reasoningUsd: 0,
+              cacheReadUsd: 0,
+              cacheWriteUsd: 0,
             },
             costUsd: a.costUsd,
             recorded: false,
@@ -146,11 +150,15 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
                 inputTokens: number;
                 outputTokens: number;
                 reasoningTokens: number | null;
+                cacheReadTokens: number | null;
+                cacheWriteTokens: number | null;
                 toolTokens: number;
                 toolCalls: number;
                 inputUsd: number;
                 outputUsd: number;
                 reasoningUsd: number;
+                cacheReadUsd: number;
+                cacheWriteUsd: number;
                 costUsd: number;
               };
             };
@@ -173,11 +181,15 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
                   inputTokens: event.usage!.inputTokens,
                   outputTokens: event.usage!.outputTokens,
                   reasoningTokens: event.usage!.reasoningTokens,
+                  cacheReadTokens: event.usage!.cacheReadTokens,
+                  cacheWriteTokens: event.usage!.cacheWriteTokens,
                   toolTokens: event.usage!.toolTokens,
                   toolCalls: event.usage!.toolCalls,
                   inputUsd: event.usage!.inputUsd,
                   outputUsd: event.usage!.outputUsd,
                   reasoningUsd: event.usage!.reasoningUsd,
+                  cacheReadUsd: event.usage!.cacheReadUsd,
+                  cacheWriteUsd: event.usage!.cacheWriteUsd,
                 };
                 const record: RunRecord = {
                   optionId: selected!.id,

@@ -31,6 +31,7 @@ export const OptionSchema = z.object({
   prompt: z.string().min(1),
   model: z.string().min(1).optional(),
   thinking: z.union([z.boolean(), z.enum(["low", "medium", "high"])]).optional(),
+  caching: z.boolean().optional(),
   skills: z.array(z.string().min(1)).optional(),
   tags: z.array(z.string().min(1)).optional(),
 });
@@ -55,6 +56,8 @@ const ModelPriceSchema = z.object({
   input_per_mtok: z.number().nonnegative(),
   output_per_mtok: z.number().nonnegative(),
   reasoning_per_mtok: z.number().nonnegative().nullable(),
+  cache_read_per_mtok: z.number().nonnegative().nullable().optional(),
+  cache_write_per_mtok: z.number().nonnegative().nullable().optional(),
 });
 
 export const PricingSchema = z.object({

@@ -18,11 +18,15 @@ export interface RunRecordUsage {
   inputTokens: number;
   outputTokens: number;
   reasoningTokens: number | null;
+  cacheReadTokens: number | null;
+  cacheWriteTokens: number | null;
   toolTokens: number;
   toolCalls: number;
   inputUsd: number;
   outputUsd: number;
   reasoningUsd: number;
+  cacheReadUsd: number;
+  cacheWriteUsd: number;
 }
 
 export interface RunRecord {
@@ -62,6 +66,8 @@ export function buildRunBlocks(runs: RunRecord[], now: number = Date.now()): Run
         inputUsd: run.usage.inputUsd,
         outputUsd: run.usage.outputUsd,
         reasoningUsd: run.usage.reasoningUsd,
+        cacheReadUsd: run.usage.cacheReadUsd,
+        cacheWriteUsd: run.usage.cacheWriteUsd,
         totalUsd: run.costUsd,
       },
     ),
@@ -69,8 +75,20 @@ export function buildRunBlocks(runs: RunRecord[], now: number = Date.now()): Run
 }
 
 export function buildLedger(
-  usage: TokenUsage & { toolTokens: number; toolCalls: number },
-  costs: { inputUsd: number; outputUsd: number; reasoningUsd: number; totalUsd: number },
+  usage: TokenUsage & {
+    toolTokens: number;
+    toolCalls: number;
+    cacheReadTokens: number | null;
+    cacheWriteTokens: number | null;
+  },
+  costs: {
+    inputUsd: number;
+    outputUsd: number;
+    reasoningUsd: number;
+    cacheReadUsd: number;
+    cacheWriteUsd: number;
+    totalUsd: number;
+  },
 ): LedgerRowData {
   const categories: LedgerCategory[] = [
     {
@@ -95,6 +113,24 @@ export function buildLedger(
       tokens: usage.reasoningTokens,
       usd: costs.reasoningUsd,
       colorVar: "--ledger-reasoning",
+    });
+  }
+  if (usage.cacheReadTokens !== null && usage.cacheReadTokens > 0) {
+    categories.push({
+      key: "cache-read",
+      label: "cache read",
+      tokens: usage.cacheReadTokens,
+      usd: costs.cacheReadUsd,
+      colorVar: "--ledger-cache-read",
+    });
+  }
+  if (usage.cacheWriteTokens !== null && usage.cacheWriteTokens > 0) {
+    categories.push({
+      key: "cache-write",
+      label: "cache write",
+      tokens: usage.cacheWriteTokens,
+      usd: costs.cacheWriteUsd,
+      colorVar: "--ledger-cache-write",
     });
   }
   if (usage.toolCalls > 0) {
