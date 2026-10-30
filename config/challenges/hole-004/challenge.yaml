@@ -1,5 +1,6 @@
 id: 4
 question: "According to the reference doc: at what token threshold does Anthropic prompt caching kick in, and roughly how much cheaper is a cache read than fresh input?"
+takeaway: "Cache writes cost 1.25x input, but reads cost ~0.1x — caching pays when a large identical prefix repeats within the 5-minute TTL."
 model: "anthropic/claude-sonnet-4-5"
 options:
   - id: fresh

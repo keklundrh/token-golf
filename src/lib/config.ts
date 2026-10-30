@@ -48,6 +48,8 @@ export const SkillsFileSchema = z.object({ skills: SkillsSchema });
 export const ChallengeSchema = z.object({
   id: z.number().int().positive(),
   question: z.string().min(1),
+  /** Hole-level lesson shown below the token ledger after a run (#4). */
+  takeaway: z.string().min(1).optional(),
   model: z.string().min(1),
   options: z.array(OptionSchema).min(1),
 });

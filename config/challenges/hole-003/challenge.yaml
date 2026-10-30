@@ -1,5 +1,6 @@
 id: 3
 question: "A sweater and a shirt together cost 110. The sweater costs 100 more than the shirt. How much is the shirt?"
+takeaway: "Thinking tokens cost real money — spend them only on problems that need reasoning, not on ones your first instinct gets right."
 model: "anthropic/claude-sonnet-4-5"
 options:
   - id: thinking

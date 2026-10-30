@@ -1,5 +1,6 @@
 id: 2
 question: "Why is the sky blue"
+takeaway: "Input tokens are cheap; output tokens are the expensive part — constrain what you ask the model to write."
 model: "anthropic/claude-sonnet-4-5"
 options:
   - id: large-input

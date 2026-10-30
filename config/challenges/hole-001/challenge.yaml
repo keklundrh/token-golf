@@ -1,5 +1,6 @@
 id: 1
 question: "Why is a lower golf score better"
+takeaway: "The same question on a cheaper model can cost ~10x less — model choice is a cost lever."
 model: "anthropic/claude-sonnet-4-5"
 options:
   - id: verbose

@@ -79,6 +79,40 @@ describe("config schemas", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accepts a challenge with a takeaway", () => {
+    const result = ChallengeSchema.safeParse({
+      id: 1,
+      question: "Q",
+      takeaway: "Model choice is a cost lever.",
+      model: "m",
+      options: [{ id: "a", label: "A", detail: "d", prompt: "p" }],
+    });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.takeaway).toBe("Model choice is a cost lever.");
+  });
+
+  it("accepts a challenge without a takeaway (optional)", () => {
+    const result = ChallengeSchema.safeParse({
+      id: 1,
+      question: "Q",
+      model: "m",
+      options: [{ id: "a", label: "A", detail: "d", prompt: "p" }],
+    });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.takeaway).toBeUndefined();
+  });
+
+  it("rejects an empty takeaway", () => {
+    const result = ChallengeSchema.safeParse({
+      id: 1,
+      question: "Q",
+      takeaway: "",
+      model: "m",
+      options: [{ id: "a", label: "A", detail: "d", prompt: "p" }],
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("config loader", () => {
