@@ -7,9 +7,9 @@ import TokenLedger from "./token-ledger";
 import GolfAnimation from "./golf-animation";
 import { shouldShowWaitingAnimation } from "@/lib/golf-animation";
 import { buildRunBlocks, type RunRecord, type RunRecordUsage } from "@/lib/ledger";
-import { formatMicroUsd, formatModelRates, type ModelRates } from "@/lib/currency";
+import { buildRunTip } from "@/lib/tips";
 import { spendFromLeaderboard, formatSpendHeader, type SpendDisplay } from "./spend-header";
-
+import { formatMicroUsd, formatModelRates, type ModelRates } from "@/lib/currency";
 export interface OptionRateInfo {
   modelId: string;
   rates: ModelRates;
@@ -33,6 +33,7 @@ interface RunState {
   segments: RunSegment[];
   streaming: boolean;
   error: string | null;
+  tip: string | null;
 }
 
 export default function ChallengeView({ challenge, holeCount, skills, optionRates }: ChallengeViewProps) {
@@ -43,6 +44,7 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
     segments: [],
     streaming: false,
     error: null,
+    tip: null,
   });
   const [recording, setRecording] = useState(false);
   // running total of recorded scores: fetched client-side from the
@@ -117,7 +119,7 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
 
   function practiceSwing() {
     if (!selected || run.streaming || run.runs.some((r) => r.optionId === selected.id)) return;
-    setRun((r) => ({ ...r, segments: [], streaming: true, error: null }));
+    setRun((r) => ({ ...r, segments: [], streaming: true, error: null, tip: null }));
 
     fetch("/api/practice", {
       method: "POST",
@@ -202,6 +204,19 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
                   ...r,
                   runs: [...r.runs, record],
                   activeIndex: r.runs.length,
+                  tip: buildRunTip({
+                    optionLabel: selected!.label,
+                    modelId: optionRates[selected!.id]?.modelId ?? "",
+                    rates: optionRates[selected!.id]?.rates ?? { inputPerMtok: 0, outputPerMtok: 0, reasoningPerMtok: null },
+                    usage,
+                    costs: {
+                      inputUsd: usage.inputUsd,
+                      outputUsd: usage.outputUsd,
+                      reasoningUsd: usage.reasoningUsd,
+                      cacheReadUsd: usage.cacheReadUsd,
+                      cacheWriteUsd: usage.cacheWriteUsd,
+                    },
+                  }),
                 };
               });
             }
@@ -210,7 +225,7 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
         setRun((r) => ({ ...r, streaming: false }));
       })
       .catch((e: Error) =>
-        setRun({ runs: [], activeIndex: -1, segments: [], streaming: false, error: e.message }),
+        setRun({ runs: [], activeIndex: -1, segments: [], streaming: false, error: e.message, tip: null }),
       );
   }
 
@@ -338,6 +353,9 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
           <TokenLedger
             runs={buildRunBlocks(run.runs)}
           />
+        )}
+        {run.tip && !run.error && (
+          <p className="rounded-lg bg-zinc-50 px-4 py-3 text-sm text-zinc-600">{run.tip}</p>
         )}
         {run.error && (
           <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{run.error}</p>
