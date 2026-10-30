@@ -4,7 +4,7 @@ takeaway: "Cache writes cost 1.25x input, but reads cost ~0.1x — caching pays 
 model: "anthropic/claude-sonnet-4-5"
 options:
   - id: fresh
-    label: "Read it fresh"
+    label: "Read it fresh (run this first)"
     detail: "No caching. Every run re-reads the whole reference doc at full input price — the expensive baseline."
     prompt: |
       You are given the following reference document.
@@ -99,7 +99,7 @@ options:
 
       Using ONLY the document above, answer in one sentence: {question}
   - id: cache-first
-    label: "Cache it (run this first)"
+    label: "Cache it (run this second)"
     detail: "Caching on. This run pays the cache WRITE on the reference doc (1.25x input rate) — the upfront cost that lets the third option read it at ~0.1x. Run this one first."
     caching: true
     prompt: |
@@ -195,7 +195,7 @@ options:
 
       Using ONLY the document above, answer in one sentence: {question}
   - id: cache-second
-    label: "Cache read (run within ~5 min of the first)"
+    label: "Cache read (run last, within ~5 min of the first)"
     detail: "Caching on. If the prefix above is unchanged, this run READS from the cache at ~0.1x input rate — the payoff. Run within ~5 min of the first cached swing (TTL 5m)."
     caching: true
     prompt: |

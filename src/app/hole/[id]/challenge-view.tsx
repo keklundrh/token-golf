@@ -26,6 +26,18 @@ interface RunSegment {
   text: string;
 }
 
+/**
+ * The input dump's color follows the ledger: blue when charged at input
+ * rate, teal when the tokens were served from cache (read/write) — the
+ * narrative matches the numbers. Usage arrives in the done frame, so the
+ * color applies post-completion.
+ */
+export function inputSegmentColor(usage: Pick<RunRecordUsage, "cacheReadTokens" | "cacheWriteTokens"> | null): string {
+  if (usage && (usage.cacheReadTokens ?? 0) > 0) return "var(--ledger-cache-read)";
+  if (usage && (usage.cacheWriteTokens ?? 0) > 0) return "var(--ledger-cache-write)";
+  return "var(--ledger-input)";
+}
+
 interface RunState {
   runs: RunRecord[];
   activeIndex: number;
@@ -344,15 +356,22 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
             ref={outputRef}
             className="max-h-64 overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm whitespace-pre-wrap"
           >
-            {run.segments.map((seg, i) => (
-              <span
-                key={i}
-                style={{ color: `var(--ledger-${seg.kind === "output" ? "output" : seg.kind})` }}
-                className={seg.kind === "input" ? "border-b border-dashed border-zinc-300 block pb-2 mb-2" : ""}
-              >
-                {seg.text}
-              </span>
-            ))}
+            {run.segments.map((seg, i) => {
+              const activeRun = run.runs[run.activeIndex];
+              const color =
+                seg.kind === "input"
+                  ? inputSegmentColor(activeRun?.usage ?? null)
+                  : `var(--ledger-${seg.kind})`;
+              return (
+                <span
+                  key={i}
+                  style={{ color }}
+                  className={seg.kind === "input" ? "border-b border-dashed border-zinc-300 block pb-2 mb-2" : ""}
+                >
+                  {seg.text}
+                </span>
+              );
+            })}
             {shouldShowWaitingAnimation(run.streaming, run.segments) && (
               <GolfAnimation />
             )}
