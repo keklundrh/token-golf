@@ -8,6 +8,7 @@ import GolfAnimation from "./golf-animation";
 import { shouldShowWaitingAnimation } from "@/lib/golf-animation";
 import { buildRunBlocks, type RunRecord, type RunRecordUsage } from "@/lib/ledger";
 import { formatMicroUsd, formatModelRates, type ModelRates } from "@/lib/currency";
+import { spendFromLeaderboard, formatSpendHeader, type SpendDisplay } from "./spend-header";
 
 export interface OptionRateInfo {
   modelId: string;
@@ -45,9 +46,9 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
   });
   const [recording, setRecording] = useState(false);
   // running total of recorded scores: fetched client-side from the
-  // leaderboard API per hole mount; null = still loading (renders "…")
-  const [recordedTotalUsd, setRecordedTotalUsd] = useState<number | null>(null);
-  const [recordedTotalLoading, setRecordedTotalLoading] = useState(true);
+  // leaderboard API per hole mount; static while on that hole. "loading"
+  // renders "Spend …", "unknown" renders "Spend —" (never a false 0)
+  const [recordedTotal, setRecordedTotal] = useState<SpendDisplay>("loading");
   const outputRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -98,14 +99,12 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
     let cancelled = false;
     fetch("/api/leaderboard")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { leaderboard: Array<{ userId: string; totalUsd: number }>; currentUserId: string | null } | null) => {
+      .then((data: Parameters<typeof spendFromLeaderboard>[0]) => {
         if (cancelled) return;
-        const mine = data?.leaderboard.find((e) => e.userId === data.currentUserId);
-        setRecordedTotalUsd(mine ? mine.totalUsd : 0);
-        setRecordedTotalLoading(false);
+        setRecordedTotal(spendFromLeaderboard(data));
       })
       .catch(() => {
-        if (!cancelled) setRecordedTotalLoading(false);
+        if (!cancelled) setRecordedTotal(spendFromLeaderboard(null));
       });
     return () => { cancelled = true; };
   }, [challenge.id]);
@@ -255,9 +254,7 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
             Hole {challenge.id} / {holeCount}
           </p>
           <p className="text-sm text-zinc-500">
-            {recordedTotalLoading
-              ? "Spend …"
-              : `Spend ${formatMicroUsd(recordedTotalUsd ?? 0)}`}
+            {formatSpendHeader(recordedTotal, recordedTotal === "loading")}
           </p>
         </div>
         <h1 className="text-2xl font-semibold tracking-tight">{challenge.question}</h1>
@@ -274,7 +271,9 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
               }`}
             >
               <span className="block font-medium">{option.label}</span>
-              <span className="block text-sm text-zinc-500">{option.detail}</span>
+              {selected?.id === option.id && (
+                <span className="block text-sm text-zinc-500">{option.detail}</span>
+              )}
               {(option.thinking ||
                 (option.skills && option.skills.length > 0) ||
                 (option.tags && option.tags.length > 0)) && (

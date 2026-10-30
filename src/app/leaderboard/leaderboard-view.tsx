@@ -1,18 +1,11 @@
-"use client";
-
-import { useEffect, useState } from "react";
 import { formatMicroUsd } from "@/lib/currency";
+
 export interface LeaderboardEntry {
   userId: string;
   username: string;
   totalUsd: number;
   holes: number;
   rank: number;
-}
-
-interface LeaderboardData {
-  leaderboard: LeaderboardEntry[];
-  currentUserId: string | null;
 }
 
 export function collapseRows(
@@ -26,6 +19,10 @@ export function collapseRows(
   if (!mine || mine.rank <= TOP_N) {
     return [...entries.slice(0, TOP_N), "collapsed", entries[entries.length - 1]];
   }
+  if (mine.rank === entries[entries.length - 1].rank) {
+    // the current user is the final player: one separator, their row last
+    return [...entries.slice(0, TOP_N), "collapsed", mine];
+  }
   return [
     ...entries.slice(0, TOP_N),
     "collapsed",
@@ -35,37 +32,21 @@ export function collapseRows(
   ];
 }
 
-export default function Leaderboard() {
-  const [data, setData] = useState<LeaderboardData | null>(null);
-  const [error, setError] = useState<string | null>(null);
+export function ordinal(n: number): string {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
+}
 
-  useEffect(() => {
-    fetch("/api/leaderboard")
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`leaderboard failed: ${res.status}`);
-        setData(await res.json());
-      })
-      .catch((e: Error) => setError(e.message));
-  }, []);
-
-  if (error) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-white px-6">
-        <p className="text-red-700">{error}</p>
-      </main>
-    );
-  }
-
-  if (!data) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-white px-6">
-        <p className="text-zinc-500">Loading leaderboard…</p>
-      </main>
-    );
-  }
-
-  const rows = collapseRows(data.leaderboard, data.currentUserId);
-  const mine = data.leaderboard.find((e) => e.userId === data.currentUserId);
+export default function LeaderboardView({
+  leaderboard,
+  currentUserId,
+}: {
+  leaderboard: LeaderboardEntry[];
+  currentUserId: string | null;
+}) {
+  const rows = collapseRows(leaderboard, currentUserId);
+  const mine = leaderboard.find((e) => e.userId === currentUserId);
 
   return (
     <main className="flex min-h-screen flex-col bg-white px-6 py-8 text-black">
@@ -74,7 +55,7 @@ export default function Leaderboard() {
         {mine && (
           <p className="text-center text-lg">
             You are <span className="font-bold">{ordinal(mine.rank)}</span> of{" "}
-            {data.leaderboard.length} — total spend{" "}
+            {leaderboard.length} — total spend{" "}
             <span className="font-bold">{formatMicroUsd(mine.totalUsd)}</span>
           </p>
         )}
@@ -99,7 +80,7 @@ export default function Leaderboard() {
                 <tr
                   key={row.userId}
                   className={`border-b border-zinc-100 ${
-                    row.userId === data.currentUserId ? "font-bold" : ""
+                    row.userId === currentUserId ? "font-bold" : ""
                   }`}
                 >
                   <td className="py-2 pr-2">{row.rank}</td>
@@ -111,20 +92,13 @@ export default function Leaderboard() {
             )}
           </tbody>
         </table>
-        <button
-          type="button"
-          onClick={() => (window.location.href = "/")}
-          className="h-12 rounded-full border border-zinc-300 font-medium hover:bg-zinc-50"
+        <a
+          href="/"
+          className="flex h-12 items-center justify-center rounded-full border border-zinc-300 text-center font-medium hover:bg-zinc-50"
         >
           Play Again
-        </button>
+        </a>
       </div>
     </main>
   );
-}
-
-export function ordinal(n: number): string {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
 }

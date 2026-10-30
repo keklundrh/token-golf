@@ -4,8 +4,8 @@ import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3"
 import { eq, sql } from "drizzle-orm";
 import * as schema from "@/db/schema";
 import { users, scores } from "@/db/schema";
+import { fetchLeaderboardRows } from "@/db/leaderboard";
 import type { Db } from "@/db";
-
 function testDb(): { db: Db; cleanup: () => void } {
   const sqlite = new Database(":memory:");
   sqlite.exec(`
@@ -49,26 +49,21 @@ describe("leaderboard query semantics", () => {
   });
   afterEach(() => cleanup());
 
-  it("ranks by total recorded cost ascending", async () => {
-    await seed(db, "u1", "Tiger-Augusta-green-1", [[1, 0.005], [2, 0.003]]);
+  it("ranks by total of the LOWEST recorded score per hole, ascending", async () => {
+    await seed(db, "u1", "Tiger-Augusta-green-1", [[1, 0.005], [1, 0.003], [2, 0.004]]);
     await seed(db, "u2", "Rory-Pebble-red-2", [[1, 0.002]]);
 
-    const rows = await db
-      .select({
-        userId: users.id,
-        totalUsd: sql<number>`CAST(SUM(${scores.costUsd}) AS REAL)`,
-        holes: sql<number>`COUNT(DISTINCT ${scores.challengeId})`,
-      })
-      .from(users)
-      .innerJoin(scores, eq(users.id, scores.userId))
-      .groupBy(users.id, users.username)
-      .orderBy(sql`SUM(${scores.costUsd}) ASC`);
+    const rows = await fetchLeaderboardRows(db);
 
+    // u1: hole 1 keeps the lowest (0.003) + hole 2 (0.004) = 0.007
     expect(rows[0].userId).toBe("u2");
-    expect(Number(rows[0].totalUsd)).toBeCloseTo(0.002);
+    expect(rows[0].totalUsd).toBeCloseTo(0.002);
+    expect(rows[0].rank).toBe(1);
+    expect(rows[0].holes).toBe(1);
     expect(rows[1].userId).toBe("u1");
-    expect(Number(rows[1].totalUsd)).toBeCloseTo(0.008);
-    expect(Number(rows[1].holes)).toBe(2);
+    expect(rows[1].totalUsd).toBeCloseTo(0.007);
+    expect(rows[1].rank).toBe(2);
+    expect(rows[1].holes).toBe(2);
   });
 
   it("only counts recorded scores", async () => {

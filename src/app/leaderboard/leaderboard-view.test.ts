@@ -35,11 +35,15 @@ describe("collapseRows", () => {
     expect(rows[13]).toEqual(entries[19]);
   });
 
-  it("shows collapse-then-last when the current user is last", () => {
+  it("shows collapse-then-last when the current user is last (no duplicate)", () => {
     const entries = Array.from({ length: 20 }, (_, i) => entry(i + 1));
     const rows = collapseRows(entries, "u20");
     expect(rows[10]).toBe("collapsed");
     expect(rows[11]).toEqual(entries[19]);
+    // no duplicate of the final player's row and no orphan separator
+    expect(rows).toHaveLength(12);
+    const entryRows = rows.filter((r) => r !== "collapsed") as LeaderboardEntry[];
+    expect(entryRows.filter((e) => e.userId === "u20")).toHaveLength(1);
   });
 });
 
