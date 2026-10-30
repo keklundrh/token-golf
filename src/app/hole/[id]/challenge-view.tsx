@@ -283,7 +283,7 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
                   {option.tags?.map((tag) => (
                     <span
                       key={tag}
-                      className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700"
+                      className="rounded-full bg-[#EE0000]/10 px-2 py-0.5 text-xs font-medium text-[#CC0000]"
                     >
                       {tag}
                     </span>
