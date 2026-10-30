@@ -32,6 +32,7 @@ describe("buildRunTip", () => {
       ...base,
       usage: { inputTokens: 29, outputTokens: 30, reasoningTokens: 220 },
       costs: { inputUsd: 0.000087, outputUsd: 0.00045, reasoningUsd: 0.0033, cacheReadUsd: 0, cacheWriteUsd: 0 },
+      flags: { thinking: true },
     });
     expect(thinkingDominated).toContain("thinking");
 
@@ -48,6 +49,7 @@ describe("buildRunTip", () => {
       ...base,
       usage: { inputTokens: 10_000, outputTokens: 30, reasoningTokens: null, cacheWriteTokens: 9_500 },
       costs: { inputUsd: 0.00015, outputUsd: 0.00045, reasoningUsd: 0, cacheReadUsd: 0, cacheWriteUsd: 0.035625 },
+      flags: { caching: true },
     });
     expect(tip).toContain("cache write");
     expect(tip).toContain("cheaper on the next equivalent run");
@@ -58,6 +60,7 @@ describe("buildRunTip", () => {
       ...base,
       usage: { inputTokens: 29, outputTokens: 30, reasoningTokens: 220 },
       costs: { inputUsd: 0.000087, outputUsd: 0.00045, reasoningUsd: 0.0033, cacheReadUsd: 0, cacheWriteUsd: 0 },
+      flags: { thinking: true },
     });
     expect(tip).toContain("220 tok at 15 µ$/tok");
   });
@@ -68,8 +71,21 @@ describe("buildRunTip", () => {
       rates: { inputPerMtok: 3, outputPerMtok: 15, reasoningPerMtok: 15, cacheReadPerMtok: 0.3, cacheWritePerMtok: 3.75 },
       usage: { inputTokens: 50_000, outputTokens: 30, reasoningTokens: null, cacheReadTokens: 49_000 },
       costs: { inputUsd: 0.00003, outputUsd: 0.00045, reasoningUsd: 0, cacheReadUsd: 0.0147, cacheWriteUsd: 0 },
+      flags: { caching: true },
     });
     expect(tip).toContain("cache read");
     expect(tip).toContain("49,000 tok at 0.3 µ$/tok");
+  });
+
+  it("ignores reported reasoning/cache tokens without the flag — same rule as the ledger", () => {
+    const tip = buildRunTip({
+      ...base,
+      usage: { inputTokens: 29, outputTokens: 30, reasoningTokens: 71, cacheReadTokens: 49_000, cacheWriteTokens: 20_000 },
+      costs: { inputUsd: 0.000087, outputUsd: 0.00045, reasoningUsd: 0, cacheReadUsd: 0.0147, cacheWriteUsd: 0.075 },
+      // no flags: reasoning reported (endpoint default) but not requested
+    });
+    expect(tip).toContain("output tokens dominated");
+    expect(tip).not.toContain("thinking");
+    expect(tip).not.toContain("cache");
   });
 });

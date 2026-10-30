@@ -199,6 +199,12 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
                   usage,
                   costUsd: event.usage!.costUsd,
                   recorded: false,
+                  // training-display flags: thinking/cache rows render only
+                  // when this option's config flag is set
+                  flags: {
+                    thinking: selected!.thinking !== undefined,
+                    caching: selected!.caching === true,
+                  },
                 };
                 return {
                   ...r,
@@ -215,6 +221,10 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
                       reasoningUsd: usage.reasoningUsd,
                       cacheReadUsd: usage.cacheReadUsd,
                       cacheWriteUsd: usage.cacheWriteUsd,
+                    },
+                    flags: {
+                      thinking: selected!.thinking !== undefined,
+                      caching: selected!.caching === true,
                     },
                   }),
                 };

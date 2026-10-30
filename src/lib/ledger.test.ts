@@ -80,6 +80,7 @@ describe("buildRunBlocks", () => {
         timestamp: now,
         usage: { ...baseUsage, reasoningTokens: 50, toolTokens: 80, toolCalls: 2, inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0.00075, cacheReadUsd: 0, cacheWriteUsd: 0 },
         costUsd: 0.00118,
+        flags: { thinking: true, tools: true },
       }),
       makeRun({ optionId: "plain", optionLabel: "Plain run", timestamp: now - 60_000 }),
     ];
@@ -88,6 +89,32 @@ describe("buildRunBlocks", () => {
     expect(blocks[0].ledger.totalUsd).toBeCloseTo(0.00118);
     expect(blocks[1].ledger.categories.map((c) => c.key)).toEqual(["input", "output"]);
     expect(blocks[1].ledger.totalUsd).toBeCloseTo(0.00043);
+  });
+
+  it("renders thinking/cache rows only when the option's flag is set", () => {
+    // Training-display rule: an endpoint that reasons by default must not
+    // show a thinking row the challenge didn't author.
+    const runs = [
+      makeRun({
+        optionId: "reasons-by-default",
+        optionLabel: "Local model",
+        timestamp: now,
+        usage: { ...baseUsage, reasoningTokens: 71, inputUsd: 0.000325, outputUsd: 0.002475, reasoningUsd: 0, cacheReadUsd: 0, cacheWriteUsd: 0 },
+        costUsd: 0.0028,
+        // no flags: reasoning reported but not requested
+      }),
+      makeRun({
+        optionId: "thinks",
+        optionLabel: "With thinking",
+        timestamp: now,
+        usage: { ...baseUsage, reasoningTokens: 71, inputUsd: 0.000325, outputUsd: 0.002475, reasoningUsd: 0, cacheReadUsd: 0, cacheWriteUsd: 0 },
+        costUsd: 0.0028,
+        flags: { thinking: true },
+      }),
+    ];
+    const blocks = buildRunBlocks(runs, now);
+    expect(blocks[0].ledger.categories.map((c) => c.key)).toEqual(["input", "output"]);
+    expect(blocks[1].ledger.categories.map((c) => c.key)).toEqual(["input", "output", "reasoning"]);
   });
 
   it("carries recorded flags through to blocks", () => {
@@ -119,15 +146,16 @@ describe("run history model", () => {
 
   it("per-run ledger builds independently via buildLedger", () => {
     const usage = { ...baseUsage, toolTokens: 40, toolCalls: 1 };
-    const ledger = buildLedger(usage, { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0, cacheWriteUsd: 0, totalUsd: 0.00043 });
+    const ledger = buildLedger(usage, { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0, cacheWriteUsd: 0, totalUsd: 0.00043 }, { tools: true });
     expect(ledger.categories.find((c) => c.key === "tools")?.calls).toBe(1);
     expect(ledger.totalUsd).toBeCloseTo(0.00043);
   });
 
-  it("renders cache read/write rows only when non-zero", () => {
+  it("renders cache read/write rows only when non-zero and caching flag set", () => {
     const withCache = buildLedger(
       { ...baseUsage, cacheReadTokens: 50_000, cacheWriteTokens: 20_000 },
       { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0.000015, cacheWriteUsd: 0.000075, totalUsd: 0.00052 },
+      { caching: true },
     );
     expect(withCache.categories.map((c) => c.key)).toEqual(["input", "output", "cache-read", "cache-write"]);
     const cacheRead = withCache.categories.find((c) => c.key === "cache-read");
@@ -137,7 +165,15 @@ describe("run history model", () => {
     const zeroCache = buildLedger(
       { ...baseUsage, cacheReadTokens: 0, cacheWriteTokens: null },
       { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0, cacheWriteUsd: 0, totalUsd: 0.00043 },
+      { caching: true },
     );
     expect(zeroCache.categories.map((c) => c.key)).toEqual(["input", "output"]);
+
+    // non-zero cache tokens without the flag: no rows (training-display rule)
+    const unflagged = buildLedger(
+      { ...baseUsage, cacheReadTokens: 50_000, cacheWriteTokens: 20_000 },
+      { inputUsd: 0.00003, outputUsd: 0.0004, reasoningUsd: 0, cacheReadUsd: 0.000015, cacheWriteUsd: 0.000075, totalUsd: 0.00052 },
+    );
+    expect(unflagged.categories.map((c) => c.key)).toEqual(["input", "output"]);
   });
 });

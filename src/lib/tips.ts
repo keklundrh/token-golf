@@ -14,6 +14,9 @@ export interface RunTipInput {
   rates: ModelRates;
   usage: TokenUsage;
   costs: { inputUsd: number; outputUsd: number; reasoningUsd: number; cacheReadUsd: number; cacheWriteUsd: number };
+  /** Training-display flags (same rule as the ledger): thinking/cache
+   * categories are considered only when the option's flag is set. */
+  flags?: { thinking?: boolean; caching?: boolean };
 }
 
 interface Category {
@@ -29,7 +32,7 @@ interface Category {
  * "Detailed explanation on anthropic/claude-sonnet-4-5: output tokens
  * dominated — 300 tok at 15 µ$/tok. Try a shorter output to cut it."
  */
-export function buildRunTip({ optionLabel, modelId, rates, usage, costs }: RunTipInput): string {
+export function buildRunTip({ optionLabel, modelId, rates, usage, costs, flags = {} }: RunTipInput): string {
   const categories: Category[] = [
     {
       label: "input",
@@ -46,7 +49,7 @@ export function buildRunTip({ optionLabel, modelId, rates, usage, costs }: RunTi
       suggestion: "a shorter output would cut it",
     },
   ];
-  if (usage.reasoningTokens !== null && usage.reasoningTokens > 0 && rates.reasoningPerMtok !== null) {
+  if (flags.thinking && usage.reasoningTokens !== null && usage.reasoningTokens > 0 && rates.reasoningPerMtok !== null) {
     categories.push({
       label: "thinking",
       tokens: usage.reasoningTokens,
@@ -57,7 +60,7 @@ export function buildRunTip({ optionLabel, modelId, rates, usage, costs }: RunTi
   }
   const cacheReadTokens = usage.cacheReadTokens ?? null;
   const cacheWriteTokens = usage.cacheWriteTokens ?? null;
-  if (cacheReadTokens !== null && cacheReadTokens > 0) {
+  if (flags.caching && cacheReadTokens !== null && cacheReadTokens > 0) {
     categories.push({
       label: "cache read",
       tokens: cacheReadTokens,
@@ -66,7 +69,7 @@ export function buildRunTip({ optionLabel, modelId, rates, usage, costs }: RunTi
       suggestion: "cache reads are cheaper than fresh input — that's the saving",
     });
   }
-  if (cacheWriteTokens !== null && cacheWriteTokens > 0) {
+  if (flags.caching && cacheWriteTokens !== null && cacheWriteTokens > 0) {
     categories.push({
       label: "cache write",
       tokens: cacheWriteTokens,

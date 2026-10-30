@@ -36,6 +36,9 @@ export interface RunRecord {
   usage: RunRecordUsage;
   costUsd: number;
   recorded: boolean;
+  /** Training-display flags (per the user's rule): thinking/cache/tools
+   * rows render only when the option's config flag is set. */
+  flags?: { thinking?: boolean; caching?: boolean; tools?: boolean };
 }
 
 export function relativeTime(timestamp: number, now: number = Date.now()): string {
@@ -70,6 +73,7 @@ export function buildRunBlocks(runs: RunRecord[], now: number = Date.now()): Run
         cacheWriteUsd: run.usage.cacheWriteUsd,
         totalUsd: run.costUsd,
       },
+      run.flags,
     ),
   }));
 }
@@ -89,6 +93,7 @@ export function buildLedger(
     cacheWriteUsd: number;
     totalUsd: number;
   },
+  flags: { thinking?: boolean; caching?: boolean; tools?: boolean } = {},
 ): LedgerRowData {
   const categories: LedgerCategory[] = [
     {
@@ -106,7 +111,12 @@ export function buildLedger(
       colorVar: "--ledger-output",
     },
   ];
-  if (usage.reasoningTokens !== null && usage.reasoningTokens > 0) {
+  // Training-display rule (per the user's decision, superseding #5's
+  // render-when-reported rule): input and output are defaults, always
+  // shown; thinking/cache/tools rows render only when the option's config
+  // flag is set — an endpoint that reasons by default must not teach a
+  // concept the challenge didn't author.
+  if (flags.thinking && usage.reasoningTokens !== null && usage.reasoningTokens > 0) {
     categories.push({
       key: "reasoning",
       label: "thinking",
@@ -115,7 +125,7 @@ export function buildLedger(
       colorVar: "--ledger-reasoning",
     });
   }
-  if (usage.cacheReadTokens !== null && usage.cacheReadTokens > 0) {
+  if (flags.caching && usage.cacheReadTokens !== null && usage.cacheReadTokens > 0) {
     categories.push({
       key: "cache-read",
       label: "cache read",
@@ -124,7 +134,7 @@ export function buildLedger(
       colorVar: "--ledger-cache-read",
     });
   }
-  if (usage.cacheWriteTokens !== null && usage.cacheWriteTokens > 0) {
+  if (flags.caching && usage.cacheWriteTokens !== null && usage.cacheWriteTokens > 0) {
     categories.push({
       key: "cache-write",
       label: "cache write",
@@ -133,7 +143,7 @@ export function buildLedger(
       colorVar: "--ledger-cache-write",
     });
   }
-  if (usage.toolCalls > 0) {
+  if (flags.tools && usage.toolCalls > 0) {
     categories.push({
       key: "tools",
       label: "tools",
