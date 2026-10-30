@@ -23,7 +23,7 @@ export interface ModelRates {
 
 /**
  * Format a model's itemized rates for the pre-swing price line, e.g.
- * "in 3 µ$/tok · out 15 µ$/tok · think 15 µ$/tok". Reasoning rate omitted
+ * "in 3 µ$/tok · out 15 µ$/tok · thinking 15 µ$/tok". Reasoning rate omitted
  * when null (non-zero-only display rule per #5).
  *
  * USD-per-million-tok equals µ$-per-tok: the 1e6 factors cancel, so the
@@ -35,7 +35,7 @@ export function formatModelRates(rates: ModelRates): string {
     `out ${rates.outputPerMtok} µ$/tok`,
   ];
   if (rates.reasoningPerMtok !== null) {
-    parts.push(`think ${rates.reasoningPerMtok} µ$/tok`);
+    parts.push(`thinking ${rates.reasoningPerMtok} µ$/tok`);
   }
   return parts.join(" · ");
 }

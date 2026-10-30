@@ -37,9 +37,9 @@ describe("formatModelRates", () => {
   const haiku: ModelRates = { inputPerMtok: 1.0, outputPerMtok: 5.0, reasoningPerMtok: 5.0 };
   const gptMini: ModelRates = { inputPerMtok: 0.25, outputPerMtok: 2.0, reasoningPerMtok: null };
 
-  it("itemizes in/out/think rates in µ$/tok matching config values", () => {
-    expect(formatModelRates(sonnet)).toBe("in 3 µ$/tok · out 15 µ$/tok · think 15 µ$/tok");
-    expect(formatModelRates(haiku)).toBe("in 1 µ$/tok · out 5 µ$/tok · think 5 µ$/tok");
+  it("itemizes in/out/thinking rates in µ$/tok matching config values", () => {
+    expect(formatModelRates(sonnet)).toBe("in 3 µ$/tok · out 15 µ$/tok · thinking 15 µ$/tok");
+    expect(formatModelRates(haiku)).toBe("in 1 µ$/tok · out 5 µ$/tok · thinking 5 µ$/tok");
   });
 
   it("omits the think rate when reasoning pricing is null", () => {
