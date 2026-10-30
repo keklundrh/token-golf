@@ -83,8 +83,8 @@ options:
       mastery — answer the following question in exactly one sentence,
       the single best sentence you can write: {question}
   - id: large-output
-    label: "Detailed explanation"
-    detail: "Simple input, unconstrained detailed output."
+    label: "Large output"
+    detail: "Simple input, detailed output."
     prompt: |
       Explain the physics, the history of the discovery, and related 
       phenomena. Respond, as close to nine hundred tokens as possible, 

@@ -143,6 +143,11 @@ export function renderPracticeStream({
           challengeId: challenge.id,
           optionId: option.id,
           costUsd: cost.totalUsd,
+          inputTokens: tokens.inputTokens,
+          outputTokens: tokens.outputTokens,
+          reasoningTokens: tokens.reasoningTokens,
+          cacheReadTokens: tokens.cacheReadTokens,
+          cacheWriteTokens: tokens.cacheWriteTokens,
           createdAt: Date.now(),
         })
         .run();

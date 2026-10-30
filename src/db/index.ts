@@ -29,6 +29,11 @@ function createDb(): Db {
       challenge_id INTEGER NOT NULL,
       option_id TEXT NOT NULL,
       cost_usd REAL NOT NULL,
+      input_tokens INTEGER NOT NULL DEFAULT 0,
+      output_tokens INTEGER NOT NULL DEFAULT 0,
+      reasoning_tokens INTEGER,
+      cache_read_tokens INTEGER,
+      cache_write_tokens INTEGER,
       created_at INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS scores (
@@ -39,7 +44,31 @@ function createDb(): Db {
       recorded_at INTEGER NOT NULL
     );
   `);
+  migrateAttempts(sqlite);
   return drizzle(sqlite, { schema });
+}
+
+// Existing DB files (Docker persistent volume, local dev db) predate the
+// attempts usage columns: CREATE TABLE IF NOT EXISTS won't add them to a
+// table that already exists. Idempotent ALTER TABLE guarded by a pragma
+// column check.
+// Exported for the migration test; getDb runs the migration automatically.
+export function migrateAttemptsForTest(sqlite: Database.Database): void {
+  migrateAttempts(sqlite);
+}
+
+function migrateAttempts(sqlite: Database.Database): void {
+  const columns = new Set(
+    (sqlite.pragma("table_info(attempts)") as Array<{ name: string }>).map((c) => c.name),
+  );
+  const add = (column: string, ddl: string) => {
+    if (!columns.has(column)) sqlite.exec(`ALTER TABLE attempts ADD COLUMN ${ddl}`);
+  };
+  add("input_tokens", "input_tokens INTEGER NOT NULL DEFAULT 0");
+  add("output_tokens", "output_tokens INTEGER NOT NULL DEFAULT 0");
+  add("reasoning_tokens", "reasoning_tokens INTEGER");
+  add("cache_read_tokens", "cache_read_tokens INTEGER");
+  add("cache_write_tokens", "cache_write_tokens INTEGER");
 }
 
 let _db: Db | null = null;

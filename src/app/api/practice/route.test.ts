@@ -66,10 +66,24 @@ describe("POST /api/practice config error distinction", () => {
   });
 });
 
-function seedAttempt(optionId: string, costUsd: number, challengeId = 1): void {
+function seedAttempt(
+  optionId: string,
+  costUsd: number,
+  challengeId = 1,
+  tokens: { inputTokens?: number; outputTokens?: number; reasoningTokens?: number | null } = {},
+): void {
   getDb()
     .insert(attempts)
-    .values({ userId: TEST_USER_ID, challengeId, optionId, costUsd, createdAt: Date.now() })
+    .values({
+      userId: TEST_USER_ID,
+      challengeId,
+      optionId,
+      costUsd,
+      inputTokens: tokens.inputTokens ?? 0,
+      outputTokens: tokens.outputTokens ?? 0,
+      reasoningTokens: tokens.reasoningTokens ?? null,
+      createdAt: Date.now(),
+    })
     .run();
 }
 
@@ -128,10 +142,64 @@ describe("GET /api/practice returns all attempts", () => {
     const res = await GET(new Request(base, { headers: { cookie: userCookie() } }));
     const data = await res.json();
     expect(data.attempts).toEqual([
-      { optionId: "terse", costUsd: 0.001 },
-      { optionId: "verbose", costUsd: 0.002 },
+      {
+        optionId: "terse",
+        costUsd: 0.001,
+        inputTokens: 0,
+        outputTokens: 0,
+        reasoningTokens: null,
+        cacheReadTokens: null,
+        cacheWriteTokens: null,
+        inputUsd: 0,
+        outputUsd: 0,
+        reasoningUsd: 0,
+        cacheReadUsd: 0,
+        cacheWriteUsd: 0,
+      },
+      {
+        optionId: "verbose",
+        costUsd: 0.002,
+        inputTokens: 0,
+        outputTokens: 0,
+        reasoningTokens: null,
+        cacheReadTokens: null,
+        cacheWriteTokens: null,
+        inputUsd: 0,
+        outputUsd: 0,
+        reasoningUsd: 0,
+        cacheReadUsd: 0,
+        cacheWriteUsd: 0,
+      },
     ]);
     // don't leak these seeds into other tests (scoped + shuffle-safe)
+    getDb()
+      .delete(attempts)
+      .where(and(eq(attempts.userId, TEST_USER_ID), eq(attempts.challengeId, 1)))
+      .run();
+  });
+
+
+  it("returns real per-category costs for persisted token counts", async () => {
+    ensureUser();
+    const base = "http://localhost:3000/api/practice?challengeId=1";
+    getDb()
+      .delete(attempts)
+      .where(and(eq(attempts.userId, TEST_USER_ID), eq(attempts.challengeId, 1)))
+      .run();
+    // hole 1's terse option: anthropic/claude-sonnet-4-5 (in 3.00, out 15.00)
+    seedAttempt("terse", 0.24, 1, { inputTokens: 20_000, outputTokens: 12_000 });
+
+    const res = await GET(new Request(base, { headers: { cookie: userCookie() } }));
+    const data = await res.json();
+    expect(data.attempts).toHaveLength(1);
+    const row = data.attempts[0];
+    expect(row.inputTokens).toBe(20_000);
+    expect(row.outputTokens).toBe(12_000);
+    // computeCost at GET time: 20_000/1e6*3.00 = 0.06, 12_000/1e6*15.00 = 0.18
+    expect(row.inputUsd).toBeCloseTo(0.06);
+    expect(row.outputUsd).toBeCloseTo(0.18);
+    expect(row.reasoningUsd).toBe(0);
+
     getDb()
       .delete(attempts)
       .where(and(eq(attempts.userId, TEST_USER_ID), eq(attempts.challengeId, 1)))

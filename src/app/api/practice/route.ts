@@ -4,7 +4,7 @@ import { users, attempts } from "@/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import { loadChallenge, loadSkills } from "@/lib/config";
 import { renderPracticeStream } from "@/lib/practice";
-import { SPEND_CAP_USD } from "@/lib/cost";
+import { SPEND_CAP_USD, computeCost } from "@/lib/cost";
 
 export const maxDuration = 60;
 
@@ -17,12 +17,58 @@ export async function GET(request: Request): Promise<Response> {
   if (!Number.isInteger(challengeId) || challengeId <= 0) {
     return Response.json({ error: "invalid challengeId" }, { status: 400 });
   }
-  const attemptRows = await getDb()
-    .select({ optionId: attempts.optionId, costUsd: attempts.costUsd })
+  const db = getDb();
+  const attemptRows = await db
+    .select({
+      optionId: attempts.optionId,
+      costUsd: attempts.costUsd,
+      inputTokens: attempts.inputTokens,
+      outputTokens: attempts.outputTokens,
+      reasoningTokens: attempts.reasoningTokens,
+      cacheReadTokens: attempts.cacheReadTokens,
+      cacheWriteTokens: attempts.cacheWriteTokens,
+    })
     .from(attempts)
     .where(and(eq(attempts.userId, userId), eq(attempts.challengeId, challengeId)))
     .orderBy(attempts.createdAt);
-  return Response.json({ attempts: attemptRows });
+
+  // Per-category costs recomputed server-side (computeCost reads pricing
+  // config): the client seed must show real µ$ shares per row, not 0 —
+  // same numbers-don't-add-up class as the 0-tok bug.
+  let challenge;
+  try {
+    challenge = loadChallenge(challengeId, process.env.PRACTICE_CONFIG_DIR);
+  } catch {
+    challenge = null; // config error surfaces on POST; GET returns raw rows
+  }
+  const options = new Map((challenge?.options ?? []).map((o) => [o.id, o]));
+  const enriched = attemptRows.map((row) => {
+    const option = options.get(row.optionId);
+    const modelSpec = option?.model ?? challenge?.model;
+    let costs = { inputUsd: 0, outputUsd: 0, reasoningUsd: 0, cacheReadUsd: 0, cacheWriteUsd: 0 };
+    if (modelSpec) {
+      try {
+        const breakdown = computeCost(modelSpec, {
+          inputTokens: row.inputTokens,
+          outputTokens: row.outputTokens,
+          reasoningTokens: row.reasoningTokens,
+          cacheReadTokens: row.cacheReadTokens,
+          cacheWriteTokens: row.cacheWriteTokens,
+        });
+        costs = {
+          inputUsd: breakdown.inputUsd,
+          outputUsd: breakdown.outputUsd,
+          reasoningUsd: breakdown.reasoningUsd,
+          cacheReadUsd: breakdown.cacheReadUsd,
+          cacheWriteUsd: breakdown.cacheWriteUsd,
+        };
+      } catch {
+        // unknown model: leave 0 costs rather than failing the GET
+      }
+    }
+    return { ...row, ...costs };
+  });
+  return Response.json({ attempts: enriched });
 }
 export async function POST(request: Request): Promise<Response> {
   const configDir = process.env.PRACTICE_CONFIG_DIR;

@@ -60,37 +60,59 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
   useEffect(() => {
     fetch(`/api/practice?challengeId=${challenge.id}`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((data: { attempts: Array<{ optionId: string; costUsd: number }> } | null) => {
-        if (!data?.attempts?.length) return;
-        const records: RunRecord[] = data.attempts.map((a) => {
-          const option = challenge.options.find((o) => o.id === a.optionId);
-          return {
-            optionId: a.optionId,
-            optionLabel: option?.label ?? a.optionId,
-            timestamp: Date.now(),
-            usage: {
-              inputTokens: 0,
-              outputTokens: 0,
-              reasoningTokens: null,
-              cacheReadTokens: null,
-              cacheWriteTokens: null,
-              toolTokens: 0,
-              toolCalls: 0,
-              inputUsd: 0,
-              outputUsd: 0,
-              reasoningUsd: 0,
-              cacheReadUsd: 0,
-              cacheWriteUsd: 0,
-            },
-            costUsd: a.costUsd,
-            recorded: false,
-          };
-        });
-        setRun((r) => ({ ...r, runs: records, activeIndex: records.length - 1 }));
-        const last = data.attempts[data.attempts.length - 1];
-        const lastOption = challenge.options.find((o) => o.id === last.optionId);
-        if (lastOption) setSelected(lastOption);
-      })
+      .then(
+        (data: {
+          attempts: Array<{
+            optionId: string;
+            costUsd: number;
+            inputTokens: number;
+            outputTokens: number;
+            reasoningTokens: number | null;
+            cacheReadTokens: number | null;
+            cacheWriteTokens: number | null;
+            inputUsd: number;
+            outputUsd: number;
+            reasoningUsd: number;
+            cacheReadUsd: number;
+            cacheWriteUsd: number;
+          }>;
+        } | null) => {
+          // gate: a mount-time GET that resolves after a fresh live swing
+          // must not wipe the real-token record with seeded rows
+          if (!data?.attempts?.length) return;
+          setRun((r) => {
+            if (r.runs.length > 0) return r;
+            const records: RunRecord[] = data.attempts.map((a) => {
+              const option = challenge.options.find((o) => o.id === a.optionId);
+              return {
+                optionId: a.optionId,
+                optionLabel: option?.label ?? a.optionId,
+                timestamp: Date.now(),
+                usage: {
+                  inputTokens: a.inputTokens,
+                  outputTokens: a.outputTokens,
+                  reasoningTokens: a.reasoningTokens,
+                  cacheReadTokens: a.cacheReadTokens,
+                  cacheWriteTokens: a.cacheWriteTokens,
+                  toolTokens: 0,
+                  toolCalls: 0,
+                  inputUsd: a.inputUsd,
+                  outputUsd: a.outputUsd,
+                  reasoningUsd: a.reasoningUsd,
+                  cacheReadUsd: a.cacheReadUsd,
+                  cacheWriteUsd: a.cacheWriteUsd,
+                },
+                costUsd: a.costUsd,
+                recorded: false,
+              };
+            });
+            const last = data.attempts[data.attempts.length - 1];
+            const lastOption = challenge.options.find((o) => o.id === last.optionId);
+            if (lastOption) setSelected(lastOption);
+            return { ...r, runs: records, activeIndex: records.length - 1 };
+          });
+        },
+      )
       .catch(() => {});
   }, [challenge.id]);
 
