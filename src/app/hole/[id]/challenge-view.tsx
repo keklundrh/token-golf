@@ -55,9 +55,11 @@ export function ProTip({ text }: { text: string }) {
   );
 }
 
-/** The pricing of the option a run belongs to: drives the derived cache
- * row labels (input × ratio); undefined falls back to plain labels. */
-function pricingFor(optionId: string, optionRates: Record<string, OptionRateInfo>) {
+/** The option model's rates in RunRecord shape: captured per run so the
+ * derived cache row labels (input × ratio) always come from the model
+ * that served that run — the runs array can mix per-option models (#4).
+ * undefined falls back to plain labels (no multiplier). */
+function ratesFor(optionId: string, optionRates: Record<string, OptionRateInfo>) {
   const info = optionRates[optionId];
   if (!info) return undefined;
   return {
@@ -134,6 +136,9 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
                 },
                 costUsd: a.costUsd,
                 recorded: false,
+                // per-run rates from the attempt's option config: seeded
+                // rows can mix per-option models (#4)
+                rates: ratesFor(a.optionId, optionRates),
               };
             });
             const last = data.attempts[data.attempts.length - 1];
@@ -257,6 +262,9 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
                     thinking: selected!.thinking !== undefined,
                     caching: selected!.caching === true,
                   },
+                  // the serving option's rates, captured per run: the runs
+                  // array can mix per-option models (#4)
+                  rates: ratesFor(selected!.id, optionRates),
                 };
                 return {
                   ...r,
@@ -401,9 +409,9 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
             )}
           </div>
         )}
-        {run.runs.length > 0 && run.runs[run.runs.length - 1] && (
+        {run.runs.length > 0 && (
           <TokenLedger
-            runs={buildRunBlocks(run.runs, Date.now(), pricingFor(run.runs[run.runs.length - 1].optionId, optionRates))}
+            runs={buildRunBlocks(run.runs, Date.now())}
           />
         )}
         {run.runs.length > 0 && challenge.takeaway && !run.error && (

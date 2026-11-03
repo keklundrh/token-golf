@@ -42,6 +42,10 @@ export interface RunRecord {
   /** Training-display flags (per the user's rule): thinking/cache/tools
    * rows render only when the option's config flag is set. */
   flags?: { thinking?: boolean; caching?: boolean; tools?: boolean };
+  /** The option model's rates, captured per run so the derived cache row
+   * labels always come from the model that actually served the run — the
+   * runs array can mix per-option models (#4). */
+  rates?: { input_per_mtok: number; cache_read_per_mtok?: number | null; cache_write_per_mtok?: number | null };
 }
 
 export function relativeTime(timestamp: number, now: number = Date.now()): string {
@@ -64,7 +68,9 @@ export function buildRunBlocks(
   now: number = Date.now(),
   price?: { input_per_mtok: number; cache_read_per_mtok?: number | null; cache_write_per_mtok?: number | null },
 ): RunBlock[] {
-  // oldest first: Run 1 at the top, newest last (adjacent to the action buttons)
+  // oldest first: Run 1 at the top, newest last (adjacent to the action
+  // buttons). Each run prefers its own captured rates (per-option models,
+  // #4); the list-level price is the fallback for runs without them.
   return runs.map((run, i) => ({
     number: i + 1,
     optionLabel: run.optionLabel,
@@ -81,7 +87,7 @@ export function buildRunBlocks(
         totalUsd: run.costUsd,
       },
       run.flags,
-      price,
+      run.rates ?? price,
     ),
   }));
 }
