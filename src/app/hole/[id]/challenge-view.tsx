@@ -136,6 +136,10 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
                 },
                 costUsd: a.costUsd,
                 recorded: false,
+                flags: {
+                  thinking: option?.thinking !== undefined,
+                  caching: option?.caching === true,
+                },
                 // per-run rates from the attempt's option config: seeded
                 // rows can mix per-option models (#4)
                 rates: ratesFor(a.optionId, optionRates),
