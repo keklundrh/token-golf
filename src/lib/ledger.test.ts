@@ -163,7 +163,7 @@ describe("run history model", () => {
     expect(cacheRead?.tokens).toBe(50);
     expect(cacheRead?.colorVar).toBe("--ledger-cache-read");
     const cacheWrite = withCache.categories.find((c) => c.key === "cache-write");
-    expect(cacheWrite?.label).toBe("cache write (input)");
+    expect(cacheWrite?.label).toBe("cache write");
     expect(cacheWrite?.colorVar).toBe("--ledger-cache-write");
     // the input row shows only the tokens charged at input rate — the
     // cached tokens are listed in their own rows, so tok and µ$ agree

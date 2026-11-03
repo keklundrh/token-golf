@@ -5,7 +5,7 @@ model: "anthropic/claude-sonnet-4-5"
 options:
   - id: large-input
     label: "Large input"
-    detail: "Huge context & one-sentence output. Large inputs are cheap."
+    detail: "Provide model with a lot of information up front. Limit output to one sentence. Large inputs are cheap."
     prompt: |
       You are Dr. Elena Vasquez, a professor of atmospheric physics with
       twenty-five years of experience teaching introductory science courses
@@ -85,7 +85,7 @@ options:
       the single best sentence you can write: {question}
   - id: large-output
     label: "Large output"
-    detail: "Simple input, detailed output."
+    detail: "Very limited input with a detailed output response."
     prompt: |
       Explain the physics, the history of the discovery, and related 
       phenomena. Respond, as close to nine hundred tokens as possible, 

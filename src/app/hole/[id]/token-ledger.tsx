@@ -25,14 +25,20 @@ function LedgerBlock({
           {ledger.categories.map((cat) => (
             <div key={cat.key} className="flex items-center gap-2 text-xs">
               <span
-                className="inline-block h-2.5 w-2.5 rounded-full"
+                className={`inline-block h-2.5 w-2.5 rounded-full ${cat.emphasis === "light" ? "opacity-50" : cat.emphasis === "heavy" ? "ring-1 ring-current" : ""}`}
                 style={{ background: `var(${cat.colorVar})` }}
               />
-              <span className="font-medium text-black">{cat.label}</span>
+              <span
+                className={`font-medium text-black ${cat.emphasis === "light" ? "opacity-60" : ""}`}
+              >
+                {cat.label}
+              </span>
               {cat.calls !== undefined && (
                 <span className="text-zinc-500">{cat.calls} call{cat.calls === 1 ? "" : "s"}</span>
               )}
-              <span className="text-zinc-500">{cat.tokens.toLocaleString()} tok</span>
+              <span className={`text-zinc-500 ${cat.emphasis === "heavy" ? "font-semibold" : ""}`}>
+                {cat.tokens.toLocaleString()} tok
+              </span>
               <span className="ml-auto font-mono text-zinc-700">
                 {formatMicroUsd(cat.usd)}
               </span>

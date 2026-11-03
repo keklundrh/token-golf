@@ -5,18 +5,18 @@ model: "anthropic/claude-sonnet-4-5"
 options:
   - id: verbose
     label: "Balanced model"
-    detail: "Medium yet capable model with constrained output."
+    detail: "Medium-sized, capable model at a reasonable price."
     prompt: |
       Answer in exactly one sentence: {question}
   - id: balanced
     label: "Small model"
-    detail: "Small model with hard constraint on output length."
+    detail: "Small model, less capable at a good price."
     prompt: |
       Answer in exactly one sentence: {question}
     model: "anthropic/claude-haiku-4-5"
   - id: local 
     label: "Local model"
-    detail: "Local model with hard constraint on output length."
+    detail: "Capable model running locally at a great price."
     prompt: |
       Answer in exactly one sentence: {question}
     model: "ai-bu-cai/Qwen3.8-27B"

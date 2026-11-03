@@ -5,13 +5,16 @@ model: "anthropic/claude-sonnet-4-5"
 options:
   - id: thinking
     label: "With thinking"
-    detail: "Extended thinking on before answering."
+    detail: >-
+      Give model time to think "out loud" to itself. The model writes notes and reasons which 
+      consume tokens. Extremely helpful. Use when necessary.
     prompt: |
       Take your time and reason carefully before answering. Answer with a 
       single sentence. {question}
     thinking: "high"
   - id: no-thinking
     label: "Without thinking"
-    detail: "Answer immediately, no extended thinking."
+    detail: >- 
+      Model answers immediatel without extended thinking, or reasoning, about the problem.
     prompt: |
       Answer immediately with your first instinct. {question}

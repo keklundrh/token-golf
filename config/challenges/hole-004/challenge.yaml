@@ -5,7 +5,9 @@ model: "anthropic/claude-sonnet-4-5"
 options:
   - id: fresh
     label: "Read it fresh (run this first)"
-    detail: "No caching. Every run re-reads the whole reference doc at full input price — the expensive baseline."
+    detail: >- 
+      First time through, read the prompt and generate output at full price. This is the 
+      unavoidable baseline for the others to beat.
     prompt: |
       You are given the following reference document.
 
@@ -198,7 +200,8 @@ options:
       Using ONLY the document above, answer in one sentence: {question}
   - id: cache-second
     label: "Cache read (run last, within ~5 min of the first)"
-    detail: "Caching on. If the prefix above is unchanged, this run READS from the cache at ~0.1x input rate — the payoff. Run within ~5 min of the first cached swing (TTL 5m)."
+    detail: >- 
+      The input is the same. Blue text will change to teal and cost you less.
     caching: true
     prompt: |
       You are given the following reference document.

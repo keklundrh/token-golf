@@ -7,6 +7,9 @@ export interface LedgerCategory {
   calls?: number;
   usd: number;
   colorVar: string;
+  /** Visual weight carries the cost story: "heavy" = expensive row,
+   * "light" = cheap row (cache write vs read; per #4). */
+  emphasis?: "heavy" | "light";
 }
 
 export interface LedgerRowData {
@@ -140,15 +143,17 @@ export function buildLedger(
       tokens: usage.cacheReadTokens,
       usd: costs.cacheReadUsd,
       colorVar: "--ledger-cache-read",
+      emphasis: "light",
     });
   }
   if (flags.caching && usage.cacheWriteTokens !== null && usage.cacheWriteTokens > 0) {
     categories.push({
       key: "cache-write",
-      label: "cache write (input)",
+      label: "cache write",
       tokens: usage.cacheWriteTokens,
       usd: costs.cacheWriteUsd,
       colorVar: "--ledger-cache-write",
+      emphasis: "heavy",
     });
   }
   if (flags.tools && usage.toolCalls > 0) {
