@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildLedger, buildRunBlocks, relativeTime, type RunRecord } from "./ledger";
+import { buildLedger, buildRunBlocks, cacheRowLabel, relativeTime, type RunRecord } from "./ledger";
 import type { TokenUsage } from "./cost";
 
 const baseUsage: TokenUsage & {
@@ -162,8 +162,10 @@ describe("run history model", () => {
     const cacheRead = withCache.categories.find((c) => c.key === "cache-read");
     expect(cacheRead?.tokens).toBe(50);
     expect(cacheRead?.colorVar).toBe("--ledger-cache-read");
+    // no pricing passed: labels fall back to plain input charges
+    expect(cacheRead?.label).toBe("input (cache hit)");
     const cacheWrite = withCache.categories.find((c) => c.key === "cache-write");
-    expect(cacheWrite?.label).toBe("cache write");
+    expect(cacheWrite?.label).toBe("input (cache save)");
     expect(cacheWrite?.colorVar).toBe("--ledger-cache-write");
     // the input row shows only the tokens charged at input rate — the
     // cached tokens are listed in their own rows, so tok and µ$ agree
@@ -186,5 +188,17 @@ describe("run history model", () => {
     );
     expect(unflagged.categories.map((c) => c.key)).toEqual(["input", "output"]);
     expect(unflagged.categories.find((c) => c.key === "input")?.tokens).toBe(30);
+  });
+  it("derives cache row labels from the model's pricing", () => {
+    const price = { input_per_mtok: 3.0, cache_read_per_mtok: 0.3, cache_write_per_mtok: 3.75 };
+    expect(cacheRowLabel(price, "read")).toBe("input × 0.1 (cache hit)");
+    expect(cacheRowLabel(price, "write")).toBe("input × 1.25 (cache save)");
+  });
+
+  it("falls back to plain input labels when cache pricing is null", () => {
+    const price = { input_per_mtok: 1.0, cache_read_per_mtok: null, cache_write_per_mtok: null };
+    expect(cacheRowLabel(price, "read")).toBe("input (cache hit)");
+    expect(cacheRowLabel(price, "write")).toBe("input (cache save)");
+    expect(cacheRowLabel(undefined, "read")).toBe("input (cache hit)");
   });
 });

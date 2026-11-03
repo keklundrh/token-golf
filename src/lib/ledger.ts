@@ -59,7 +59,11 @@ export interface RunBlock {
   recorded: boolean;
   ledger: LedgerRowData;
 }
-export function buildRunBlocks(runs: RunRecord[], now: number = Date.now()): RunBlock[] {
+export function buildRunBlocks(
+  runs: RunRecord[],
+  now: number = Date.now(),
+  price?: { input_per_mtok: number; cache_read_per_mtok?: number | null; cache_write_per_mtok?: number | null },
+): RunBlock[] {
   // oldest first: Run 1 at the top, newest last (adjacent to the action buttons)
   return runs.map((run, i) => ({
     number: i + 1,
@@ -77,8 +81,26 @@ export function buildRunBlocks(runs: RunRecord[], now: number = Date.now()): Run
         totalUsd: run.costUsd,
       },
       run.flags,
+      price,
     ),
   }));
+}
+
+/**
+ * Cache row labels read as INPUT charges, not output (per #10): the old
+ * "cache write"/"cache read" names were interpreted as output charges.
+ * Ratios derive from the model's pricing; without cache pricing the
+ * multiplier is omitted — never display one the charge doesn't reflect.
+ */
+export function cacheRowLabel(
+  price: { input_per_mtok: number; cache_read_per_mtok?: number | null; cache_write_per_mtok?: number | null } | undefined,
+  kind: "read" | "write",
+): string {
+  const rate = kind === "read" ? price?.cache_read_per_mtok : price?.cache_write_per_mtok;
+  const noun = kind === "read" ? "cache hit" : "cache save";
+  if (rate == null || !price?.input_per_mtok) return `input (${noun})`;
+  const ratio = rate / price.input_per_mtok;
+  return `input × ${Number.isInteger(ratio) ? ratio : Math.round(ratio * 100) / 100} (${noun})`;
 }
 
 export function buildLedger(
@@ -97,6 +119,7 @@ export function buildLedger(
     totalUsd: number;
   },
   flags: { thinking?: boolean; caching?: boolean; tools?: boolean } = {},
+  price?: { input_per_mtok: number; cache_read_per_mtok?: number | null; cache_write_per_mtok?: number | null },
 ): LedgerRowData {
   // The SDK's inputTokens INCLUDES cached tokens (verified in the provider
   // SDK sources): the input row must show only the tokens actually charged
@@ -139,7 +162,7 @@ export function buildLedger(
   if (flags.caching && usage.cacheReadTokens !== null && usage.cacheReadTokens > 0) {
     categories.push({
       key: "cache-read",
-      label: "cache read",
+      label: cacheRowLabel(price, "read"),
       tokens: usage.cacheReadTokens,
       usd: costs.cacheReadUsd,
       colorVar: "--ledger-cache-read",
@@ -149,7 +172,7 @@ export function buildLedger(
   if (flags.caching && usage.cacheWriteTokens !== null && usage.cacheWriteTokens > 0) {
     categories.push({
       key: "cache-write",
-      label: "cache write",
+      label: cacheRowLabel(price, "write"),
       tokens: usage.cacheWriteTokens,
       usd: costs.cacheWriteUsd,
       colorVar: "--ledger-cache-write",

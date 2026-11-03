@@ -55,6 +55,18 @@ export function ProTip({ text }: { text: string }) {
   );
 }
 
+/** The pricing of the option a run belongs to: drives the derived cache
+ * row labels (input × ratio); undefined falls back to plain labels. */
+function pricingFor(optionId: string, optionRates: Record<string, OptionRateInfo>) {
+  const info = optionRates[optionId];
+  if (!info) return undefined;
+  return {
+    input_per_mtok: info.rates.inputPerMtok,
+    cache_read_per_mtok: info.rates.cacheReadPerMtok,
+    cache_write_per_mtok: info.rates.cacheWritePerMtok,
+  };
+}
+
 export default function ChallengeView({ challenge, holeCount, skills, optionRates }: ChallengeViewProps) {
   const [selected, setSelected] = useState<Option | null>(null);
   const [run, setRun] = useState<RunState>({
@@ -389,9 +401,9 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
             )}
           </div>
         )}
-        {run.runs.length > 0 && (
+        {run.runs.length > 0 && run.runs[run.runs.length - 1] && (
           <TokenLedger
-            runs={buildRunBlocks(run.runs)}
+            runs={buildRunBlocks(run.runs, Date.now(), pricingFor(run.runs[run.runs.length - 1].optionId, optionRates))}
           />
         )}
         {run.runs.length > 0 && challenge.takeaway && !run.error && (
