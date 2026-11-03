@@ -25,8 +25,13 @@ function LedgerBlock({
           {ledger.categories.map((cat) => (
             <div key={cat.key} className="flex items-center gap-2 text-xs">
               <span
-                className={`inline-block h-2.5 w-2.5 rounded-full ${cat.emphasis === "light" ? "opacity-50" : cat.emphasis === "heavy" ? "ring-1 ring-current" : ""}`}
-                style={{ background: `var(${cat.colorVar})` }}
+                className={`inline-block h-2.5 w-2.5 rounded-full ${cat.emphasis === "light" ? "opacity-50" : cat.emphasis === "heavy" ? "ring-1" : ""}`}
+                style={{
+                  background: `var(${cat.colorVar})`,
+                  // ring-1 has no color class: currentColor resolves here,
+                  // so the heavy dot's ring matches its teal background
+                  color: `var(${cat.colorVar})`,
+                }}
               />
               <span
                 className={`font-medium text-black ${cat.emphasis === "light" ? "opacity-60" : ""}`}
