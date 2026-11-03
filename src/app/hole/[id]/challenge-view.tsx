@@ -46,6 +46,15 @@ interface RunState {
   error: string | null;
 }
 
+export function ProTip({ text }: { text: string }) {
+  return (
+    <div className="rounded-lg bg-green-50 px-4 py-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-green-700">Pro tip</p>
+      <p className="mt-0.5 text-sm font-medium text-black">{text}</p>
+    </div>
+  );
+}
+
 export default function ChallengeView({ challenge, holeCount, skills, optionRates }: ChallengeViewProps) {
   const [selected, setSelected] = useState<Option | null>(null);
   const [run, setRun] = useState<RunState>({
@@ -386,7 +395,7 @@ export default function ChallengeView({ challenge, holeCount, skills, optionRate
           />
         )}
         {run.runs.length > 0 && challenge.takeaway && !run.error && (
-          <p className="rounded-lg bg-zinc-50 px-4 py-3 text-sm text-zinc-600">{challenge.takeaway}</p>
+          <ProTip text={challenge.takeaway} />
         )}
         {run.error && (
           <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">{run.error}</p>
