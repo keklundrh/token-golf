@@ -6,10 +6,10 @@ metadata:
     app: token-golf
 spec:
   replicas: 1
-  # RevisionHistoryLimit equivalent: DC defaults are fine for an event app.
+  # DC selectors are a plain label map (NOT Deployment's matchLabels form —
+  # that's a BadRequest at apply time).
   selector:
-    matchLabels:
-      app: token-golf
+    app: token-golf
   strategy:
     type: Rolling
   template:
