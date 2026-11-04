@@ -21,12 +21,21 @@ never committed to git.
 2. `oc login` / `oc project <namespace>`.
 3. `oc apply -f openshift/`
 4. `oc create secret generic token-golf-keys --from-env-file=.env.secrets`
-5. Create the build-webhook secret (value = any random hex; the same
-   value goes into the GitHub webhook's Secret field):
+   (do this BEFORE the pod starts: the Deployment envFrom's this Secret,
+   and without it the container crash-loops on missing provider keys)
+5. Create the build-webhook secret (value = any random hex; this value
+   is the URL path token — see the webhook section below):
    `oc create secret generic token-golf-webhook-secret --from-literal=WebHookSecretKey=$(openssl rand -hex 20)`
-6. First build (once; the webhook handles later pushes to `dev`):
+6. Grant anonymous build-triggering (webhook POSTs are unauthenticated;
+   without this role GitHub's calls get 403):
+   `oc adm policy add-role-to-user system:webhook system:anonymous -n token-golf`
+   ⚠ Shared-cluster caution: this lets ANY caller with network access
+   trigger builds in this namespace. Get cluster-admin sign-off; the
+   no-anonymous-grants alternative is GitHub Actions with a bot token
+   running `oc start-build token-golf` (also enables dev-only filtering).
+7. First build (once; the webhook handles later pushes to `dev`):
    `oc start-build token-golf`
-7. `oc rollout status deploy/token-golf`, then `oc get route token-golf`.
+8. `oc rollout status deploy/token-golf`, then `oc get route token-golf`.
 
 ## GitHub webhook (push-to-deploy, one-time)
 
@@ -40,8 +49,11 @@ without it, builds only happen via `oc start-build` by hand.
    Substitute `<secret>` with the Secret's key value:
    `oc get secret token-golf-webhook-secret -o jsonpath='{.data.WebHookSecretKey}' | base64 -d`
 2. GitHub repo → Settings → Webhooks → Add webhook:
-   Payload URL = that URL · Content type = `application/json` ·
-   Secret = the `WebHookSecretKey` value from step 5 above ·
+   Payload URL = that URL (the secret IN the URL path is the real auth —
+   keep the full URL secret) · Content type = `application/json` ·
+   Secret field = the `WebHookSecretKey` value (GitHub uses it to sign
+   deliveries; OpenShift's generic endpoint ignores the signature —
+   filling it is optional but harmless) ·
    Trigger = "Just the push event" · Active ✓
    (CLI alternative: `gh api repos/keklundrh/token-golf/hooks -f name=web
    -f 'config[url]=<URL>' -f 'config[content_type]=json'
