@@ -17,10 +17,9 @@ spec:
       name: token-golf:latest
   triggers:
     - type: ConfigChange
-    - type: GenericWebHook
+    - type: Generic
       generic:
         # secret value lives in the token-golf-webhook-secret Secret,
         # applied by hand (see README) — never committed to git
         secretReference:
           name: token-golf-webhook-secret
-        allowEnv: false

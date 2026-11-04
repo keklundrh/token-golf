@@ -33,7 +33,7 @@ never committed to git.
 `git push origin dev` deploys automatically once the webhook exists —
 without it, builds only happen via `oc start-build` by hand.
 
-1. Get the webhook URL (the BC's `GenericWebHook` trigger references the
+1. Get the webhook URL (the BC's `Generic` webhook trigger references the
    `token-golf-webhook-secret` Secret; the URL embeds its key):
    `oc describe bc token-golf | grep -A2 Webhook`
    — e.g.
