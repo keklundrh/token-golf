@@ -33,11 +33,12 @@ never committed to git.
 `git push origin dev` deploys automatically once the webhook exists —
 without it, builds only happen via `oc start-build` by hand.
 
-1. Get the webhook URL (the BC's `Generic` webhook trigger references the
-   `token-golf-webhook-secret` Secret; the URL embeds its key):
-   `oc describe bc token-golf | grep -A2 Webhook`
-   — e.g.
+1. Get the webhook URL. `oc describe bc token-golf` shows the template
+   with a literal `<secret>` placeholder (the trigger uses
+   `secretReference`, so describe can't embed the value):
    `https://api.<cluster>/apis/build.openshift.io/v1/namespaces/<namespace>/buildconfigs/token-golf/webhooks/<secret>/generic`
+   Substitute `<secret>` with the Secret's key value:
+   `oc get secret token-golf-webhook-secret -o jsonpath='{.data.WebHookSecretKey}' | base64 -d`
 2. GitHub repo → Settings → Webhooks → Add webhook:
    Payload URL = that URL · Content type = `application/json` ·
    Secret = the `WebHookSecretKey` value from step 5 above ·
