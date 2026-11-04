@@ -39,6 +39,21 @@ Guidance for AI agents working in this repo.
   definitions, build prompts, agent instructions, or implementation notes in
   `docs/`.
 
+## Cluster & infrastructure operations
+
+- **NEVER run `oc`/`kubectl` commands that MUTATE the cluster without the
+  user explicitly asking for that exact change** — this includes `oc
+  apply`, `oc patch`, `oc set`, `oc create secret`, `oc adm policy`,
+  `oc start-build`, `oc delete`, and `oc replace --force`. The OpenShift
+  cluster (`caiprod`) is shared production infrastructure; the user
+  operates it themselves to learn. Read-only commands (`oc get`,
+  `oc describe`, `oc logs`, dry-runs) are fine when diagnosing.
+  If a diagnosis shows a change is needed, TELL the user the command and
+  stop — do not run it.
+- **GitHub-side settings (webhooks, Actions, secrets) are likewise
+  user-operated.** Compose the `gh api` command or UI steps for them;
+  never execute settings-changing API calls unprompted.
+
 ## Verification & Testing
 
 - **No code is written without an explicit test.** Every behavior change
