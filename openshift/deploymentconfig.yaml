@@ -1,14 +1,17 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
 metadata:
   name: token-golf
   labels:
     app: token-golf
 spec:
   replicas: 1
+  # RevisionHistoryLimit equivalent: DC defaults are fine for an event app.
   selector:
     matchLabels:
       app: token-golf
+  strategy:
+    type: Rolling
   template:
     metadata:
       labels:
@@ -33,6 +36,9 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: token-golf-data
+  # `triggers` only exists on DeploymentConfig, NOT on plain Deployment —
+  # on a Deployment the API server silently strips this field and image
+  # updates never roll the pod (the bug that motivated this conversion).
   triggers:
     - type: ConfigChange
     - type: ImageChange

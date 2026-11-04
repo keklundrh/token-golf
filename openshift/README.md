@@ -9,10 +9,21 @@ never committed to git.
   trigger (secret via `token-golf-webhook-secret` Secret reference) so a
   GitHub push fires the build.
 - `pvc.yaml` — PersistentVolumeClaim `token-golf-data` (1Gi, ReadWriteOnce)
-  backing the SQLite mount; the Deployment references it by name.
-- `deployment.yaml` — envFrom the `token-golf-keys` Secret;
-  `DATABASE_PATH=/data/token-golf.db`; PVC `token-golf-data` mounted at
-  `/data`; imageChange trigger for auto-rollout.
+  backing the SQLite mount; the DeploymentConfig references it by name.
+- `deploymentconfig.yaml` — **DeploymentConfig** (`apps.openshift.io/v1`),
+  NOT a plain Deployment: only a DC honors `triggers`, including the
+  `ImageChange` trigger (`automatic: true` on container `token-golf`,
+  watching `token-golf:latest`) that rolls the pod whenever a build tags
+  the image stream. On a plain `apps/v1 Deployment` the API server
+  silently strips the `triggers` field — the pod never rolls and image
+  updates sit un-deployed (the bug this conversion fixed).
+  envFrom the `token-golf-keys` Secret; `DATABASE_PATH=/data/token-golf.db`;
+  PVC `token-golf-data` mounted at `/data`.
+  **Switching an existing environment:** the DC and the old Deployment
+  can't own the same pods — delete the old Deployment first
+  (`oc delete deploy token-golf`), then `oc apply -f openshift/`.
+  The PVC (`token-golf-data`) is untouched; the DB survives the switch.
+  Rollout status: `oc rollout status dc/token-golf` (not `deploy/`).
 - `service.yaml` / `route.yaml` — port 3000, edge-terminated route.
 
 ## Manual steps (in order)
@@ -21,8 +32,8 @@ never committed to git.
 2. `oc login` / `oc project <namespace>`.
 3. `oc apply -f openshift/`
 4. `oc create secret generic token-golf-keys --from-env-file=.env.secrets`
-   (do this BEFORE the pod starts: the Deployment envFrom's this Secret,
-   and without it the container crash-loops on missing provider keys)
+   (do this BEFORE the pod starts: the DeploymentConfig envFrom's this
+   Secret, and without it the container crash-loops on missing provider keys)
 5. Create the build-webhook secret (value = any random hex; this value
    is the URL path token — see the webhook section below):
    `oc create secret generic token-golf-webhook-secret --from-literal=WebHookSecretKey=$(openssl rand -hex 20)`
@@ -35,7 +46,7 @@ never committed to git.
    running `oc start-build token-golf` (also enables dev-only filtering).
 7. First build (once; the webhook handles later pushes to `dev`):
    `oc start-build token-golf`
-8. `oc rollout status deploy/token-golf`, then `oc get route token-golf`.
+8. `oc rollout status dc/token-golf`, then `oc get route token-golf`.
 
 ## GitHub webhook (push-to-deploy, one-time)
 
