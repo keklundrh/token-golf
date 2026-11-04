@@ -15,3 +15,12 @@ spec:
     to:
       kind: ImageStreamTag
       name: token-golf:latest
+  triggers:
+    - type: ConfigChange
+    - type: GenericWebHook
+      generic:
+        # secret value lives in the token-golf-webhook-secret Secret,
+        # applied by hand (see README) — never committed to git
+        secretReference:
+          name: token-golf-webhook-secret
+        allowEnv: false
